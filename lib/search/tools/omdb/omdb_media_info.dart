@@ -4,9 +4,20 @@ import 'package:popcorn_flutter/search/core/model/media_type.dart';
 import 'package:popcorn_flutter/search/tools/omdb/omdb_media_type.dart';
 
 class OMDBItemVO extends MediaInfo {
+  static const _unkown = 'N/A';
   const OMDBItemVO._({required super.id, required super.name});
 
+  static void _purgeData(Map<String, dynamic> data) {
+    for (final entry in data.entries) {
+      if (entry.value == _unkown) {
+        data[entry.key] = null;
+      }
+    }
+  }
+
   static MediaInfo? fromData(Map<String, dynamic> data) {
+    _purgeData(data);
+
     final id = data['imdbID'];
     final name = data['Title'];
     final type = OMDBMediaTypeVO.fromData(data['Type']);

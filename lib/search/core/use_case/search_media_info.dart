@@ -7,12 +7,12 @@ class SearchMediaInfo implements UseCase {
   final IMediaSearcher _searcher;
   const SearchMediaInfo({required IMediaSearcher searcher}) : _searcher = searcher;
 
-  Future<MediaSearchResult> searchMedia({required String? query, MediaType? type}) async {
+  Future<MediaSearchResult> searchMedia({required String? query, MediaType? type, int? page}) async {
     try {
-      final request = MediaSearchRequest.create(terms: query, type: type);
+      final request = MediaSearchRequest.create(terms: query, type: type, page: page);
       return _searcher.searchMedia(request);
     } catch (ex) {
-      return MediaSearchResult(items: [], errors: [ex.toString()]);
+      return MediaSearchResult(errors: [ex.toString()]);
     }
   }
 }

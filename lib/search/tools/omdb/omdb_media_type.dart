@@ -10,4 +10,13 @@ extension OMDBMediaTypeVO on MediaType {
     }
     return null;
   }
+
+  static String fromType(MediaType type) {
+    switch (type) {
+      case MediaType.movie:
+        return "movie";
+      case MediaType.series:
+        return "series";
+    }
+  }
 }

@@ -32,7 +32,7 @@ void main(List<String> args) async {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      home: const AppSearchView(),
+      home: const MediaSearchFormPage(),
     ),
   );
 
