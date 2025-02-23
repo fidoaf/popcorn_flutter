@@ -1,0 +1,128 @@
+import 'package:flutter/material.dart';
+import 'package:popcorn_flutter/favorite/core/model/favorite_media.dart';
+import 'package:popcorn_flutter/favorite/view/media_favorite_controller.dart';
+
+class FavoriteListView extends StatefulWidget {
+  const FavoriteListView({super.key});
+
+  @override
+  State<StatefulWidget> createState() => FavoriteListViewState();
+}
+
+class FavoriteListViewState extends State<FavoriteListView> {
+  final _controller = MediaFavoriteController();
+
+  final _favoriteList = <FavoriteMediaInfo>[];
+
+  @override
+  void initState() {
+    _refresh();
+    //
+    super.initState();
+  }
+
+  void _refresh() {
+    _controller.getFavoriteList().then((list) {
+      setState(() {
+        _favoriteList
+          ..clear()
+          ..addAll(list);
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_favoriteList.isEmpty) {
+      return const Wrap();
+    } else {
+      return GridView.builder(
+        itemCount: _favoriteList.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
+        itemBuilder: (context, index) {
+          final fav = _favoriteList[index];
+          return _FavoriteItemView(
+            info: fav,
+            onRemoved: (item) => _refresh(),
+          );
+        },
+      );
+    }
+  }
+}
+
+class _FavoriteItemView extends StatefulWidget {
+  final FavoriteMediaInfo info;
+  final Function(FavoriteMediaInfo) onRemoved;
+  const _FavoriteItemView({required this.info, required this.onRemoved});
+
+  @override
+  State<StatefulWidget> createState() => _FavoriteItemViewState();
+}
+
+class _FavoriteItemViewState extends State<_FavoriteItemView> {
+  final _controller = MediaFavoriteController();
+
+  bool _selected = false;
+
+  void _updateHover(bool selected) {
+    setState(() {
+      _selected = selected;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final info = widget.info;
+    final poster = info.imageUrl;
+    final Widget content;
+
+    content = Stack(
+      children: [
+        Center(
+          child: Card(
+            elevation: _selected ? 5 : 1,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (poster != null)
+                    Expanded(
+                      child: Image.network(poster),
+                    ),
+                  Text(info.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_selected)
+          Align(
+              alignment: Alignment.topRight,
+              child: IconButton.outlined(
+                onPressed: () async {
+                  final success = await _controller.removeFavorite(info);
+                  if (success) widget.onRemoved(info);
+                },
+                icon: const Icon(Icons.close),
+              )),
+      ],
+    );
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Container(
+        decoration: _selected
+            ? const BoxDecoration(
+                // borderRadius: BorderRadius.circular(8),
+                // border: Border.all(color: Colors.grey),
+                )
+            : null,
+        child: content,
+      ),
+      onEnter: (_) => _updateHover(true),
+      onExit: (_) => _updateHover(false),
+    );
+  }
+}

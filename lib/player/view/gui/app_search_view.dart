@@ -2,17 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/player/view/media_player_controller.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 
-class MediaInfoDetails extends StatelessWidget {
+class MediaInfoDetails extends StatefulWidget {
   final MediaInfo info;
-  final _controller = const MediaPlayerController();
   const MediaInfoDetails({super.key, required this.info});
 
   @override
+  State<StatefulWidget> createState() => MediaInfoDetailsState();
+}
+
+class MediaInfoDetailsState extends State<MediaInfoDetails> {
+  final _controller = const MediaPlayerController();
+
+  final bool _isCheckingMedia = true;
+
+  @override
   Widget build(BuildContext context) {
+    final info = widget.info;
     final poster = info.image;
     return Scaffold(
       appBar: AppBar(),
-      floatingActionButton: FloatingActionButton.large(onPressed: () => _controller.openPlayer(info), child: const Icon(Icons.play_circle)),
+      floatingActionButton: _isCheckingMedia
+          ? const FloatingActionButton.large(onPressed: null, child: CircularProgressIndicator())
+          : FloatingActionButton.large(onPressed: () => _controller.openPlayer(info), child: const Icon(Icons.play_circle)),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: poster == null
           ? const Wrap()

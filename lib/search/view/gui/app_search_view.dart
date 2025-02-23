@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/app/view/gui/transition_page.dart';
-import 'package:popcorn_flutter/player/view/media_player_controller.dart';
-import 'package:popcorn_flutter/search/core/model/media_info.dart';
+import 'package:popcorn_flutter/favorite/view/gui/favorite_list.dart';
+import 'package:popcorn_flutter/player/view/gui/app_search_view.dart';
 import 'package:popcorn_flutter/search/core/model/media_search.dart';
 import 'package:popcorn_flutter/search/core/model/media_type.dart';
 import 'package:popcorn_flutter/search/view/media_search_controller.dart';
-import 'package:popcorn_flutter/shared/view/list/paginator.dart';
+import 'package:popcorn_flutter/shared/view/list/paginator_view.dart';
 
 class MediaSearchFormPage extends StatefulWidget {
   const MediaSearchFormPage({super.key});
@@ -22,6 +22,7 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
 
   bool _isLoading = false;
   MediaType? _selectedType;
+  GlobalKey? _favKey;
 
   @override
   Widget build(BuildContext context) {
@@ -41,28 +42,42 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('What would you like to watch?'),
-                TextFormField(
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.sentences,
-                  controller: _textController,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: (value) {
-                    return value == null || value.isEmpty ? 'You must input search terms' : null;
-                  },
-                  onFieldSubmitted: (_) => _search(),
+                Flexible(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('What would you like to watch?'),
+                      TextFormField(
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.sentences,
+                        controller: _textController,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (value) {
+                          return value == null || value.isEmpty ? 'You must input search terms' : null;
+                        },
+                        onFieldSubmitted: (_) => _search(),
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SegmentedButton(
+                            segments: MediaType.values.map((mt) => ButtonSegment<MediaType>(value: mt, label: Text(mt.name.toUpperCase()))).toList(),
+                            selected: _selectedType == null ? const {} : {_selectedType},
+                            emptySelectionAllowed: true,
+                            onSelectionChanged: (newSel) => setState(() {
+                              _selectedType = newSel.isEmpty ? null : newSel.first;
+                            }),
+                          ),
+                          OutlinedButton(onPressed: _search, child: const Text('SEARCH'))
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 32),
-                SegmentedButton(
-                  segments: MediaType.values.map((mt) => ButtonSegment<MediaType>(value: mt, label: Text(mt.name.toUpperCase()))).toList(),
-                  selected: _selectedType == null ? const {} : {_selectedType},
-                  emptySelectionAllowed: true,
-                  onSelectionChanged: (newSel) => setState(() {
-                    _selectedType = newSel.isEmpty ? null : newSel.first;
-                  }),
-                ),
-                const SizedBox(height: 32),
-                OutlinedButton(onPressed: _search, child: const Text('SEARCH'))
+                Flexible(flex: 1, child: FavoriteListView(key: _favKey)),
               ],
             ),
           ),
@@ -84,11 +99,12 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
     }
   }
 
-  void _showDetails(MediaSearchResult results) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => _MediaSearchResultsPage(originalSearch: _textController.text, searchResult: results))).then((_) {
+  void _showDetails(MediaSearchResult results) async {
+    Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => _MediaSearchResultsPage(originalSearch: _textController.text, searchResult: results))).then((refresh) {
       setState(() {
         _textController.clear();
         _selectedType = null;
+        if (refresh == true) _favKey = GlobalKey();
       });
     });
   }
@@ -108,6 +124,8 @@ class _MediaSearchResultsPageState extends State<_MediaSearchResultsPage> {
   final _controller = MediaSearchController();
   int _currentPage = 0;
   bool _isLoading = false;
+
+  bool _isModified = false;
   MediaSearchResult? _currentResult;
 
   @override
@@ -124,6 +142,7 @@ class _MediaSearchResultsPageState extends State<_MediaSearchResultsPage> {
       if (successfulSearch) {
         final items = results.list;
         appBar = AppBar(
+          toolbarHeight: 36,
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -133,7 +152,7 @@ class _MediaSearchResultsPageState extends State<_MediaSearchResultsPage> {
           ),
           leading: IconButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop<bool>(context, _isModified);
             },
             icon: const Icon(Icons.arrow_back),
           ),
@@ -163,7 +182,10 @@ class _MediaSearchResultsPageState extends State<_MediaSearchResultsPage> {
                             trailing: IconButton(
                               icon: const Icon(Icons.favorite),
                               color: false ? Colors.red : Colors.white,
-                              onPressed: () {},
+                              onPressed: () async {
+                                await _controller.addFavorite(item);
+                                _isModified = true;
+                              },
                             ),
                           ),
                         ),
@@ -174,9 +196,9 @@ class _MediaSearchResultsPageState extends State<_MediaSearchResultsPage> {
               ),
             ),
             ColoredBox(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
               child: Center(
-                child: Paginator(
+                child: PaginatorView(
                   totalCount: results.totalCount,
                   currentPage: _currentPage,
                   onPageChanged: (index) {
@@ -197,7 +219,7 @@ class _MediaSearchResultsPageState extends State<_MediaSearchResultsPage> {
               alignment: Alignment.centerRight,
               child: IconButton(
                 onPressed: () {
-                  Navigator.pop(context);
+                  Navigator.pop<bool>(context, _isModified);
                 },
                 icon: const Icon(Icons.close),
               ),
@@ -218,48 +240,5 @@ class _MediaSearchResultsPageState extends State<_MediaSearchResultsPage> {
     setState(() => _isLoading = true);
     _currentResult = await _controller.search(terms: widget.originalSearch, page: _currentPage, type: widget.originalType);
     setState(() => _isLoading = false);
-  }
-}
-
-class MediaInfoDetails extends StatelessWidget {
-  final MediaInfo info;
-  final _controller = const MediaPlayerController();
-  const MediaInfoDetails({super.key, required this.info});
-
-  @override
-  Widget build(BuildContext context) {
-    final poster = info.image;
-    return Scaffold(
-      appBar: AppBar(),
-      floatingActionButton: FloatingActionButton.large(onPressed: () => _controller.openPlayer(info), child: const Icon(Icons.play_circle)),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      body: poster == null
-          ? const Wrap()
-          : Container(
-              foregroundDecoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(poster.url),
-                  fit: BoxFit.fitHeight,
-                  opacity: 0.2,
-                ),
-              ),
-              alignment: Alignment.bottomCenter,
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Center(
-                child: Column(
-                  children: [
-                    Text(
-                      info.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    Text(
-                      info.dateExplanation,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-    );
   }
 }
