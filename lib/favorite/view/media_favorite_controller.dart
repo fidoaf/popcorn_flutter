@@ -7,7 +7,7 @@ class MediaFavoriteController {
   final _favList = const GetFavoriteMediaList(storage: FavoriteStorageClient());
   final _removeFav = const RemoveFavoriteMediaInfo(storage: FavoriteStorageClient());
 
-  Future<List<MediaInfo>> getFavoriteList() {
+  List<MediaInfo> getFavoriteList() {
     return _favList.get();
   }
 

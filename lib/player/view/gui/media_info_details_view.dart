@@ -18,12 +18,25 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
 
   MediaInfoDetailsState();
 
+  bool _isMediaFavorite(MediaInfo info) {
+    return _controller.isFavorite(info);
+  }
+
   @override
   Widget build(BuildContext context) {
     final info = widget.info;
     final poster = info.image;
+    final isFavorite = _isMediaFavorite(info);
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.favorite),
+            color: isFavorite ? Colors.red : Colors.white,
+            onPressed: () async {},
+          )
+        ],
+      ),
       floatingActionButton: _isCheckingMedia
           ? const FloatingActionButton.large(onPressed: null, child: CircularProgressIndicator())
           : FloatingActionButton.large(onPressed: () => _controller.openPlayer(info), child: const Icon(Icons.play_circle)),

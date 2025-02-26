@@ -4,7 +4,7 @@ abstract class IFavoriteStorage {
   Future<bool> add(MediaInfo info);
   Future<bool> remove(MediaInfo info);
 
-  Future<List<MediaInfo>> getAll();
+  List<MediaInfo> getAll();
 
   Future<bool> clear();
 }

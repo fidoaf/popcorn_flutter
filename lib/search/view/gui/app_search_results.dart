@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/app/view/gui/transition_page.dart';
 import 'package:popcorn_flutter/player/view/gui/media_info_details_view.dart';
+import 'package:popcorn_flutter/search/core/model/media_info.dart';
 import 'package:popcorn_flutter/search/core/model/media_search.dart';
 import 'package:popcorn_flutter/search/core/model/media_type.dart';
 import 'package:popcorn_flutter/search/view/media_search_controller.dart';
@@ -23,6 +24,10 @@ class _MediaSearchResultsPageState extends State<MediaSearchResultsPage> {
 
   bool _isModified = false;
   MediaSearchResult? _currentResult;
+
+  bool _isMediaFavorite(MediaInfo info) {
+    return _controller.isFavorite(info);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +71,7 @@ class _MediaSearchResultsPageState extends State<MediaSearchResultsPage> {
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       final item = items[index];
-                      final isFavorite = _controller.isFavorite(item);
+                      final isFavorite = _isMediaFavorite(item);
                       return InkWell(
                         onTap: () {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: item)));

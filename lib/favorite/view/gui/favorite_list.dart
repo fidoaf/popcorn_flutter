@@ -23,12 +23,11 @@ class FavoriteListViewState extends State<FavoriteListView> {
   }
 
   void _refresh() {
-    _controller.getFavoriteList().then((list) {
-      setState(() {
-        _favoriteList
-          ..clear()
-          ..addAll(list);
-      });
+    final list = _controller.getFavoriteList();
+    setState(() {
+      _favoriteList
+        ..clear()
+        ..addAll(list);
     });
   }
 

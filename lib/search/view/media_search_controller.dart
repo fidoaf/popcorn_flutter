@@ -1,5 +1,6 @@
 import 'package:popcorn_flutter/app/core/application_configuration.dart';
 import 'package:popcorn_flutter/favorite/core/use_case/add_favorite_media_info.dart';
+import 'package:popcorn_flutter/favorite/core/use_case/get_favorite_media_list.dart';
 import 'package:popcorn_flutter/favorite/core/use_case/remove_favorite_media_info.dart';
 import 'package:popcorn_flutter/favorite/tools/storage/favorite_storage_client.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
@@ -10,6 +11,7 @@ import 'package:popcorn_flutter/search/tools/omdb/omdb_media_search.dart';
 
 class MediaSearchController {
   final _searcher = const SearchMediaInfo(searcher: OMDBSearcher(secretKey: omdbKeySecret));
+  final _listFav = const GetFavoriteMediaList(storage: FavoriteStorageClient());
   final _addFav = const AddFavoriteMediaInfo(storage: FavoriteStorageClient());
   final _removeFav = const RemoveFavoriteMediaInfo(storage: FavoriteStorageClient());
 
@@ -26,6 +28,7 @@ class MediaSearchController {
   }
 
   bool isFavorite(MediaInfo info) {
-    return true;
+    final favorites = _listFav.get();
+    return favorites.any((f) => f.id == info.id);
   }
 }

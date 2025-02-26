@@ -6,7 +6,7 @@ class GetFavoriteMediaList implements UseCase {
   final IFavoriteStorage _storage;
   const GetFavoriteMediaList({required IFavoriteStorage storage}) : _storage = storage;
 
-  Future<List<MediaInfo>> get() async {
+  List<MediaInfo> get() {
     try {
       return _storage.getAll();
     } catch (ex) {
