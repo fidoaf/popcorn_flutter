@@ -13,7 +13,10 @@ class MediaInfoDetails extends StatefulWidget {
 class MediaInfoDetailsState extends State<MediaInfoDetails> {
   final _controller = const MediaPlayerController();
 
-  final bool _isCheckingMedia = true;
+  // TODO: Check media
+  final bool _isCheckingMedia = false;
+
+  MediaInfoDetailsState();
 
   @override
   Widget build(BuildContext context) {

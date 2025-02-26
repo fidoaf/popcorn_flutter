@@ -1,7 +1,7 @@
 import 'package:popcorn_flutter/search/core/model/media_image.dart';
 import 'package:popcorn_flutter/search/core/model/media_type.dart';
 
-abstract class MediaInfo {
+class MediaInfo {
   final String id;
   final String name;
   final MediaType? type;
@@ -13,7 +13,20 @@ abstract class MediaInfo {
     return '[$name ($dateExplanation)]';
   }
 
-  String get dateExplanation;
+  String get dateExplanation => '';
+
+  static MediaInfo fromJson(Map<String, dynamic> data) {
+    return MediaInfo(id: data['id'], name: data['name'], type: MediaType.fromString(data['type']), image: MediaImage.fromJson(data['image']));
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'type': type?.name,
+      'image': image?.toJson(),
+    };
+  }
 }
 
 class MovieInfo extends MediaInfo {

@@ -12,15 +12,22 @@ class PaginatorView extends StatelessWidget {
   final void Function(int index) onPageChanged;
   const PaginatorView({super.key, required this.currentPage, required this.totalCount, required this.onPageChanged});
 
-  int get totalPages => totalCount ~/ _pageSize;
+  int get totalPages => (totalCount / _pageSize).ceil();
+
+  void goToFirstPage() => onPageChanged(0);
+  void goToPreviousPage() => onPageChanged(currentPage - 1);
+  void goToNextPage() => onPageChanged(currentPage + 1);
+  void goToLastPage() => onPageChanged(totalPages);
 
   @override
   Widget build(BuildContext context) {
     final pagerSize = min(totalPages, _maxPages);
     final paginator = Paginator(currentPage: currentPage, totalPages: totalPages, maxPages: pagerSize);
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        TextButton(onPressed: currentPage == 0 ? null : goToFirstPage, child: const Text('<<')),
+        TextButton(onPressed: currentPage == 0 ? null : goToPreviousPage, child: const Text('<')),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: paginator.map<Widget>((page) {
@@ -39,6 +46,8 @@ class PaginatorView extends StatelessWidget {
                   );
           }).toList(),
         ),
+        TextButton(onPressed: currentPage == totalPages - 1 ? null : goToNextPage, child: const Text('>')),
+        TextButton(onPressed: currentPage == totalPages - 1 ? null : goToLastPage, child: const Text('>>')),
       ],
     );
   }

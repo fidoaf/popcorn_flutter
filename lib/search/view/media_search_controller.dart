@@ -24,4 +24,8 @@ class MediaSearchController {
   Future<bool> removeFavorite(MediaInfo info) {
     return _removeFav.removeInfo(info: info);
   }
+
+  bool isFavorite(MediaInfo info) {
+    return true;
+  }
 }

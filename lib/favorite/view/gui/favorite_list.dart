@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:popcorn_flutter/favorite/core/model/favorite_media.dart';
 import 'package:popcorn_flutter/favorite/view/media_favorite_controller.dart';
+import 'package:popcorn_flutter/player/view/gui/media_info_details_view.dart';
+import 'package:popcorn_flutter/search/core/model/media_info.dart';
 
 class FavoriteListView extends StatefulWidget {
   const FavoriteListView({super.key});
@@ -12,7 +13,7 @@ class FavoriteListView extends StatefulWidget {
 class FavoriteListViewState extends State<FavoriteListView> {
   final _controller = MediaFavoriteController();
 
-  final _favoriteList = <FavoriteMediaInfo>[];
+  final _favoriteList = <MediaInfo>[];
 
   @override
   void initState() {
@@ -31,6 +32,10 @@ class FavoriteListViewState extends State<FavoriteListView> {
     });
   }
 
+  void _showMediaDetails(MediaInfo fav) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: fav)));
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_favoriteList.isEmpty) {
@@ -43,6 +48,7 @@ class FavoriteListViewState extends State<FavoriteListView> {
           final fav = _favoriteList[index];
           return _FavoriteItemView(
             info: fav,
+            onSelected: (item) => _showMediaDetails(item),
             onRemoved: (item) => _refresh(),
           );
         },
@@ -52,9 +58,10 @@ class FavoriteListViewState extends State<FavoriteListView> {
 }
 
 class _FavoriteItemView extends StatefulWidget {
-  final FavoriteMediaInfo info;
-  final Function(FavoriteMediaInfo) onRemoved;
-  const _FavoriteItemView({required this.info, required this.onRemoved});
+  final MediaInfo info;
+  final Function(MediaInfo) onSelected;
+  final Function(MediaInfo) onRemoved;
+  const _FavoriteItemView({required this.info, required this.onSelected, required this.onRemoved});
 
   @override
   State<StatefulWidget> createState() => _FavoriteItemViewState();
@@ -74,25 +81,30 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
   @override
   Widget build(BuildContext context) {
     final info = widget.info;
-    final poster = info.imageUrl;
+    final poster = info.image?.url;
     final Widget content;
 
     content = Stack(
       children: [
-        Center(
-          child: Card(
-            elevation: _selected ? 5 : 1,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (poster != null)
-                    Expanded(
-                      child: Image.network(poster),
-                    ),
-                  Text(info.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                ],
+        InkWell(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: info)));
+          },
+          child: Center(
+            child: Card(
+              elevation: _selected ? 5 : 1,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (poster != null)
+                      Expanded(
+                        child: Image.network(poster),
+                      ),
+                    Text(info.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
               ),
             ),
           ),

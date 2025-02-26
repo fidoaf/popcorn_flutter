@@ -1,8 +1,10 @@
-import 'package:popcorn_flutter/favorite/core/model/favorite_media.dart';
+import 'package:popcorn_flutter/search/core/model/media_info.dart';
 
 abstract class IFavoriteStorage {
-  Future<bool> add(FavoriteMediaInfo info);
-  Future<bool> remove(FavoriteMediaInfo info);
+  Future<bool> add(MediaInfo info);
+  Future<bool> remove(MediaInfo info);
 
-  Future<List<FavoriteMediaInfo>> getAll();
+  Future<List<MediaInfo>> getAll();
+
+  Future<bool> clear();
 }

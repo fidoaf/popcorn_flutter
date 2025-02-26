@@ -1,6 +1,6 @@
 import 'package:desktop_window/desktop_window.dart';
 import 'package:flutter/material.dart';
-import 'package:popcorn_flutter/search/view/gui/app_search_view.dart';
+import 'package:popcorn_flutter/search/view/gui/app_search_form.dart';
 
 const double _fixedWidth = 800;
 const double _fixedHeight = 800;
