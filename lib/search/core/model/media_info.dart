@@ -27,6 +27,14 @@ class MediaInfo {
       'image': image?.toJson(),
     };
   }
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is MediaInfo && hashCode == other.hashCode;
+  }
 }
 
 class MovieInfo extends MediaInfo {

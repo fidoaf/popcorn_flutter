@@ -4,6 +4,7 @@ import 'package:popcorn_flutter/player/view/gui/media_info_details_view.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 import 'package:popcorn_flutter/search/core/model/media_search.dart';
 import 'package:popcorn_flutter/search/core/model/media_type.dart';
+import 'package:popcorn_flutter/search/view/gui/media_type_extension.dart';
 import 'package:popcorn_flutter/search/view/media_search_controller.dart';
 import 'package:popcorn_flutter/shared/view/list/paginator_view.dart';
 
@@ -74,19 +75,27 @@ class _MediaSearchResultsPageState extends State<MediaSearchResultsPage> {
                       final isFavorite = _isMediaFavorite(item);
                       return InkWell(
                         onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: item)));
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: item), settings: RouteSettings(name: '/${item.id}/details'))).then((refresh) {
+                            if (refresh == true) {
+                              setState(() {
+                                _isModified = true;
+                              });
+                            }
+                          });
                         },
                         child: Card(
                           key: ValueKey(item.name),
                           child: ListTile(
+                            leading: item.type?.icon,
                             title: Text(item.name),
                             subtitle: Text(item.dateExplanation),
                             trailing: IconButton(
                               icon: const Icon(Icons.favorite),
                               color: isFavorite ? Colors.red : Colors.white,
                               onPressed: () async {
-                                await _controller.addFavorite(item);
+                                isFavorite ? await _controller.removeFavorite(item) : await _controller.addFavorite(item);
                                 _isModified = true;
+                                setState(() {});
                               },
                             ),
                           ),

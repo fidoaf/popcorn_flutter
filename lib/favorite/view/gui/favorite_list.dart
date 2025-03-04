@@ -32,7 +32,9 @@ class FavoriteListViewState extends State<FavoriteListView> {
   }
 
   void _showMediaDetails(MediaInfo fav) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: fav)));
+    Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: fav), settings: RouteSettings(name: '/${fav.id}/details'))).then((refresh) {
+      if (refresh == true) setState(() {});
+    });
   }
 
   @override
@@ -87,7 +89,14 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
       children: [
         InkWell(
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: info)));
+            Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: info), settings: RouteSettings(name: '/${info.id}/details'))).then((refresh) {
+              if (refresh == true) {
+                if (_controller.isFavorite(info)) {
+                } else {
+                  widget.onRemoved(info);
+                }
+              }
+            });
           },
           child: Center(
             child: Card(

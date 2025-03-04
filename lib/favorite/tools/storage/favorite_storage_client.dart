@@ -23,7 +23,8 @@ class FavoriteStorageClient implements IFavoriteStorage {
   Future<bool> remove(MediaInfo info) async {
     final rawList = _prefs.getStringList(_favKey) ?? [];
     final newList = rawList.map((text) => MediaInfo.fromJson(jsonDecode(text))).where((fav) => fav != info);
-    return _prefs.setStringList(_favKey, newList.map((i) => jsonEncode(i.toJson())).toList());
+    final removed = await _prefs.setStringList(_favKey, newList.map((i) => jsonEncode(i.toJson())).toList());
+    return removed;
   }
 
   @override

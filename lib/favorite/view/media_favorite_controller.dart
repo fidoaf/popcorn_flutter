@@ -11,6 +11,11 @@ class MediaFavoriteController {
     return _favList.get();
   }
 
+  bool isFavorite(MediaInfo info) {
+    final favorites = _favList.get();
+    return favorites.any((f) => f.id == info.id);
+  }
+
   Future<bool> removeFavorite(MediaInfo info) {
     return _removeFav.remove(info: info);
   }
