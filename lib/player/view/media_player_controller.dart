@@ -5,6 +5,7 @@ import 'package:popcorn_flutter/favorite/core/use_case/remove_favorite_media_inf
 import 'package:popcorn_flutter/favorite/tools/storage/favorite_storage_client.dart';
 import 'package:popcorn_flutter/player/core/use_case/media_available.dart';
 import 'package:popcorn_flutter/player/core/use_case/play_media.dart';
+import 'package:popcorn_flutter/player/tools/vidsrc/instances/vidsrc_dev.dart';
 import 'package:popcorn_flutter/player/tools/vidsrc/vidsrc_media_player.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 import 'package:popcorn_flutter/search/core/model/media_search.dart';
@@ -12,8 +13,8 @@ import 'package:popcorn_flutter/search/core/use_case/media_full_details.dart';
 import 'package:popcorn_flutter/search/tools/omdb/omdb_media_search.dart';
 
 class MediaPlayerController {
-  final PlayMediaItem _player = const PlayMediaItem(player: VidsrcMediaPlayer());
-  final AvailableMediaItem _avMedia = const AvailableMediaItem(player: VidsrcMediaPlayer());
+  final PlayMediaItem _player = const PlayMediaItem(player: VidsrcMediaPlayer(VidsrcDev()));
+  final AvailableMediaItem _avMedia = const AvailableMediaItem(player: VidsrcMediaPlayer(VidsrcDev()));
   final _listFav = const GetFavoriteMediaList(storage: FavoriteStorageClient());
   final _addFav = const AddFavoriteMediaInfo(storage: FavoriteStorageClient());
   final _removeFav = const RemoveFavoriteMediaInfo(storage: FavoriteStorageClient());

@@ -74,31 +74,71 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
               alignment: Alignment.bottomCenter,
               padding: const EdgeInsets.only(bottom: 20),
               child: Center(
-                child: Column(
-                  children: [
-                    Text(
-                      info.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    Text(
-                      info.dateExplanation,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    FutureBuilder<MediaInfoResult>(
-                      future: _controller.getDetails(info),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
-                          final details = snapshot.data?.details;
-                          return details == null ? const Wrap() : Text(details.id);
-                        } else {
-                          return const Wrap();
-                        }
-                      },
-                    ),
-                  ],
+                child: Container(
+                  color: Colors.black,
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  child: Column(
+                    children: [
+                      Text(
+                        info.name,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        info.dateExplanation,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      FutureBuilder<MediaInfoResult>(
+                        future: _controller.getDetails(info),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            final info = snapshot.data?.details;
+                            return info == null ? const Wrap() : _ExtendedDetails(details: info);
+                          } else {
+                            return const Wrap();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
+    );
+  }
+}
+
+class _ExtendedDetails extends StatelessWidget {
+  final MediaFullDetails details;
+  const _ExtendedDetails({required this.details});
+
+  @override
+  Widget build(BuildContext context) {
+    final genres = details.genres;
+    final casting = details.casting;
+    return Column(
+      children: [
+        const SizedBox(height: 32),
+        //
+        if (genres.isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Genres:'),
+              ...genres.map((g) => Text('- $g')),
+              const SizedBox(height: 32),
+            ],
+          ),
+        //
+        if (casting.isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Casting:'),
+              ...casting.map((c) => Text('- $c')),
+              const SizedBox(height: 32),
+            ],
+          ),
+      ],
     );
   }
 }

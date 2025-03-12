@@ -29,11 +29,11 @@ class MediaFullDetails {
   // final String rated;
   // final String released;
   // final String runtime;
-  // final String genre;
+  final List<String> genres;
   // final String director;
   // final String writer;
-  // final String actors;
-  // final String plot;
+  final List<String> casting;
+  final String plot;
   // final String language;
   // final String country;
   // final String awards;
@@ -48,11 +48,11 @@ class MediaFullDetails {
     // required this.rated,
     // required this.released,
     // required this.runtime,
-    // required this.genre,
+    this.genres = const [],
     // required this.director,
     // required this.writer,
-    // required this.actors,
-    // required this.plot,
+    this.casting = const [],
+    this.plot = "",
     // required this.language,
     // required this.country,
     // required this.awards,

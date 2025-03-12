@@ -9,10 +9,9 @@ class OMDBDetailsVO extends MediaFullDetails {
   final String rated;
   final String released;
   final String runtime;
-  final String genre;
   final String director;
   final String writer;
-  final String actors;
+  @override
   final String plot;
   final String language;
   final String country;
@@ -27,10 +26,8 @@ class OMDBDetailsVO extends MediaFullDetails {
     required this.rated,
     required this.released,
     required this.runtime,
-    required this.genre,
     required this.director,
     required this.writer,
-    required this.actors,
     required this.plot,
     required this.language,
     required this.country,
@@ -47,14 +44,16 @@ class OMDBDetailsVO extends MediaFullDetails {
     final type = OMDBMediaTypeVO.fromData(data['Type']);
     final posterUrl = data['Poster'];
     final poster = posterUrl == null ? null : MediaImage(url: posterUrl, type: MediaImageType.poster);
+    final plot = data['Plot'];
+
+    final genreList = parseList(data, 'Genre');
+    final actorList = parseList(data, 'Actors');
+
     final rated = data['Rated'];
     final released = data['Released'];
     final runtime = data['Runtime'];
-    final genre = data['Genre'];
     final director = data['Director'];
     final write = data['Writer'];
-    final actors = data['Actors'];
-    final plot = data['Plot'];
     final language = data['Language'];
     final country = data['Country'];
     // TODO: Ratings
@@ -68,6 +67,9 @@ class OMDBDetailsVO extends MediaFullDetails {
           id: id,
           name: name,
           image: poster,
+          genres: genreList,
+          casting: actorList,
+          plot: plot,
           // releaseDate: releaseYear == null ? DateTime.now() : DateTime(releaseYear),
         );
       case MediaType.series:
@@ -79,6 +81,9 @@ class OMDBDetailsVO extends MediaFullDetails {
           id: id,
           name: name,
           image: poster,
+          genres: genreList,
+          casting: actorList,
+          plot: plot,
           // startDate: releaseYear == null ? DateTime.now() : DateTime(releaseYear),
           // endDate: endYear == null ? DateTime.now() : DateTime(endYear),
         );
