@@ -1,4 +1,4 @@
-import 'package:popcorn_flutter/app/core/application_configuration.dart';
+import 'package:popcorn_flutter/app/core/service_locator.dart';
 import 'package:popcorn_flutter/favorite/core/use_case/add_favorite_media_info.dart';
 import 'package:popcorn_flutter/favorite/core/use_case/get_favorite_media_list.dart';
 import 'package:popcorn_flutter/favorite/core/use_case/remove_favorite_media_info.dart';
@@ -10,7 +10,7 @@ import 'package:popcorn_flutter/search/core/use_case/search_media_info.dart';
 import 'package:popcorn_flutter/search/tools/omdb/omdb_media_search.dart';
 
 class MediaSearchController {
-  final _searcher = const SearchMediaInfo(searcher: OMDBSearcher(secretKey: omdbKeySecret));
+  final _searcher = SearchMediaInfo(searcher: OMDBSearcher(secretKey: ServiceLocator.configuration.omdbKeySecret));
   final _listFav = const GetFavoriteMediaList(storage: FavoriteStorageClient());
   final _addFav = const AddFavoriteMediaInfo(storage: FavoriteStorageClient());
   final _removeFav = const RemoveFavoriteMediaInfo(storage: FavoriteStorageClient());

@@ -187,3 +187,4 @@ devtools_options.yaml
 .local-chrome/131.0.6778.204/chrome-win64/resources/accessibility/reading_mode_gdocs_helper_manifest.json
 .local-chrome/131.0.6778.204/chrome-win64/resources/accessibility/reading_mode_gdocs_helper/content.js
 .local-chrome/131.0.6778.204/chrome-win64/resources/accessibility/reading_mode_gdocs_helper/gdocs_script.js
+.env

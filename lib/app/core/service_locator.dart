@@ -1,10 +1,16 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:popcorn_flutter/configuration/core/model/application_configuration.dart';
+import 'package:popcorn_flutter/configuration/tools/dotenv/dotenv_handler.dart';
+import 'package:popcorn_flutter/storage/core/model/application_storage.dart';
+import 'package:popcorn_flutter/storage/tools/preference_handler.dart';
 
 class ServiceLocator {
+  ServiceLocator._();
+
   static final _cache = <Type, dynamic>{};
 
   static init() async {
-    put<SharedPreferences>(await SharedPreferences.getInstance());
+    put<ApplicationConfiguration>(await DotEnvHandler.getInstance());
+    put<ApplicationStorage>(await PreferenceHandler.getInstance());
   }
 
   static void put<T>(T obj) {
@@ -14,4 +20,7 @@ class ServiceLocator {
   static T get<T>() {
     return _cache[T];
   }
+
+  static ApplicationConfiguration get configuration => get<ApplicationConfiguration>();
+  static ApplicationStorage get storage => get<ApplicationStorage>();
 }

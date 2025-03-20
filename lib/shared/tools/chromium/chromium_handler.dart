@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:popcorn_flutter/app/core/service_locator.dart';
+import 'package:popcorn_flutter/shared/tools/chromium/browser.dart';
 import 'package:puppeteer/puppeteer.dart';
 
 class ChromiumHandler {
@@ -7,7 +9,7 @@ class ChromiumHandler {
   static const String _domain = 'localhost';
   static const int _port = 56789;
 
-  static const String _chromePath = r'C:\Program Files\Google\Chrome\Application\chrome.exe';
+  static final BrowserType _browserType = BrowserType.fromString(ServiceLocator.configuration.browser);
   static const List<String> _chromeArgs = [
     '--remote-debugging-port=$_port',
     '--ash-enable-night-light',
@@ -31,6 +33,8 @@ class ChromiumHandler {
   }
 
   ChromiumHandler._internal();
+
+  String get _chromePath => _browserType.path;
 
   Future<bool> launch(String url) async {
     _process ??= await Process.start(

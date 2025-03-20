@@ -37,6 +37,7 @@ void main(List<String> args) async {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
+      themeMode: ThemeMode.system,
       home: const MediaSearchFormPage(),
     ),
   );

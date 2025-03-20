@@ -12,7 +12,7 @@ class MediaInfoDetails extends StatefulWidget {
 }
 
 class MediaInfoDetailsState extends State<MediaInfoDetails> {
-  final _controller = const MediaPlayerController();
+  final _controller = MediaPlayerController();
 
   MediaInfoDetailsState();
 
@@ -77,28 +77,32 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
                 child: Container(
                   color: Colors.black,
                   width: MediaQuery.of(context).size.width * 0.75,
-                  child: Column(
-                    children: [
-                      Text(
-                        info.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        info.dateExplanation,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      FutureBuilder<MediaInfoResult>(
-                        future: _controller.getDetails(info),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            final info = snapshot.data?.details;
-                            return info == null ? const Wrap() : _ExtendedDetails(details: info);
-                          } else {
-                            return const Wrap();
-                          }
-                        },
-                      ),
-                    ],
+                  child: Card(
+                    margin: EdgeInsets.zero,
+                    shape: const OutlineInputBorder(),
+                    child: Column(
+                      children: [
+                        Text(
+                          info.name,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          info.dateExplanation,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        FutureBuilder<MediaInfoResult>(
+                          future: _controller.getDetails(info),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              final info = snapshot.data?.details;
+                              return info == null ? const Wrap() : _ExtendedDetails(details: info);
+                            } else {
+                              return const Wrap();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
