@@ -32,7 +32,13 @@ class FavoriteListViewState extends State<FavoriteListView> {
   }
 
   void _showMediaDetails(MediaInfo fav) {
-    Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: fav), settings: RouteSettings(name: '/${fav.id}/details'))).then((refresh) {
+    Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MediaInfoDetails(info: fav),
+        settings: RouteSettings(name: '/${fav.id}/details'),
+      ),
+    ).then((refresh) {
       if (refresh == true) setState(() {});
     });
   }
@@ -44,7 +50,9 @@ class FavoriteListViewState extends State<FavoriteListView> {
     } else {
       return GridView.builder(
         itemCount: _favoriteList.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+        ),
         itemBuilder: (context, index) {
           final fav = _favoriteList[index];
           return _FavoriteItemView(
@@ -62,7 +70,11 @@ class _FavoriteItemView extends StatefulWidget {
   final MediaInfo info;
   final Function(MediaInfo) onSelected;
   final Function(MediaInfo) onRemoved;
-  const _FavoriteItemView({required this.info, required this.onSelected, required this.onRemoved});
+  const _FavoriteItemView({
+    required this.info,
+    required this.onSelected,
+    required this.onRemoved,
+  });
 
   @override
   State<StatefulWidget> createState() => _FavoriteItemViewState();
@@ -89,7 +101,13 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
       children: [
         InkWell(
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: info), settings: RouteSettings(name: '/${info.id}/details'))).then((refresh) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MediaInfoDetails(info: info),
+                settings: RouteSettings(name: '/${info.id}/details'),
+              ),
+            ).then((refresh) {
               if (refresh == true) {
                 if (_controller.isFavorite(info)) {
                 } else {
@@ -108,9 +126,17 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
                   children: [
                     if (poster != null)
                       Expanded(
-                        child: Image.network(poster),
+                        child: Image.network(
+                          poster,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(Icons.image_not_supported);
+                          },
+                        ),
                       ),
-                    Text(info.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      info.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
               ),
@@ -119,26 +145,28 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
         ),
         if (_selected)
           Align(
-              alignment: Alignment.topRight,
-              child: IconButton.outlined(
-                onPressed: () async {
-                  final success = await _controller.removeFavorite(info);
-                  if (success) widget.onRemoved(info);
-                },
-                icon: const Icon(Icons.close),
-              )),
+            alignment: Alignment.topRight,
+            child: IconButton.outlined(
+              onPressed: () async {
+                final success = await _controller.removeFavorite(info);
+                if (success) widget.onRemoved(info);
+              },
+              icon: const Icon(Icons.close),
+            ),
+          ),
       ],
     );
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: Container(
-        decoration: _selected
-            ? const BoxDecoration(
-                // borderRadius: BorderRadius.circular(8),
-                // border: Border.all(color: Colors.grey),
+        decoration:
+            _selected
+                ? const BoxDecoration(
+                  // borderRadius: BorderRadius.circular(8),
+                  // border: Border.all(color: Colors.grey),
                 )
-            : null,
+                : null,
         child: content,
       ),
       onEnter: (_) => _updateHover(true),

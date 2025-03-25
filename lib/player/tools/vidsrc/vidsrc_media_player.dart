@@ -2,13 +2,16 @@ import 'package:popcorn_flutter/player/core/model/media_play.dart';
 import 'package:popcorn_flutter/player/core/model/media_player_request.dart';
 import 'package:popcorn_flutter/player/tools/vidsrc/instances/vidsrc_instance.dart';
 import 'package:popcorn_flutter/search/core/model/media_type.dart';
-import 'package:popcorn_flutter/shared/tools/chromium/chromium_handler.dart';
+import 'package:popcorn_flutter/shared/core/model/web_renderer.dart';
 
 class VidsrcMediaPlayer implements IMediaPlayer {
-  static final ChromiumHandler _handler = ChromiumHandler();
-
+  final IWebRenderer _renderer;
   final VidSrcInstance _instance;
-  const VidsrcMediaPlayer(this._instance);
+  const VidsrcMediaPlayer({
+    required IWebRenderer renderer,
+    required VidSrcInstance instance,
+  }) : _renderer = renderer,
+       _instance = instance;
 
   String _getMediaUrl(MediaPlayerRequest request) {
     switch (request.type) {
@@ -20,16 +23,14 @@ class VidsrcMediaPlayer implements IMediaPlayer {
   }
 
   Future<bool> _openPlayer(String mediaUrl) {
-    return _handler.launch(mediaUrl);
+    return _renderer.launch(mediaUrl);
     // return launchUrlString(mediaUrl);
   }
 
   @override
   Future<bool> isAvailable(MediaPlayerRequest request) async {
-    // final url = _getMediaUrl(request);
-    // final response = await get(Uri.parse(url));
-    // return response.statusCode == HttpStatus.accepted;
-    return true;
+    final url = _getMediaUrl(request);
+    return _renderer.check(url);
   }
 
   @override

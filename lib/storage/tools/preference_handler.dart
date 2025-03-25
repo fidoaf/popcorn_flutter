@@ -1,4 +1,3 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:popcorn_flutter/storage/core/model/application_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,6 +24,21 @@ class PreferenceHandler extends ApplicationStorage {
 
   @override
   int? getInt(String key) {
-    return dotenv.getInt(key);
+    return _prefs.getInt(key);
+  }
+  
+  @override
+  List<String>? getStringList(String key) {
+    return _prefs.getStringList(key);
+  }
+  
+  @override
+  Future<bool> setStringList(String key, List<String> value) {
+    return _prefs.setStringList(key, value);
+  }
+  
+  @override
+  Future<bool> clear() {
+    return _prefs.clear();
   }
 }

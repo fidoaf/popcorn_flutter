@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:popcorn_flutter/app/core/service_locator.dart';
 import 'package:popcorn_flutter/favorite/core/model/favorite_storage.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:popcorn_flutter/storage/core/model/application_storage.dart';
 
 class FavoriteStorageClient implements IFavoriteStorage {
   static const _favKey = 'favorites';
 
-  static final _prefs = ServiceLocator.get<SharedPreferences>();
+  static final _prefs = ServiceLocator.get<ApplicationStorage>();
 
   const FavoriteStorageClient();
 

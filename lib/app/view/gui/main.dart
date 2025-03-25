@@ -2,6 +2,7 @@ import 'package:desktop_window/desktop_window.dart';
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/app/core/service_locator.dart';
 import 'package:popcorn_flutter/search/view/gui/app_search_form.dart';
+import 'package:popcorn_flutter/shared/core/model/navigation_service.dart';
 
 const double _fixedWidth = 800;
 const double _fixedHeight = 800;
@@ -34,6 +35,7 @@ void main(List<String> args) async {
   //
   runApp(
     MaterialApp(
+      navigatorKey: NavigationService.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),

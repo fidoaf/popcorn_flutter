@@ -11,11 +11,12 @@ import 'package:popcorn_flutter/search/core/model/media_info.dart';
 import 'package:popcorn_flutter/search/core/model/media_search.dart';
 import 'package:popcorn_flutter/search/core/use_case/media_full_details.dart';
 import 'package:popcorn_flutter/search/tools/omdb/omdb_media_search.dart';
+import 'package:popcorn_flutter/shared/tools/inapp_web/inapp_webview.dart';
 
 class MediaPlayerController {
   final _videoType = VidsrcType.fromString(ServiceLocator.configuration.vidsrcInstance);
-  late final PlayMediaItem _player = PlayMediaItem(player: VidsrcMediaPlayer(_videoType.instance));
-  late final AvailableMediaItem _avMedia = AvailableMediaItem(player: VidsrcMediaPlayer(_videoType.instance));
+  late final PlayMediaItem _player = PlayMediaItem(player: VidsrcMediaPlayer(renderer: InAppWebRenderer(), instance: _videoType.instance));
+  late final AvailableMediaItem _avMedia = AvailableMediaItem(player: VidsrcMediaPlayer(renderer: InAppWebRenderer(), instance: _videoType.instance));
   final _listFav = const GetFavoriteMediaList(storage: FavoriteStorageClient());
   final _addFav = const AddFavoriteMediaInfo(storage: FavoriteStorageClient());
   final _removeFav = const RemoveFavoriteMediaInfo(storage: FavoriteStorageClient());

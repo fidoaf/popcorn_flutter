@@ -40,11 +40,13 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
             icon: const Icon(Icons.favorite),
             color: isFavorite ? Colors.red : Colors.white,
             onPressed: () async {
-              isFavorite ? await _controller.removeFavorite(info) : await _controller.addFavorite(info);
+              isFavorite
+                  ? await _controller.removeFavorite(info)
+                  : await _controller.addFavorite(info);
               _isModified = true;
               setState(() {});
             },
-          )
+          ),
         ],
       ),
       floatingActionButton: FutureBuilder<bool>(
@@ -53,60 +55,76 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
           if (snapshot.hasData) {
             final isAvailable = snapshot.data == true;
             return isAvailable
-                ? FloatingActionButton.large(onPressed: () => _controller.openPlayer(info), child: const Icon(Icons.play_circle))
-                : const FloatingActionButton.large(onPressed: null, backgroundColor: Colors.red, child: Icon(Icons.close));
+                ? FloatingActionButton.large(
+                  onPressed: () {
+                    _controller.openPlayer(info);
+                  },
+                  child: const Icon(Icons.play_circle),
+                )
+                : const FloatingActionButton.large(
+                  onPressed: null,
+                  backgroundColor: Colors.red,
+                  child: Icon(Icons.close),
+                );
           } else {
-            return const FloatingActionButton.large(onPressed: null, child: CircularProgressIndicator());
+            return const FloatingActionButton.large(
+              onPressed: null,
+              child: CircularProgressIndicator(),
+            );
           }
         },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      body: poster == null
-          ? const Wrap()
-          : Container(
-              foregroundDecoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(poster.url),
-                  fit: BoxFit.fitHeight,
-                  opacity: 0.2,
+      body:
+          poster == null
+              ? const Wrap()
+              : Container(
+                foregroundDecoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(poster.url),
+                    fit: BoxFit.fitHeight,
+                    opacity: 0.2,
+                  ),
                 ),
-              ),
-              alignment: Alignment.bottomCenter,
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Center(
-                child: Container(
-                  color: Colors.black,
-                  width: MediaQuery.of(context).size.width * 0.75,
-                  child: Card(
-                    margin: EdgeInsets.zero,
-                    shape: const OutlineInputBorder(),
-                    child: Column(
-                      children: [
-                        Text(
-                          info.name,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          info.dateExplanation,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        FutureBuilder<MediaInfoResult>(
-                          future: _controller.getDetails(info),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasData) {
-                              final info = snapshot.data?.details;
-                              return info == null ? const Wrap() : _ExtendedDetails(details: info);
-                            } else {
-                              return const Wrap();
-                            }
-                          },
-                        ),
-                      ],
+                alignment: Alignment.bottomCenter,
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Center(
+                  child: Container(
+                    color: Colors.black,
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      shape: const OutlineInputBorder(),
+                      child: Column(
+                        children: [
+                          Text(
+                            info.name,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            info.dateExplanation,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          FutureBuilder<MediaInfoResult>(
+                            future: _controller.getDetails(info),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
+                                final info = snapshot.data?.details;
+                                return info == null
+                                    ? const Wrap()
+                                    : _ExtendedDetails(details: info);
+                              } else {
+                                return const Wrap();
+                              }
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
     );
   }
 }
