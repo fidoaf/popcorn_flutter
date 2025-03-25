@@ -1,4 +1,3 @@
-import 'package:desktop_window/desktop_window.dart';
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/app/core/service_locator.dart';
 import 'package:popcorn_flutter/search/view/gui/app_search_form.dart';
@@ -11,10 +10,10 @@ void _adjustWindow() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Fix size
-  const fixSize = Size(_fixedWidth, _fixedHeight);
-  await DesktopWindow.setWindowSize(fixSize);
-  await DesktopWindow.setMinWindowSize(fixSize);
-  await DesktopWindow.setMaxWindowSize(fixSize);
+  // const fixSize = Size(_fixedWidth, _fixedHeight);
+  // await DesktopWindow.setWindowSize(fixSize);
+  // await DesktopWindow.setMinWindowSize(fixSize);
+  // await DesktopWindow.setMaxWindowSize(fixSize);
 
   // await DesktopWindow.resetMaxWindowSize();
   // await DesktopWindow.toggleFullScreen();

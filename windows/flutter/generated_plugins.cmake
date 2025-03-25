@@ -3,8 +3,8 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  desktop_window
   flutter_inappwebview_windows
+  fullscreen_window
   url_launcher_windows
 )
 
