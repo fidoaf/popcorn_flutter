@@ -3,6 +3,7 @@ import 'package:popcorn_flutter/favorite/core/use_case/add_favorite_media_info.d
 import 'package:popcorn_flutter/favorite/core/use_case/get_favorite_media_list.dart';
 import 'package:popcorn_flutter/favorite/core/use_case/remove_favorite_media_info.dart';
 import 'package:popcorn_flutter/favorite/tools/storage/favorite_storage_client.dart';
+import 'package:popcorn_flutter/history/tools/storage/history_storage_client.dart';
 import 'package:popcorn_flutter/player/core/use_case/media_available.dart';
 import 'package:popcorn_flutter/player/core/use_case/play_media.dart';
 import 'package:popcorn_flutter/player/tools/vidsrc/instances/vidsrc_instance.dart';
@@ -15,7 +16,7 @@ import 'package:popcorn_flutter/shared/tools/inapp_web/inapp_webview.dart';
 
 class MediaPlayerController {
   final _videoType = VidsrcType.fromString(ServiceLocator.configuration.vidsrcInstance);
-  late final PlayMediaItem _player = PlayMediaItem(player: VidsrcMediaPlayer(renderer: InAppWebRenderer(), instance: _videoType.instance));
+  late final PlayMediaItem _player = PlayMediaItem(player: VidsrcMediaPlayer(renderer: InAppWebRenderer(), instance: _videoType.instance), storage: const HistoryStorageClient());
   late final AvailableMediaItem _avMedia = AvailableMediaItem(player: VidsrcMediaPlayer(renderer: InAppWebRenderer(), instance: _videoType.instance));
   final _listFav = const GetFavoriteMediaList(storage: FavoriteStorageClient());
   final _addFav = const AddFavoriteMediaInfo(storage: FavoriteStorageClient());

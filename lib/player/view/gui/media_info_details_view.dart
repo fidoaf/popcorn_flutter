@@ -36,16 +36,17 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
           icon: const Icon(Icons.arrow_back),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite),
-            color: isFavorite ? Colors.red : Colors.white,
-            onPressed: () async {
-              isFavorite
-                  ? await _controller.removeFavorite(info)
-                  : await _controller.addFavorite(info);
-              _isModified = true;
-              setState(() {});
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: IconButton.outlined(
+              icon: const Icon(Icons.favorite),
+              color: isFavorite ? Colors.red : Colors.white,
+              onPressed: () async {
+                isFavorite ? await _controller.removeFavorite(info) : await _controller.addFavorite(info);
+                _isModified = true;
+                setState(() {});
+              },
+            ),
           ),
         ],
       ),
@@ -61,16 +62,9 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
                   },
                   child: const Icon(Icons.play_circle),
                 )
-                : const FloatingActionButton.large(
-                  onPressed: null,
-                  backgroundColor: Colors.red,
-                  child: Icon(Icons.close),
-                );
+                : const FloatingActionButton.large(onPressed: null, backgroundColor: Colors.red, child: Icon(Icons.close));
           } else {
-            return const FloatingActionButton.large(
-              onPressed: null,
-              child: CircularProgressIndicator(),
-            );
+            return const FloatingActionButton.large(onPressed: null, child: CircularProgressIndicator());
           }
         },
       ),
@@ -79,13 +73,7 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
           poster == null
               ? const Wrap()
               : Container(
-                foregroundDecoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(poster.url),
-                    fit: BoxFit.fitHeight,
-                    opacity: 0.2,
-                  ),
-                ),
+                foregroundDecoration: BoxDecoration(image: DecorationImage(image: NetworkImage(poster.url), fit: BoxFit.fitHeight, opacity: 0.2)),
                 alignment: Alignment.bottomCenter,
                 padding: const EdgeInsets.only(bottom: 20),
                 child: Center(
@@ -97,23 +85,14 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
                       shape: const OutlineInputBorder(),
                       child: Column(
                         children: [
-                          Text(
-                            info.name,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            info.dateExplanation,
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
+                          Text(info.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(info.dateExplanation, style: Theme.of(context).textTheme.titleSmall),
                           FutureBuilder<MediaInfoResult>(
                             future: _controller.getDetails(info),
                             builder: (context, snapshot) {
                               if (snapshot.hasData) {
                                 final info = snapshot.data?.details;
-                                return info == null
-                                    ? const Wrap()
-                                    : _ExtendedDetails(details: info);
+                                return info == null ? const Wrap() : _ExtendedDetails(details: info);
                               } else {
                                 return const Wrap();
                               }
@@ -141,25 +120,9 @@ class _ExtendedDetails extends StatelessWidget {
       children: [
         const SizedBox(height: 32),
         //
-        if (genres.isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Genres:'),
-              ...genres.map((g) => Text('- $g')),
-              const SizedBox(height: 32),
-            ],
-          ),
+        if (genres.isNotEmpty) Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Genres:'), ...genres.map((g) => Text('- $g')), const SizedBox(height: 32)]),
         //
-        if (casting.isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Casting:'),
-              ...casting.map((c) => Text('- $c')),
-              const SizedBox(height: 32),
-            ],
-          ),
+        if (casting.isNotEmpty) Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Casting:'), ...casting.map((c) => Text('- $c')), const SizedBox(height: 32)]),
       ],
     );
   }

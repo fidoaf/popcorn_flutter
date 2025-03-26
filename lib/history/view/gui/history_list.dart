@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:popcorn_flutter/favorite/view/media_favorite_controller.dart';
+import 'package:popcorn_flutter/history/view/media_history_controller.dart';
 import 'package:popcorn_flutter/player/view/gui/media_info_details_view.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 
-class FavoriteListView extends StatefulWidget {
-  const FavoriteListView({super.key});
+class HistoryListView extends StatefulWidget {
+  const HistoryListView({super.key});
 
   @override
-  State<StatefulWidget> createState() => FavoriteListViewState();
+  State<StatefulWidget> createState() => HistoryListViewState();
 }
 
-class FavoriteListViewState extends State<FavoriteListView> {
-  final _controller = MediaFavoriteController();
+class HistoryListViewState extends State<HistoryListView> {
+  final _controller = MediaHistoryController();
 
-  final _favoriteList = <MediaInfo>[];
+  final _historyList = <MediaInfo>[];
 
   @override
   void initState() {
@@ -23,9 +23,9 @@ class FavoriteListViewState extends State<FavoriteListView> {
   }
 
   void _refresh() {
-    final list = _controller.getFavoriteList();
+    final list = _controller.getHistoryList();
     setState(() {
-      _favoriteList
+      _historyList
         ..clear()
         ..addAll(list);
     });
@@ -39,21 +39,21 @@ class FavoriteListViewState extends State<FavoriteListView> {
 
   @override
   Widget build(BuildContext context) {
-    if (_favoriteList.isEmpty) {
+    if (_historyList.isEmpty) {
       return const Wrap();
     } else {
       return ConstrainedBox(
-        constraints: const BoxConstraints.tightForFinite(height: 330),
+        constraints: const BoxConstraints.tightForFinite(height: 300),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text("Favorites", style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text("Continue watching", style: TextStyle(fontWeight: FontWeight.bold)),
             GridView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
               children:
-                  _favoriteList.map((fav) {
+                  _historyList.map((fav) {
                     return _FavoriteItemView(info: fav, onSelected: (item) => _showMediaDetails(item), onRemoved: (item) => _refresh());
                   }).toList(),
             ),
@@ -75,7 +75,7 @@ class _FavoriteItemView extends StatefulWidget {
 }
 
 class _FavoriteItemViewState extends State<_FavoriteItemView> {
-  final _controller = MediaFavoriteController();
+  final _controller = MediaHistoryController();
 
   bool _selected = false;
 
@@ -97,7 +97,7 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
           onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: info), settings: RouteSettings(name: '/${info.id}/details'))).then((refresh) {
               if (refresh == true) {
-                if (_controller.isFavorite(info)) {
+                if (_controller.isWatching(info)) {
                 } else {
                   widget.onRemoved(info);
                 }
@@ -133,7 +133,7 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
             alignment: Alignment.topRight,
             child: IconButton.outlined(
               onPressed: () async {
-                final success = await _controller.removeFavorite(info);
+                final success = await _controller.removeFromHistory(info);
                 if (success) widget.onRemoved(info);
               },
               icon: const Icon(Icons.close),

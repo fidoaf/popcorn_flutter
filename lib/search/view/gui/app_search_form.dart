@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/app/view/gui/transition_page.dart';
 import 'package:popcorn_flutter/favorite/view/gui/favorite_list.dart';
+import 'package:popcorn_flutter/history/view/gui/history_list.dart';
 import 'package:popcorn_flutter/search/core/model/media_search.dart';
 import 'package:popcorn_flutter/search/core/model/media_type.dart';
 import 'package:popcorn_flutter/search/view/gui/app_search_results.dart';
@@ -21,6 +22,7 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
 
   bool _isLoading = false;
   MediaType? _selectedType;
+  GlobalKey? _histKey;
   GlobalKey? _favKey;
 
   @override
@@ -41,52 +43,51 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Flexible(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('What would you like to watch?'),
-                      TextFormField(
-                        autofocus: true,
-                        textCapitalization: TextCapitalization.sentences,
-                        controller: _textController,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (value) {
-                          return value == null || value.isEmpty ? 'You must input search terms' : null;
-                        },
-                        onFieldSubmitted: (_) => _search(),
-                      ),
-                      const SizedBox(height: 32),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          SegmentedButton(
-                            segments: MediaType.values.map((mt) => ButtonSegment<MediaType>(value: mt, label: Text(mt.name.toUpperCase()))).toList(),
-                            selected: _selectedType == null ? const {} : {_selectedType},
-                            emptySelectionAllowed: true,
-                            onSelectionChanged: (newSel) => setState(() {
-                              _selectedType = newSel.isEmpty ? null : newSel.first;
-                            }),
-                          ),
-                          OutlinedButton(onPressed: _search, child: const Text('SEARCH'))
-                        ],
-                      ),
-                    ],
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('What would you like to watch?'),
+                    TextFormField(
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.sentences,
+                      controller: _textController,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (value) {
+                        return value == null || value.isEmpty ? 'You must input search terms' : null;
+                      },
+                      onFieldSubmitted: (_) => _search(),
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        SegmentedButton(
+                          segments: MediaType.values.map((mt) => ButtonSegment<MediaType>(value: mt, label: Text(mt.name.toUpperCase()))).toList(),
+                          selected: _selectedType == null ? const {} : {_selectedType},
+                          emptySelectionAllowed: true,
+                          onSelectionChanged:
+                              (newSel) => setState(() {
+                                _selectedType = newSel.isEmpty ? null : newSel.first;
+                              }),
+                        ),
+                        OutlinedButton(onPressed: _search, child: const Text('SEARCH')),
+                      ],
+                    ),
+                  ],
                 ),
-                Flexible(flex: 1, child: FavoriteListView(key: _favKey)),
+
+                const SizedBox(height: 25),
+
+                Flexible(flex: 4, child: HistoryListView(key: _histKey)),
+                Flexible(flex: 4, child: FavoriteListView(key: _favKey)),
               ],
             ),
           ),
         ),
       );
     }
-    return Scaffold(
-      body: content,
-      appBar: appBar,
-    );
+    return Scaffold(body: content, appBar: appBar);
   }
 
   void _search() async {

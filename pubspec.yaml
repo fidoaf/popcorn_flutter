@@ -39,6 +39,7 @@ dependencies:
   shared_preferences: ^2.5.1
   url_launcher: ^6.3.1
   fullscreen_window: ^1.0.3
+  window_manager: ^0.4.3
 
   # Phased-out:
   # desktop_window: ^0.4.2

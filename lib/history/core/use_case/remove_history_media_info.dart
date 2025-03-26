@@ -2,9 +2,9 @@ import 'package:popcorn_flutter/search/core/model/media_info.dart';
 import 'package:popcorn_flutter/shared/core/use_case/use_case_interface.dart';
 import 'package:popcorn_flutter/storage/core/model/media_storage.dart';
 
-class RemoveFavoriteMediaInfo implements UseCase {
+class RemoveHistoryMediaInfo implements UseCase {
   final IMediaStorage _storage;
-  const RemoveFavoriteMediaInfo({required IMediaStorage storage}) : _storage = storage;
+  const RemoveHistoryMediaInfo({required IMediaStorage storage}) : _storage = storage;
 
   Future<bool> removeInfo({required MediaInfo info}) async {
     try {
