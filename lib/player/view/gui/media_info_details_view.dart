@@ -38,7 +38,7 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: IconButton.outlined(
+            child: IconButton.filled(
               icon: const Icon(Icons.favorite),
               color: isFavorite ? Colors.red : Colors.white,
               onPressed: () async {

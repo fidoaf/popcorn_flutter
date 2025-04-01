@@ -14,11 +14,24 @@ class FavoriteListViewState extends State<FavoriteListView> {
   final _controller = MediaFavoriteController();
 
   final _favoriteList = <MediaInfo>[];
+  final _scrollController = ScrollController();
+
+  bool _showSlider = false;
+  bool _showLeftScroller = false;
+  bool _showRightScroller = false;
 
   @override
   void initState() {
     _refresh();
     //
+    _scrollController.addListener(() {
+      if (_scrollController.position.viewportDimension > _scrollController.position.maxScrollExtent) {
+        setState(() {
+          _showLeftScroller = true;
+          _showRightScroller = true;
+        });
+      }
+    });
     super.initState();
   }
 
@@ -33,7 +46,9 @@ class FavoriteListViewState extends State<FavoriteListView> {
 
   void _showMediaDetails(MediaInfo fav) {
     Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: fav), settings: RouteSettings(name: '/${fav.id}/details'))).then((refresh) {
-      if (refresh == true) setState(() {});
+      if (refresh == true) {
+        setState(() {});
+      }
     });
   }
 
@@ -42,21 +57,44 @@ class FavoriteListViewState extends State<FavoriteListView> {
     if (_favoriteList.isEmpty) {
       return const Wrap();
     } else {
-      return ConstrainedBox(
-        constraints: const BoxConstraints.tightForFinite(height: 330),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      return MouseRegion(
+        onEnter:
+            (event) => setState(() {
+              _showSlider = true;
+            }),
+        onExit:
+            (event) => setState(() {
+              _showSlider = false;
+            }),
+        child: Stack(
           children: [
-            const Text("Favorites", style: TextStyle(fontWeight: FontWeight.bold)),
-            GridView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
-              children:
-                  _favoriteList.map((fav) {
-                    return _FavoriteItemView(info: fav, onSelected: (item) => _showMediaDetails(item), onRemoved: (item) => _refresh());
-                  }).toList(),
+            // Content
+            Column(
+              children: [
+                const Text("Favorites", style: TextStyle(fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      physics: const BouncingScrollPhysics(),
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children:
+                            _favoriteList.map((fav) {
+                              return ConstrainedBox(
+                                constraints: const BoxConstraints.tightForFinite(width: 175),
+                                child: _FavoriteItemView(info: fav, onSelected: (item) => _showMediaDetails(item), onRemoved: (item) => _refresh()),
+                              );
+                            }).toList(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
+            // GUI
+            if (_showSlider && _showLeftScroller) Align(alignment: Alignment.centerLeft, child: IconButton.filledTonal(onPressed: () {}, icon: const Icon(Icons.arrow_left))),
+            if (_showSlider && _showRightScroller) Align(alignment: Alignment.centerRight, child: IconButton.filledTonal(onPressed: () {}, icon: const Icon(Icons.arrow_right))),
           ],
         ),
       );
@@ -131,7 +169,7 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
         if (_selected)
           Align(
             alignment: Alignment.topRight,
-            child: IconButton.outlined(
+            child: IconButton.filled(
               onPressed: () async {
                 final success = await _controller.removeFavorite(info);
                 if (success) widget.onRemoved(info);
