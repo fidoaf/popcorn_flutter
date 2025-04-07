@@ -21,6 +21,16 @@ class OMDBSearcher implements IMediaSearcher {
   final String secretKey;
   const OMDBSearcher({required this.secretKey});
 
+  Map<String, dynamic>? _getSearchData(Response httpResponse) {
+    final rawData = httpResponse.body;
+    try {
+      final resultObj = jsonDecode(rawData);
+      return resultObj;
+    } catch (e) {
+      return null;
+    }
+  }
+
   @override
   Future<MediaSearchResult> searchMedia(MediaSearchRequest request) async {
     final requestPage = request.page;
@@ -31,22 +41,38 @@ class OMDBSearcher implements IMediaSearcher {
       if (mediaType != null) _typeParam: OMDBMediaTypeVO.fromType(mediaType),
       if (requestPage != null) _pageParam: '${requestPage + 1}',
     });
+
     final httpResponse = await get(url);
-    if (httpResponse.statusCode == 200) {
-      final rawData = httpResponse.body;
-      final resultObj = jsonDecode(rawData);
-      final hasResults = resultObj['Response'];
-      if (hasResults == true || (hasResults is String && bool.tryParse(hasResults.toLowerCase()) == true)) {
+    final resultObj = _getSearchData(httpResponse);
+    if (resultObj == null) {
+      return const MediaSearchResult(
+        errors: ['Unexpected error found on media search'],
+      );
+    } else {
+      final response = resultObj['Response'];
+      final hasResult =
+          response == true ||
+          (response is String && bool.tryParse(response.toLowerCase()) == true);
+      if (hasResult) {
         final items = resultObj['Search'] as List?;
         final numResults = int.tryParse(resultObj['totalResults']) ?? 0;
-        final mediaList = items?.map((i) => OMDBItemVO.fromData(i)).whereType<MediaInfo>().toList() ?? [];
-        return MediaSearchResult(list: MediaList(items: mediaList), totalCount: numResults, hasNextPage: true);
+        final mediaList =
+            items
+                ?.map((i) => OMDBItemVO.fromData(i))
+                .whereType<MediaInfo>()
+                .toList() ??
+            [];
+        return MediaSearchResult(
+          list: MediaList(items: mediaList),
+          totalCount: numResults,
+          hasNextPage: true,
+        );
       } else {
         final error = resultObj['Error'];
-        return MediaSearchResult(errors: error == null ? null : [error]);
+        return MediaSearchResult(
+          errors: [error ?? 'Unexpected error found on media search'],
+        );
       }
-    } else {
-      return const MediaSearchResult(errors: ['Unexpected error found on media search']);
     }
   }
 
@@ -62,14 +88,18 @@ class OMDBSearcher implements IMediaSearcher {
       final rawData = httpResponse.body;
       final resultObj = jsonDecode(rawData);
       final hasResults = resultObj['Response'];
-      if (hasResults == true || (hasResults is String && bool.tryParse(hasResults.toLowerCase()) == true)) {
+      if (hasResults == true ||
+          (hasResults is String &&
+              bool.tryParse(hasResults.toLowerCase()) == true)) {
         return MediaInfoResult(details: OMDBDetailsVO.fromData(resultObj));
       } else {
         final error = resultObj['Error'];
         return MediaInfoResult(errors: error == null ? null : [error]);
       }
     } else {
-      return const MediaInfoResult(errors: ['Unexpected error found on media search']);
+      return const MediaInfoResult(
+        errors: ['Unexpected error found on media search'],
+      );
     }
   }
 }
