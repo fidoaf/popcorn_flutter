@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:popcorn_flutter/configuration/core/model/application_configuration.dart';
 
@@ -14,7 +16,7 @@ class DotEnvHandler extends ApplicationConfiguration {
 
   static Future<DotEnvHandler> getInstance() async {
     // Use optional and a default empty map in case there is no .env file or is empty
-    await dotenv.load(isOptional: true, mergeWith: {});
+    await dotenv.load(isOptional: true);
     return DotEnvHandler._();
   }
 

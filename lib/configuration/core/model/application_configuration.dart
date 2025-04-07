@@ -3,7 +3,7 @@ abstract class ApplicationConfiguration {
 
   int? getInt(String key);
 
-  String get omdbKeySecret => getString('omdbKeySecret') ?? '';
+  String get omdbKeySecret => getString('omdb.keySecret') ?? '';
   String get browser => getString('browser') ?? '';
-  String get vidsrcInstance => getString('vidsrcInstance') ?? '';
+  String get vidsrcInstance => getString('vidsrc.instance') ?? '';
 }
