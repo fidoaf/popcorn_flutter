@@ -73,20 +73,16 @@ class FavoriteListViewState extends State<FavoriteListView> {
               children: [
                 const Text("Favorites", style: TextStyle(fontWeight: FontWeight.bold)),
                 Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      physics: const BouncingScrollPhysics(),
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children:
-                            _favoriteList.map((fav) {
-                              return ConstrainedBox(
-                                constraints: const BoxConstraints.tightForFinite(width: 175),
-                                child: _FavoriteItemView(info: fav, onSelected: (item) => _showMediaDetails(item), onRemoved: (item) => _refresh()),
-                              );
-                            }).toList(),
-                      ),
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const BouncingScrollPhysics(),
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children:
+                          _favoriteList.map((fav) {
+                            return _FavoriteItemView(info: fav, onSelected: (item) => _showMediaDetails(item), onRemoved: (item) => _refresh());
+                          }).toList(),
                     ),
                   ),
                 ),
@@ -142,9 +138,10 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
               }
             });
           },
-          child: Center(
-            child: Card(
-              elevation: _selected ? 5 : 1,
+          child: Card(
+            elevation: _selected ? 5 : 1,
+            child: Container(
+              constraints: BoxConstraints.expand(width: 200),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
