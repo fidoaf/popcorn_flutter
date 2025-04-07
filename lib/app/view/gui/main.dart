@@ -12,5 +12,14 @@ void main(List<String> args) async {
   final home = ServiceLocator.window.handleView(const MediaSearchFormPage());
 
   //
-  runApp(MaterialApp(navigatorKey: NavigationService.navigatorKey, debugShowCheckedModeBanner: false, theme: ThemeData.light(), darkTheme: ThemeData.dark(), themeMode: ThemeMode.system, home: home));
+  runApp(
+    MaterialApp(
+      navigatorKey: NavigationService.navigatorKey,
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeMode: ThemeMode.system,
+      home: home,
+    ),
+  );
 }

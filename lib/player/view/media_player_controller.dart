@@ -4,6 +4,7 @@ import 'package:popcorn_flutter/favorite/core/use_case/get_favorite_media_list.d
 import 'package:popcorn_flutter/favorite/core/use_case/remove_favorite_media_info.dart';
 import 'package:popcorn_flutter/favorite/tools/storage/favorite_storage_client.dart';
 import 'package:popcorn_flutter/history/tools/storage/history_storage_client.dart';
+import 'package:popcorn_flutter/player/core/model/media_player_settings.dart';
 import 'package:popcorn_flutter/player/core/use_case/media_available.dart';
 import 'package:popcorn_flutter/player/core/use_case/play_media.dart';
 import 'package:popcorn_flutter/player/tools/vidsrc/instances/vidsrc_instance.dart';
@@ -27,6 +28,24 @@ class MediaPlayerController {
 
   void openPlayer(MediaInfo info) {
     _player.playMedia(info);
+  }
+
+  MediaPlayerSettings? getPlayerSettings(MediaInfo info){
+    return const MediaPlayerSettings(
+                                url:
+                                    'https://vidsrc.xyz/embed/tv?imdb=tt11280740&season=1&episode=1&color=e600e6',
+                              );
+  }
+
+  MediaPlayerSettings? getPreviousInfoSettings(MediaInfo info){
+    return null;
+  }
+
+MediaPlayerSettings? getNextInfoSettings(MediaInfo info){
+    return const MediaPlayerSettings(
+                                url:
+                                    'https://vidsrc.xyz/embed/tv?imdb=tt11280740&season=1&episode=2&color=e600e6',
+                              );
   }
 
   bool isFavorite(MediaInfo info) {

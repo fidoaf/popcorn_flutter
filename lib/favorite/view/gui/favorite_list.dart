@@ -141,7 +141,7 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
           child: Card(
             elevation: _selected ? 5 : 1,
             child: Container(
-              constraints: BoxConstraints.expand(width: 200),
+              constraints: const BoxConstraints.expand(width: 200),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(

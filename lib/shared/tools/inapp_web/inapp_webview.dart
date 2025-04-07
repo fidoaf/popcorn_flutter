@@ -14,8 +14,16 @@ class InAppWebRenderer implements IWebRenderer {
 
   InAppWebRenderer._internal();
 
-  void back() async {
+  void _closePlayer() async {
     await FullScreenWindow.setFullScreen(false);
+    Navigator.pop(NavigationService.navigatorKey.currentContext!);
+  }
+
+  void _goToPreviousEpisode() {
+    Navigator.pop(NavigationService.navigatorKey.currentContext!);
+  }
+
+  void _goToNextEpisode() {
     Navigator.pop(NavigationService.navigatorKey.currentContext!);
   }
 
@@ -28,7 +36,7 @@ class InAppWebRenderer implements IWebRenderer {
 
   @override
   Future<bool> launch(String url) async {
-    await FullScreenWindow.setFullScreen(true);
+    // await FullScreenWindow.setFullScreen(true);
     Navigator.push(
       NavigationService.navigatorKey.currentContext!,
       MaterialPageRoute(
@@ -38,18 +46,41 @@ class InAppWebRenderer implements IWebRenderer {
             body: KeyboardListener(
               focusNode: FocusNode(),
               onKeyEvent: (event) {
-                if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
-                  back();
+                if (event is KeyDownEvent &&
+                    event.logicalKey == LogicalKeyboardKey.escape) {
+                  _closePlayer();
                 }
               },
               child: Stack(
                 children: [
                   InAppWebView(
-                    initialUrlRequest: URLRequest(url: WebUri(url)),
+                    initialUrlRequest: URLRequest(url: WebUri('https://vidsrc.xyz/embed/tv?imdb=tt11280740&season=1&episode=1&color=e600e6')),
+                    keepAlive: InAppWebViewKeepAlive(),
+                    initialSettings: InAppWebViewSettings(),
+                    onConsoleMessage: (controller, consoleMessage) {
+                      print(consoleMessage.message);
+                    },
+                    onCreateWindow: (controller, createWindowAction) async {
+                      return false;
+                    },
+                    onEnterFullscreen: (controller) {
+                      print('object');
+                    },
+                    onPermissionRequest: (controller, permissionRequest) async {
+                      print('object');
+                      return null;
+                    },
                     // preventGestureDelay: ,
-                    shouldOverrideUrlLoading: (controller, navigationAction) async {
+                    shouldOverrideUrlLoading: (
+                      controller,
+                      navigationAction,
+                    ) async {
                       final uri = navigationAction.request.url;
-                      if (['vidsrc.xyz', 'edgedeliverynetwork.com'].contains(uri?.host)) {
+                      if ([
+                        'vidsrc.xyz',
+                        'edgedeliverynetwork.com',
+                      ].contains(uri?.host)) {
+                        print(navigationAction);
                         return NavigationActionPolicy.ALLOW;
                       } else {
                         print('URL cancelled ${uri.toString()}');
@@ -57,7 +88,29 @@ class InAppWebRenderer implements IWebRenderer {
                       }
                     },
                   ),
-                  Align(alignment: Alignment.topRight, child: IconButton(onPressed: back, icon: const Icon(Icons.close))),
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      onPressed: _closePlayer,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ),
+
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: _goToPreviousEpisode,
+                      icon: const Icon(Icons.arrow_circle_left),
+                    ),
+                  ),
+
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      onPressed: _goToNextEpisode,
+                      icon: const Icon(Icons.arrow_circle_right),
+                    ),
+                  ),
                 ],
               ),
             ),

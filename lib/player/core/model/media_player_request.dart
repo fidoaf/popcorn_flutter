@@ -4,7 +4,8 @@ import 'package:popcorn_flutter/search/core/model/media_type.dart';
 class MediaPlayerRequest {
   final String id;
   final MediaType type;
-  MediaPlayerRequest._({required this.id, required this.type});
+  final String? language;
+  MediaPlayerRequest._({required this.id, required this.type, this.language});
 
   static MediaPlayerRequest create(MediaInfo info) {
     final id = info.id;
