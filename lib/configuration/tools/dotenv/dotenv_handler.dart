@@ -13,7 +13,8 @@ class DotEnvHandler extends ApplicationConfiguration {
   DotEnvHandler._internal();
 
   static Future<DotEnvHandler> getInstance() async {
-    await dotenv.load();
+    // Use optional and a default empty map in case there is no .env file or is empty
+    await dotenv.load(isOptional: true, mergeWith: {});
     return DotEnvHandler._();
   }
 
