@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/history/view/media_history_controller.dart';
-import 'package:popcorn_flutter/player/view/gui/media_info_details_view.dart';
+import 'package:popcorn_flutter/details/view/gui/media_info_details_view.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 
 class HistoryListView extends StatefulWidget {

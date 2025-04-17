@@ -17,7 +17,7 @@ class VidsrcMediaPlayer implements IMediaPlayer {
   String _getMediaUrl(MediaPlayerRequest request) {
     switch (request.type) {
       case MediaType.movie:
-        return '${_instance.baseUrl}/movie/${request.id}';
+        return '${_instance.baseUrl}/movie?${request.id}&ds_lang=en';
       case MediaType.series:
         return '${_instance.baseUrl}/tv?imdb=${request.id}&season=1&episode=1&ds_lang=en';
     }

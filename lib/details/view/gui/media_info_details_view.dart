@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:popcorn_flutter/player/core/model/media_player_settings.dart';
+import 'package:popcorn_flutter/details/core/model/media_full_details.dart';
+import 'package:popcorn_flutter/details/view/media_details_controller.dart';
 import 'package:popcorn_flutter/player/view/gui/fullscreen_player.dart';
-import 'package:popcorn_flutter/player/view/media_player_controller.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 import 'package:popcorn_flutter/search/core/model/media_search.dart';
 import 'package:popcorn_flutter/shared/core/model/navigation_service.dart';
@@ -15,7 +15,7 @@ class MediaInfoDetails extends StatefulWidget {
 }
 
 class MediaInfoDetailsState extends State<MediaInfoDetails> {
-  final _controller = MediaPlayerController();
+  final _controller = MediaDetailsController();
 
   MediaInfoDetailsState();
 

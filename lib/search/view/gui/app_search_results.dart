@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/app/view/gui/transition_page.dart';
-import 'package:popcorn_flutter/player/view/gui/media_info_details_view.dart';
+import 'package:popcorn_flutter/details/view/gui/media_info_details_view.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 import 'package:popcorn_flutter/search/core/model/media_search.dart';
 import 'package:popcorn_flutter/search/core/model/media_type.dart';

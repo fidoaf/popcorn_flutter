@@ -1,5 +1,5 @@
+import 'package:popcorn_flutter/details/core/model/media_full_details.dart';
 import 'package:popcorn_flutter/search/core/model/media_image.dart';
-import 'package:popcorn_flutter/search/core/model/media_search.dart';
 import 'package:popcorn_flutter/search/core/model/media_type.dart';
 import 'package:popcorn_flutter/search/tools/omdb/omdb_media_type.dart';
 import 'package:popcorn_flutter/search/tools/omdb/omdb_shared.dart';

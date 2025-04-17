@@ -1,22 +1,4 @@
-import 'package:popcorn_flutter/favorite/core/use_case/get_favorite_media_list.dart';
-import 'package:popcorn_flutter/favorite/core/use_case/remove_favorite_media_info.dart';
-import 'package:popcorn_flutter/favorite/tools/storage/favorite_storage_client.dart';
-import 'package:popcorn_flutter/search/core/model/media_info.dart';
+import 'package:popcorn_flutter/favorite/view/favorite_mixin.dart';
+import 'package:popcorn_flutter/player/view/player_mixin.dart';
 
-class MediaFavoriteController {
-  final _favList = const GetFavoriteMediaList(storage: FavoriteStorageClient());
-  final _removeFav = const RemoveFavoriteMediaInfo(storage: FavoriteStorageClient());
-
-  List<MediaInfo> getFavoriteList() {
-    return _favList.get();
-  }
-
-  bool isFavorite(MediaInfo info) {
-    final favorites = _favList.get();
-    return favorites.any((f) => f.id == info.id);
-  }
-
-  Future<bool> removeFavorite(MediaInfo info) {
-    return _removeFav.remove(info: info);
-  }
-}
+class MediaFavoriteController with FavoriteMixin, PlayerMixin {}

@@ -18,7 +18,11 @@ class WindowManager extends WindowHandler {
     // Fix size
     await windowManager.ensureInitialized();
 
-    WindowOptions windowOptions = const WindowOptions(title: 'Popcorn', center: true, size: Size(_fixedWidth, _fixedHeight));
+    WindowOptions windowOptions = const WindowOptions(
+      title: 'Popcorn',
+      center: true,
+      size: Size(_fixedWidth, _fixedHeight),
+    );
 
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
@@ -45,6 +49,8 @@ class _HandledView extends StatefulWidget {
 }
 
 class _HandledViewState extends State<_HandledView> with WindowListener {
+  bool _loading = false;
+
   @override
   void initState() {
     super.initState();
@@ -71,6 +77,9 @@ class _HandledViewState extends State<_HandledView> with WindowListener {
                 child: const Text('Yes'),
                 onPressed: () async {
                   Navigator.of(context).pop();
+                  setState(() {
+                    _loading = true;
+                  });
                   await windowManager.destroy();
                 },
               ),
@@ -83,6 +92,15 @@ class _HandledViewState extends State<_HandledView> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
-    return widget.child;
+    return _loading
+        ?  Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [const CircularProgressIndicator(), const SizedBox(height: 32), Text('Closing...', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),)],
+            ),
+          ),
+        )
+        : widget.child;
   }
 }
