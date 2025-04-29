@@ -27,10 +27,7 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
   GlobalKey? _favKey;
 
   void _goToAppSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ApplicationSettings()),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const ApplicationSettings()));
   }
 
   @override
@@ -41,14 +38,7 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
       appBar = null;
       content = const LoadingWidget();
     } else {
-      appBar = AppBar(
-        actions: [
-          IconButton(
-            onPressed: _goToAppSettings,
-            icon: const Icon(Icons.settings),
-          ),
-        ],
-      );
+      appBar = AppBar(actions: [IconButton(tooltip: 'View settings', onPressed: _goToAppSettings, icon: const Icon(Icons.settings))]);
       content = Form(
         key: _formKey,
         child: Padding(
@@ -69,9 +59,7 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
                       controller: _textController,
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       validator: (value) {
-                        return value == null || value.isEmpty
-                            ? 'You must input search terms'
-                            : null;
+                        return value == null || value.isEmpty ? 'You must input search terms' : null;
                       },
                       onFieldSubmitted: (_) => _search(),
                     ),
@@ -80,30 +68,15 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         SegmentedButton(
-                          segments:
-                              MediaType.values
-                                  .map(
-                                    (mt) => ButtonSegment<MediaType>(
-                                      value: mt,
-                                      label: Text(mt.name.toUpperCase()),
-                                    ),
-                                  )
-                                  .toList(),
-                          selected:
-                              _selectedType == null
-                                  ? const {}
-                                  : {_selectedType},
+                          segments: MediaType.values.map((mt) => ButtonSegment<MediaType>(value: mt, label: Text(mt.name.toUpperCase()))).toList(),
+                          selected: _selectedType == null ? const {} : {_selectedType},
                           emptySelectionAllowed: true,
                           onSelectionChanged:
                               (newSel) => setState(() {
-                                _selectedType =
-                                    newSel.isEmpty ? null : newSel.first;
+                                _selectedType = newSel.isEmpty ? null : newSel.first;
                               }),
                         ),
-                        OutlinedButton(
-                          onPressed: _search,
-                          child: const Text('SEARCH'),
-                        ),
+                        OutlinedButton(onPressed: _search, child: const Text('SEARCH')),
                       ],
                     ),
                   ],
@@ -125,26 +98,14 @@ class _MediaSearchFormPageState extends State<MediaSearchFormPage> {
   void _search() async {
     if (_formKey.currentState?.validate() == true) {
       setState(() => _isLoading = true);
-      final results = await _controller.search(
-        terms: _textController.text,
-        type: _selectedType,
-      );
+      final results = await _controller.search(terms: _textController.text, type: _selectedType);
       _showDetails(results);
       setState(() => _isLoading = false);
     }
   }
 
   void _showDetails(MediaSearchResult results) async {
-    Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => MediaSearchResultsPage(
-              originalSearch: _textController.text,
-              searchResult: results,
-            ),
-      ),
-    ).then((refresh) {
+    Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => MediaSearchResultsPage(originalSearch: _textController.text, searchResult: results))).then((refresh) {
       setState(() {
         _textController.clear();
         _selectedType = null;

@@ -1,4 +1,6 @@
 class MediaPlayerSettings {
   final String url;
-  const MediaPlayerSettings({required this.url});
+  final bool hasPrevious;
+  final bool hasNext;
+  const MediaPlayerSettings({required this.url, this.hasPrevious = false, this.hasNext = false});
 }
