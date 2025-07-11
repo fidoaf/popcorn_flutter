@@ -5,34 +5,21 @@ import 'package:popcorn_flutter/player/core/model/web_content_render_settings.da
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 import 'package:popcorn_flutter/shared/core/use_case/use_case_interface.dart';
 
-class PlayCurrentMediaItem implements UseCase {
+class PlayNextMediaItem implements UseCase {
   final IMediaPlayer _player;
   final IHistoryStorage _storage;
-  const PlayCurrentMediaItem({
+  const PlayNextMediaItem({
     required IMediaPlayer player,
     required IHistoryStorage storage,
   }) : _player = player,
        _storage = storage;
 
-  @Deprecated('Use player settings')
-  Future<String?> playMedia(MediaInfo info) async {
-    try {
-      final request = MediaPlayerRequest.create(info);
-      final history = await _storage.getItemHistory(request);
-      await _player.playMedia(request, history);
-      // Record in watching history
-      // await _storage.
-    } catch (ex) {
-      return ex.toString();
-    }
-    return null;
-  }
-
   Future<MediaPlayerSettings?> run(MediaInfo info) async {
     try {
       final request = MediaPlayerRequest.create(info);
       final current = await _storage.getItemHistory(request);
-      return _player.getPlayerSettings(request, current);
+      final target = current?.next;
+      return _player.getPlayerSettings(request, target);
     } catch (ex) {}
     return null;
   }

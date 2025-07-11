@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/favorite/view/media_favorite_controller.dart';
 import 'package:popcorn_flutter/details/view/gui/media_info_details_view.dart';
+import 'package:popcorn_flutter/player/view/gui/play_button.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 
 class FavoriteListView extends StatefulWidget {
@@ -208,12 +209,7 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
           Positioned.fill(
             child: Align(
               alignment: Alignment.center,
-              child: IconButton.filledTonal(
-                onPressed: () {
-                  _controller.openPlayer(info);
-                },
-                icon: const Icon(Icons.play_arrow),
-              ),
+              child: PlayButton.filledTonal(info: info),
             ),
           ),
           Align(

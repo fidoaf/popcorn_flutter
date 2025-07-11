@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/details/core/model/media_full_details.dart';
 import 'package:popcorn_flutter/details/view/media_details_controller.dart';
 import 'package:popcorn_flutter/player/view/gui/fullscreen_player.dart';
+import 'package:popcorn_flutter/player/view/gui/play_button.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 import 'package:popcorn_flutter/search/core/model/media_search.dart';
 import 'package:popcorn_flutter/shared/core/model/navigation_service.dart';
@@ -61,31 +62,7 @@ class MediaInfoDetailsState extends State<MediaInfoDetails> {
           if (snapshot.hasData) {
             final isAvailable = snapshot.data == true;
             return isAvailable
-                ? FloatingActionButton.large(
-                  onPressed: () async {
-                    final settings = _controller.getPlayerSettings(info);
-                    if (settings == null) {
-                    } else {
-                      final action = await Navigator.push(
-                        NavigationService.navigatorKey.currentContext!,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => FullScreenPlayer(
-                                playerSettings: settings,
-                                onPreviousEpisodeRequested:
-                                    () => _controller.getPreviousInfoSettings(
-                                      info,
-                                    ),
-                                onNextEpisodeRequested:
-                                    () => _controller.getNextInfoSettings(info),
-                              ),
-                        ),
-                      );
-                      print(action);
-                    }
-                  },
-                  child: const Icon(Icons.play_circle),
-                )
+                ? PlayButton.floating(info: info)
                 : const FloatingActionButton.large(
                   onPressed: null,
                   backgroundColor: Colors.red,

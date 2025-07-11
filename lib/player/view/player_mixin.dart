@@ -1,8 +1,10 @@
 import 'package:popcorn_flutter/app/core/service_locator.dart';
 import 'package:popcorn_flutter/history/tools/storage/history_storage_client.dart';
-import 'package:popcorn_flutter/player/core/model/media_player_settings.dart';
+import 'package:popcorn_flutter/player/core/model/web_content_render_settings.dart';
 import 'package:popcorn_flutter/player/core/use_case/media_available.dart';
 import 'package:popcorn_flutter/player/core/use_case/play_media.dart';
+import 'package:popcorn_flutter/player/core/use_case/play_next_media.dart';
+import 'package:popcorn_flutter/player/core/use_case/play_previous_media.dart';
 import 'package:popcorn_flutter/player/tools/vidsrc/instances/vidsrc_instance.dart';
 import 'package:popcorn_flutter/player/tools/vidsrc/vidsrc_media_player.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
@@ -10,32 +12,32 @@ import 'package:popcorn_flutter/shared/tools/inapp_web/inapp_webview.dart';
 
 mixin PlayerMixin {
   final _videoType = VidsrcType.fromString(ServiceLocator.configuration.vidsrcInstance);
-  late final PlayMediaItem _player = PlayMediaItem(player: VidsrcMediaPlayer(renderer: InAppWebRenderer(), instance: _videoType.instance), storage: const HistoryStorageClient());
-  late final AvailableMediaItem _avMedia = AvailableMediaItem(player: VidsrcMediaPlayer(renderer: InAppWebRenderer(), instance: _videoType.instance));
+  final _history = const HistoryStorageClient();
+  late final _player = VidsrcMediaPlayer(renderer: InAppWebRenderer(), instance: _videoType.instance);
+  
+  late final PlayCurrentMediaItem _currentItemPlayer = PlayCurrentMediaItem(player: _player, storage: _history);
+  late final PlayPreviousMediaItem _previousItemPlayer = PlayPreviousMediaItem(player: _player, storage: _history);
+  late final PlayNextMediaItem _nextItemPlayer = PlayNextMediaItem(player: _player, storage: _history);
+  late final AvailableMediaItem _avMedia = AvailableMediaItem(player: _player);
 
+  @Deprecated('Use player settings')
   void openPlayer(MediaInfo info) {
-    _player.playMedia(info);
+    _currentItemPlayer.playMedia(info);
   }
 
-    Future<bool> isAvailable(MediaInfo info) {
+  Future<bool> isAvailable(MediaInfo info) {
     return _avMedia.isAvailable(info);
   }
 
-  MediaPlayerSettings? getPlayerSettings(MediaInfo info) {
-    return const MediaPlayerSettings(
-      url:
-          'https://vidsrc.xyz/embed/tv?imdb=tt11280740&season=1&episode=1&color=e600e6',
-    );
+  Future<MediaPlayerSettings?> getPlayerSettings(MediaInfo info) {
+    return _currentItemPlayer.run(info);
   }
 
-  MediaPlayerSettings? getPreviousInfoSettings(MediaInfo info) {
-    return null;
+  Future<MediaPlayerSettings?> getPreviousInfoSettings(MediaInfo info) {
+    return _previousItemPlayer.run(info);
   }
 
-  MediaPlayerSettings? getNextInfoSettings(MediaInfo info) {
-    return const MediaPlayerSettings(
-      url:
-          'https://vidsrc.xyz/embed/tv?imdb=tt11280740&season=1&episode=2&color=e600e6',
-    );
+  Future<MediaPlayerSettings?> getNextInfoSettings(MediaInfo info) {
+    return _nextItemPlayer.run(info);
   }
 }

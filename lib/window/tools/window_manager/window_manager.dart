@@ -35,7 +35,7 @@ class WindowManager extends WindowHandler {
   }
 
   @override
-  Widget handleView(Widget view) {
+  Widget createMainView(Widget view) {
     return _HandledView(view);
   }
 }

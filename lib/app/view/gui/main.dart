@@ -9,7 +9,7 @@ void main(List<String> args) async {
   await ServiceLocator.init();
 
   //
-  final home = ServiceLocator.window.handleView(const MediaSearchFormPage());
+  final home = ServiceLocator.window.createMainView(const MediaSearchFormPage());
 
   //
   runApp(

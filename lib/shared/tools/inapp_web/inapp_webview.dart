@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:fullscreen_window/fullscreen_window.dart';
+import 'package:popcorn_flutter/player/core/model/web_content_render_settings.dart';
 import 'package:popcorn_flutter/shared/core/model/navigation_service.dart';
 import 'package:popcorn_flutter/shared/core/model/web_renderer.dart';
 
@@ -13,6 +13,9 @@ class InAppWebRenderer implements IWebRenderer {
   }
 
   InAppWebRenderer._internal();
+
+final GlobalKey _webviewKey = GlobalKey();
+  final FocusNode _mainFocus = FocusNode();
 
   void _closePlayer() async {
     await FullScreenWindow.setFullScreen(false);
@@ -28,15 +31,24 @@ class InAppWebRenderer implements IWebRenderer {
   }
 
   @override
-  Future<bool> check(String url) async {
+  Future<bool> check(WebContentRenderSettings settings) async {
     // final response = await get(Uri.parse(url));
     // return response.statusCode == HttpStatus.accepted;
     return true;
   }
 
   @override
-  Future<bool> launch(String url) async {
-    // await FullScreenWindow.setFullScreen(true);
+  Future<bool> launch(WebContentRenderSettings settings) async {
+    final url = settings.url;
+
+    await FullScreenWindow.setFullScreen(true);
+
+    // TODO:
+    // _mainFocus.addListener(() {
+    //   if(!_mainFocus.hasPrimaryFocus){
+    //     _mainFocus.requestFocus();
+    //   }
+    // });
     Navigator.push(
       NavigationService.navigatorKey.currentContext!,
       MaterialPageRoute(
@@ -44,33 +56,29 @@ class InAppWebRenderer implements IWebRenderer {
           return Scaffold(
             extendBodyBehindAppBar: true,
             body: KeyboardListener(
-              focusNode: FocusNode(),
+              autofocus: true,
+              focusNode: _mainFocus,
               onKeyEvent: (event) {
-                if (event is KeyDownEvent &&
-                    event.logicalKey == LogicalKeyboardKey.escape) {
-                  _closePlayer();
-                }
+                // TODO:
+                // if (event is KeyDownEvent &&
+                //     event.logicalKey == LogicalKeyboardKey.escape) {
+                //   _closePlayer();
+                // }
               },
               child: Stack(
                 children: [
                   InAppWebView(
-                    initialUrlRequest: URLRequest(url: WebUri('https://vidsrc.xyz/embed/tv?imdb=tt11280740&season=1&episode=1&color=e600e6')),
-                    keepAlive: InAppWebViewKeepAlive(),
-                    initialSettings: InAppWebViewSettings(),
-                    onConsoleMessage: (controller, consoleMessage) {
-                      print(consoleMessage.message);
-                    },
-                    onCreateWindow: (controller, createWindowAction) async {
-                      return false;
-                    },
-                    onEnterFullscreen: (controller) {
-                      print('object');
-                    },
-                    onPermissionRequest: (controller, permissionRequest) async {
-                      print('object');
-                      return null;
-                    },
-                    // preventGestureDelay: ,
+                    key: _webviewKey,
+                    initialUrlRequest: URLRequest(
+                      url: WebUri.uri(Uri.parse(url)),
+                    ),
+                    initialSettings: InAppWebViewSettings(
+                      useShouldOverrideUrlLoading: true,
+                      mediaPlaybackRequiresUserGesture: false,
+                      allowsInlineMediaPlayback: true,
+                      iframeAllowFullscreen: true,
+                      isElementFullscreenEnabled: true,
+                    ),
                     shouldOverrideUrlLoading: (
                       controller,
                       navigationAction,
@@ -79,6 +87,7 @@ class InAppWebRenderer implements IWebRenderer {
                       if ([
                         'vidsrc.xyz',
                         'edgedeliverynetwork.com',
+                        'cloudnestra.com',
                       ].contains(uri?.host)) {
                         print(navigationAction);
                         return NavigationActionPolicy.ALLOW;
@@ -87,10 +96,18 @@ class InAppWebRenderer implements IWebRenderer {
                         return NavigationActionPolicy.CANCEL;
                       }
                     },
+                    // TODO:
+                    // onEnterFullscreen: (controller) {
+                    //   FullScreenWindow.setFullScreen(true);
+                    // },
+                    // onExitFullscreen: (controller) {
+                    //   FullScreenWindow.setFullScreen(false);
+                    // },
                   ),
+
                   Align(
                     alignment: Alignment.topRight,
-                    child: IconButton(
+                    child: IconButton.filledTonal(
                       onPressed: _closePlayer,
                       icon: const Icon(Icons.close),
                     ),
