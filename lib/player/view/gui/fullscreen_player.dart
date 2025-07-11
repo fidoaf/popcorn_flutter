@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:popcorn_flutter/player/core/model/web_content_render_settings.dart';
 import 'package:popcorn_flutter/shared/core/model/navigation_service.dart';
-import 'package:fullscreen_window/fullscreen_window.dart';
 
 class FullScreenMediaPlayer extends StatefulWidget {
   final MediaPlayerSettings playerSettings;
@@ -28,7 +27,7 @@ class _FullScreenMediaPlayerState extends State<FullScreenMediaPlayer> {
   late final bool _hasNextEpisode = widget.onNextEpisodeRequested != null;
 
   void _closePlayer() async {
-    await FullScreenWindow.setFullScreen(false);
+    // await FullScreenWindow.setFullScreen(false);
     Navigator.pop(NavigationService.navigatorKey.currentContext!);
   }
 
@@ -57,8 +56,7 @@ class _FullScreenMediaPlayerState extends State<FullScreenMediaPlayer> {
       body: KeyboardListener(
         focusNode: FocusNode(),
         onKeyEvent: (event) {
-          if (event is KeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.escape) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
             _closePlayer();
           }
         },
@@ -98,13 +96,7 @@ class _FullScreenMediaPlayerState extends State<FullScreenMediaPlayer> {
               //   return NavigationActionPolicy.ALLOW;
               // },
             ),
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                onPressed: _closePlayer,
-                icon: const Icon(Icons.close),
-              ),
-            ),
+            Align(alignment: Alignment.topRight, child: IconButton(onPressed: _closePlayer, icon: const Icon(Icons.close))),
 
             if (_hasPreviousEpisode)
               Align(

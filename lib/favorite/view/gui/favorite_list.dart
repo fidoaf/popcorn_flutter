@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:popcorn_flutter/favorite/view/media_favorite_controller.dart';
 import 'package:popcorn_flutter/details/view/gui/media_info_details_view.dart';
 import 'package:popcorn_flutter/player/view/gui/play_button.dart';
+import 'package:popcorn_flutter/favorite/view/media_favorite_controller.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 
 class FavoriteListView extends StatefulWidget {
@@ -25,16 +25,20 @@ class FavoriteListViewState extends State<FavoriteListView> {
   void initState() {
     _refresh();
     //
-    _scrollController.addListener(() {
-      if (_scrollController.position.viewportDimension >
-          _scrollController.position.maxScrollExtent) {
-        setState(() {
-          _showLeftScroller = true;
-          _showRightScroller = true;
-        });
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkScrollButtons();
     });
+    _scrollController.addListener(_checkScrollButtons);
     super.initState();
+  }
+
+  void _checkScrollButtons() {
+    if (_scrollController.position.viewportDimension > _scrollController.position.maxScrollExtent) {
+      setState(() {
+        _showLeftScroller = _scrollController.offset > 0;
+        _showRightScroller = _scrollController.offset < _scrollController.position.maxScrollExtent;
+      });
+    }
   }
 
   void _refresh() {
@@ -47,17 +51,15 @@ class FavoriteListViewState extends State<FavoriteListView> {
   }
 
   void _showMediaDetails(MediaInfo fav) {
-    Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MediaInfoDetails(info: fav),
-        settings: RouteSettings(name: '/${fav.id}/details'),
-      ),
-    ).then((refresh) {
+    Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: fav), settings: RouteSettings(name: '/${fav.id}/details'))).then((refresh) {
       if (refresh == true) {
         setState(() {});
       }
     });
+  }
+
+  void _moveScroll(int delta) {
+    _scrollController.jumpTo(_scrollController.offset + delta);
   }
 
   @override
@@ -79,10 +81,7 @@ class FavoriteListViewState extends State<FavoriteListView> {
             // Content
             Column(
               children: [
-                const Text(
-                  "Favorites",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+                const Text("Favorites", style: TextStyle(fontWeight: FontWeight.bold)),
                 Expanded(
                   child: SingleChildScrollView(
                     controller: _scrollController,
@@ -92,11 +91,7 @@ class FavoriteListViewState extends State<FavoriteListView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children:
                           _favoriteList.map((fav) {
-                            return _FavoriteItemView(
-                              info: fav,
-                              onSelected: (item) => _showMediaDetails(item),
-                              onRemoved: (item) => _refresh(),
-                            );
+                            return _FavoriteItemView(info: fav, onSelected: (item) => _showMediaDetails(item), onRemoved: (item) => _refresh());
                           }).toList(),
                     ),
                   ),
@@ -105,21 +100,9 @@ class FavoriteListViewState extends State<FavoriteListView> {
             ),
             // GUI
             if (_showSlider && _showLeftScroller)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton.filledTonal(
-                  onPressed: () {},
-                  icon: const Icon(Icons.arrow_left),
-                ),
-              ),
+              Align(alignment: Alignment.centerLeft, child: IconButton.filledTonal(visualDensity: VisualDensity.compact, onPressed: () => _moveScroll(-20), icon: const Icon(Icons.arrow_left))),
             if (_showSlider && _showRightScroller)
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton.filledTonal(
-                  onPressed: () {},
-                  icon: const Icon(Icons.arrow_right),
-                ),
-              ),
+              Align(alignment: Alignment.centerRight, child: IconButton.filledTonal(visualDensity: VisualDensity.compact, onPressed: () => _moveScroll(20), icon: const Icon(Icons.arrow_right))),
           ],
         ),
       );
@@ -131,11 +114,7 @@ class _FavoriteItemView extends StatefulWidget {
   final MediaInfo info;
   final Function(MediaInfo) onSelected;
   final Function(MediaInfo) onRemoved;
-  const _FavoriteItemView({
-    required this.info,
-    required this.onSelected,
-    required this.onRemoved,
-  });
+  const _FavoriteItemView({required this.info, required this.onSelected, required this.onRemoved});
 
   @override
   State<StatefulWidget> createState() => _FavoriteItemViewState();
@@ -162,13 +141,7 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
       children: [
         InkWell(
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => MediaInfoDetails(info: info),
-                settings: RouteSettings(name: '/${info.id}/details'),
-              ),
-            ).then((refresh) {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => MediaInfoDetails(info: info), settings: RouteSettings(name: '/${info.id}/details'))).then((refresh) {
               if (refresh == true) {
                 if (_controller.isFavorite(info)) {
                 } else {
@@ -195,10 +168,7 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
                           },
                         ),
                       ),
-                    Text(
-                      info.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    Text(info.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -215,6 +185,7 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
           Align(
             alignment: Alignment.topRight,
             child: IconButton.filled(
+              tooltip: 'Remove from favorites',
               onPressed: () async {
                 final success = await _controller.removeFavorite(info);
                 if (success) widget.onRemoved(info);
