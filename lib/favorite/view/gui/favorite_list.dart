@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/details/view/gui/media_info_details_view.dart';
-import 'package:popcorn_flutter/player/view/gui/play_button.dart';
 import 'package:popcorn_flutter/favorite/view/media_favorite_controller.dart';
+import 'package:popcorn_flutter/player/view/gui/play_button.dart';
 import 'package:popcorn_flutter/search/core/model/media_info.dart';
 
 class FavoriteListView extends StatefulWidget {
@@ -80,8 +80,9 @@ class FavoriteListViewState extends State<FavoriteListView> {
           children: [
             // Content
             Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text("Favorites", style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text("Favorites", style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                 Expanded(
                   child: SingleChildScrollView(
                     controller: _scrollController,
@@ -182,8 +183,9 @@ class _FavoriteItemViewState extends State<_FavoriteItemView> {
               child: PlayButton.filledTonal(info: info),
             ),
           ),
-          Align(
-            alignment: Alignment.topRight,
+          Positioned(
+            top: 0,
+            right: 0,
             child: IconButton.filled(
               tooltip: 'Remove from favorites',
               onPressed: () async {
