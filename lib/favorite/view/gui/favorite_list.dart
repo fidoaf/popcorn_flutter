@@ -23,20 +23,28 @@ class FavoriteListViewState extends State<FavoriteListView> {
 
   @override
   void initState() {
+    super.initState();
     _refresh();
     //
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkScrollButtons();
     });
     _scrollController.addListener(_checkScrollButtons);
-    super.initState();
   }
 
   void _checkScrollButtons() {
-    if (_scrollController.position.viewportDimension > _scrollController.position.maxScrollExtent) {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    final showLeft = position.pixels > 0;
+    final showRight = position.pixels < position.maxScrollExtent;
+
+    if (_showLeftScroller != showLeft || _showRightScroller != showRight) {
       setState(() {
-        _showLeftScroller = _scrollController.offset > 0;
-        _showRightScroller = _scrollController.offset < _scrollController.position.maxScrollExtent;
+        _showLeftScroller = showLeft;
+        _showRightScroller = showRight;
       });
     }
   }
@@ -59,7 +67,17 @@ class FavoriteListViewState extends State<FavoriteListView> {
   }
 
   void _moveScroll(int delta) {
+    if (!_scrollController.hasClients) {
+      return;
+    }
     _scrollController.jumpTo(_scrollController.offset + delta);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_checkScrollButtons);
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override

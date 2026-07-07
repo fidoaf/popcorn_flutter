@@ -1,3 +1,4 @@
+
 import 'dart:io';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,9 +16,43 @@ class DotEnvHandler extends ApplicationConfiguration {
   DotEnvHandler._internal();
 
   static Future<DotEnvHandler> getInstance() async {
-    // Use optional and a default empty map in case there is no .env file or is empty
-    await dotenv.load(isOptional: true);
+    await _loadDotEnv();
     return DotEnvHandler._();
+  }
+
+  static Future<void> _loadDotEnv() async {
+    const fileName = '.env';
+
+    // First try the current working directory.
+    final localFile = File(fileName);
+    if (await localFile.exists()) {
+      await dotenv.load(fileName: fileName, isOptional: true);
+      return;
+    }
+
+    final envFile = await _findEnvFileUpwards(Directory.current);
+    if (envFile != null) {
+      await dotenv.load(fileName: envFile.path, isOptional: true);
+      return;
+    }
+
+    // Fallback to default loading behavior (assets or current directory).
+    await dotenv.load(isOptional: true);
+  }
+
+  static Future<File?> _findEnvFileUpwards(Directory start) async {
+    var dir = start;
+    while (true) {
+      final candidate = File('${dir.path}${Platform.pathSeparator}.env');
+      if (await candidate.exists()) {
+        return candidate;
+      }
+      final parent = dir.parent;
+      if (parent.path == dir.path) {
+        return null;
+      }
+      dir = parent;
+    }
   }
 
   @override

@@ -33,9 +33,13 @@ class OMDBSearcher implements IMediaSearcher {
 
   @override
   Future<MediaSearchResult> searchMedia(MediaSearchRequest request) async {
+    if (secretKey.isEmpty) {
+      return const MediaSearchResult(errors: ['OMDb API key is not configured']);
+    }
+
     final requestPage = request.page;
     final mediaType = request.type;
-    final url = Uri.http(_omdbHost, '/', {
+    final url = Uri.https(_omdbHost, '/', {
       _searchParam: request.terms,
       _keyParam: secretKey,
       if (mediaType != null) _typeParam: OMDBMediaTypeVO.fromType(mediaType),
@@ -78,8 +82,12 @@ class OMDBSearcher implements IMediaSearcher {
 
   @override
   Future<MediaInfoResult> getMediaDetails(MediaInfoRequest request) async {
+    if (secretKey.isEmpty) {
+      return const MediaInfoResult(errors: ['OMDb API key is not configured']);
+    }
+
     final requestId = request.id;
-    final url = Uri.http(_omdbHost, '/', {
+    final url = Uri.https(_omdbHost, '/', {
       _idParam: requestId,
       _keyParam: secretKey,
     });
