@@ -53,3 +53,19 @@ devtools_options.yaml
 .env
 
 .local-chrome
+android/.gradle/file-system.probe
+android/.gradle/8.12/gc.properties
+android/.gradle/8.12/checksums/checksums.lock
+android/.gradle/8.12/checksums/md5-checksums.bin
+android/.gradle/8.12/checksums/sha1-checksums.bin
+android/.gradle/8.12/executionHistory/executionHistory.bin
+android/.gradle/8.12/executionHistory/executionHistory.lock
+android/.gradle/8.12/fileChanges/last-build.bin
+android/.gradle/8.12/fileHashes/fileHashes.bin
+android/.gradle/8.12/fileHashes/fileHashes.lock
+android/.gradle/8.12/fileHashes/resourceHashesCache.bin
+android/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+android/.gradle/buildOutputCleanup/cache.properties
+android/.gradle/buildOutputCleanup/outputFiles.bin
+android/.gradle/noVersion/buildLogic.lock
+android/.gradle/vcs-1/gc.properties

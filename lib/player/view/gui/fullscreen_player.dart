@@ -8,12 +8,7 @@ class FullScreenMediaPlayer extends StatefulWidget {
   final MediaPlayerSettings playerSettings;
   final Future<MediaPlayerSettings?> Function()? onPreviousEpisodeRequested;
   final Future<MediaPlayerSettings?> Function()? onNextEpisodeRequested;
-  const FullScreenMediaPlayer({
-    super.key,
-    required this.playerSettings,
-    this.onPreviousEpisodeRequested,
-    this.onNextEpisodeRequested,
-  });
+  const FullScreenMediaPlayer({super.key, required this.playerSettings, this.onPreviousEpisodeRequested, this.onNextEpisodeRequested});
 
   @override
   State<StatefulWidget> createState() => _FullScreenMediaPlayerState();
@@ -22,8 +17,7 @@ class FullScreenMediaPlayer extends StatefulWidget {
 class _FullScreenMediaPlayerState extends State<FullScreenMediaPlayer> {
   late MediaPlayerSettings currentSettings = widget.playerSettings;
 
-  late final bool _hasPreviousEpisode =
-      widget.onPreviousEpisodeRequested != null;
+  late final bool _hasPreviousEpisode = widget.onPreviousEpisodeRequested != null;
   late final bool _hasNextEpisode = widget.onNextEpisodeRequested != null;
 
   void _closePlayer() async {
@@ -63,7 +57,7 @@ class _FullScreenMediaPlayerState extends State<FullScreenMediaPlayer> {
         child: Stack(
           children: [
             InAppWebView(
-              initialUrlRequest: URLRequest(url: WebUri(currentSettings.url)),
+              initialUrlRequest: URLRequest(url: WebUri('https://web.nxsha.app/embed/movie/533535')),
               // keepAlive: InAppWebViewKeepAlive(),
               // initialSettings: InAppWebViewSettings(),
               // onConsoleMessage: (controller, consoleMessage) {
@@ -96,24 +90,21 @@ class _FullScreenMediaPlayerState extends State<FullScreenMediaPlayer> {
               //   return NavigationActionPolicy.ALLOW;
               // },
             ),
-            Align(alignment: Alignment.topRight, child: IconButton(onPressed: _closePlayer, icon: const Icon(Icons.close))),
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(onPressed: _closePlayer, icon: const Icon(Icons.close)),
+            ),
 
             if (_hasPreviousEpisode)
               Align(
                 alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: _goToPreviousEpisode,
-                  icon: const Icon(Icons.arrow_circle_left),
-                ),
+                child: IconButton(onPressed: _goToPreviousEpisode, icon: const Icon(Icons.arrow_circle_left)),
               ),
 
             if (_hasNextEpisode)
               Align(
                 alignment: Alignment.centerRight,
-                child: IconButton(
-                  onPressed: _goToNextEpisode,
-                  icon: const Icon(Icons.arrow_circle_right),
-                ),
+                child: IconButton(onPressed: _goToNextEpisode, icon: const Icon(Icons.arrow_circle_right)),
               ),
           ],
         ),
