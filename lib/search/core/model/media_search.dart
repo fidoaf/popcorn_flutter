@@ -1,5 +1,4 @@
 import 'package:popcorn_flutter/details/core/model/media_full_details.dart';
-import 'package:popcorn_flutter/search/core/model/media_image.dart';
 import 'package:popcorn_flutter/search/core/model/media_info_request.dart';
 import 'package:popcorn_flutter/search/core/model/media_list.dart';
 import 'package:popcorn_flutter/search/core/model/media_search_request.dart';

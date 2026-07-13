@@ -8,13 +8,8 @@ class FavoriteListFetcher implements UseCase<FavoriteListFetcherParams, Iterable
   @override
   Future<Result<Iterable<FavoriteItem>>> call(FavoriteListFetcherParams params) async {
     try {
-      final list = await Future.delayed(
-          const Duration(seconds: 1),
-          () => <FavoriteItem>[
-                FavoriteItem.create(title: 'Silo', year: '2023'),
-              ]);
+      final list = await Future.delayed(const Duration(seconds: 1), () => <FavoriteItem>[FavoriteItem.create(title: 'Silo', year: '2023')]);
       return Result.success(list);
-      return Result.failure(Exception('null'));
     } on Exception catch (ex) {
       return Result.failure(ex);
     }
