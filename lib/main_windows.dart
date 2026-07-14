@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/fluent/splash_screen.dart';
@@ -66,7 +67,9 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
     final source = Uri.parse('https://web.nxsha.app/embed/movie/${movie.id}?lang=en&sub=1');
     Navigator.of(context).push(
       FluentPageRoute<void>(
-        builder: (_) => PopcornFluentSplashScreen(child: VideoPlayerFactory.create(source: source)),
+        builder: (_) => _PopOnEscape(
+          child: PopcornFluentSplashScreen(child: VideoPlayerFactory.create(source: source)),
+        ),
       ),
     );
   }
@@ -75,6 +78,28 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
   Widget build(BuildContext context) {
     return PopcornFluentSplashScreen(
       child: FluentMovieSearchView(controller: _searchController, onMovieSelected: _openMovie),
+    );
+  }
+}
+
+/// Pops the current route when the Escape key is pressed.
+class _PopOnEscape extends StatelessWidget {
+  const _PopOnEscape({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+          Navigator.of(context).maybePop();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: child,
     );
   }
 }
