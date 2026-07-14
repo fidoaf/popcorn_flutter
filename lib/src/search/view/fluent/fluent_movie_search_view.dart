@@ -29,25 +29,26 @@ class _FluentMovieSearchViewState extends State<FluentMovieSearchView> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextBox(controller: _queryController, placeholder: SearchTranslations.searchPlaceholder.trOf(context), onSubmitted: (_) => _submit()),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(onPressed: _submit, child: Text(SearchTranslations.searchButton.trOf(context))),
-            ],
+    return ScaffoldPage(
+      header: PageHeader(padding: 16, title: Text(SearchTranslations.pageTitle.trOf(context))),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextBox(
+              controller: _queryController,
+              placeholder: SearchTranslations.searchPlaceholder.trOf(context),
+              onSubmitted: (_) => _submit(),
+              prefix: const Padding(padding: EdgeInsets.only(left: 10, right: 4), child: Icon(FluentIcons.search)),
+              suffix: IconButton(icon: const Icon(FluentIcons.chevron_right), onPressed: _submit),
+            ),
           ),
-        ),
-        Expanded(
-          child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => _buildBody(context, widget.controller.state)),
-        ),
-      ],
+          Expanded(
+            child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => _buildBody(context, widget.controller.state)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -62,59 +63,39 @@ class _FluentMovieSearchViewState extends State<FluentMovieSearchView> {
         ),
       ),
       MovieSearchSuccess(:final movies) when movies.isEmpty => Center(child: Text(SearchTranslations.emptyResults.trOf(context))),
-      MovieSearchSuccess(:final movies) => ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      MovieSearchSuccess(:final movies) => ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         itemCount: movies.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 8),
-        itemBuilder: (context, index) => _MovieResultCard(movie: movies[index], onTap: widget.onMovieSelected),
+        itemBuilder: (context, index) => _MovieResultTile(movie: movies[index], onTap: widget.onMovieSelected),
       ),
     };
   }
 }
 
-class _MovieResultCard extends StatelessWidget {
-  const _MovieResultCard({required this.movie, this.onTap});
+class _MovieResultTile extends StatelessWidget {
+  const _MovieResultTile({required this.movie, this.onTap});
 
   final Movie movie;
   final ValueChanged<Movie>? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
     final year = movie.releaseDate?.year;
     final rating = movie.voteAverage;
+    final subtitle = year == null ? movie.overview : '$year \u00b7 ${movie.overview}';
 
-    return GestureDetector(
-      onTap: onTap == null ? null : () => onTap!(movie),
-      child: Card(
-        padding: const EdgeInsets.all(8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Poster(url: movie.posterUrl),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(movie.title, style: theme.typography.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  if (year != null) Text('$year', style: theme.typography.caption),
-                  const SizedBox(height: 4),
-                  Text(movie.overview, style: theme.typography.body, maxLines: 2, overflow: TextOverflow.ellipsis),
-                ],
-              ),
+    return ListTile.selectable(
+      leading: _Poster(url: movie.posterUrl),
+      title: Text(movie.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+      trailing: rating == null
+          ? null
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [const Icon(FluentIcons.favorite_star_fill), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
             ),
-            if (rating != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [const Icon(FluentIcons.favorite_star_fill), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
-                ),
-              ),
-          ],
-        ),
-      ),
+      selected: false,
+      onSelectionChange: onTap == null ? null : (_) => onTap!(movie),
     );
   }
 }
@@ -124,8 +105,8 @@ class _Poster extends StatelessWidget {
 
   final Uri? url;
 
-  static const double _width = 60;
-  static const double _height = 90;
+  static const double _width = 40;
+  static const double _height = 60;
 
   @override
   Widget build(BuildContext context) {

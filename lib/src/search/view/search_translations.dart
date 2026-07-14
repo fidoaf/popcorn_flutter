@@ -5,6 +5,8 @@ import 'package:popcorn_flutter/src/locale/domain/translation.dart';
 class SearchTranslations {
   SearchTranslations._();
 
+  static const pageTitle = Translation({AppLanguage.en: 'Search movies', AppLanguage.es: 'Buscar películas', AppLanguage.ca: 'Cerca de pel·lícules'});
+
   static const searchPlaceholder = Translation({
     AppLanguage.en: 'Search movies...',
     AppLanguage.es: 'Buscar películas...',

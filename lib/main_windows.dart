@@ -8,6 +8,7 @@ import 'package:popcorn_flutter/src/app/view/fluent/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -61,9 +62,19 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
     super.dispose();
   }
 
+  void _openMovie(Movie movie) {
+    final source = Uri.parse('https://web.nxsha.app/embed/movie/${movie.id}?lang=en&sub=1');
+    Navigator.of(context).push(
+      FluentPageRoute<void>(
+        builder: (_) => PopcornFluentSplashScreen(child: VideoPlayerFactory.create(source: source)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // return PopcornFluentSplashScreen(child: VideoPlayerFactory.create(source: Uri.parse('https://web.nxsha.app/embed/movie/533535?lang=en')));
-    return PopcornFluentSplashScreen(child: FluentMovieSearchView(controller: _searchController));
+    return PopcornFluentSplashScreen(
+      child: FluentMovieSearchView(controller: _searchController, onMovieSelected: _openMovie),
+    );
   }
 }
