@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
@@ -9,12 +10,13 @@ import 'package:popcorn_flutter/src/locale/view/translation_context_extension.da
 
 import 'src/app/view/material/splash_screen.dart';
 
-void main(List<String> args) {
+void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   if (!Platform.isAndroid) {
     runApp(const UnsupportedPlatformView());
     return;
   }
+  await dotenv.load();
   runApp(const _PopcornAndroidApp());
 }
 

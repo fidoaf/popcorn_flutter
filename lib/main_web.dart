@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
@@ -9,11 +10,13 @@ import 'package:popcorn_flutter/src/locale/view/translation_context_extension.da
 
 import 'src/app/view/web/splash_screen.dart';
 
-void main(List<String> args) {
+void main(List<String> args) async {
   if (!kIsWeb) {
     runApp(const UnsupportedPlatformView());
     return;
   }
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load();
   runApp(const _PopcornWebApp());
 }
 

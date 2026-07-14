@@ -2,12 +2,14 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/fluent/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
-import 'package:window_manager/window_manager.dart'; // NOT material.dart
+import 'package:popcorn_flutter/src/search/search.dart';
+import 'package:window_manager/window_manager.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +17,7 @@ void main(List<String> args) async {
     runApp(const UnsupportedPlatformView());
     return;
   }
+  await dotenv.load();
   await windowManager.ensureInitialized();
   const WindowOptions windowOptions = WindowOptions(title: 'Popcorn', center: true, size: Size(800, 600));
   windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -42,11 +45,25 @@ class _PopcornWindowsApp extends StatelessWidget {
   }
 }
 
-class _WindowsHomeView extends StatelessWidget {
+class _WindowsHomeView extends StatefulWidget {
   const _WindowsHomeView();
 
   @override
+  State<_WindowsHomeView> createState() => _WindowsHomeViewState();
+}
+
+class _WindowsHomeViewState extends State<_WindowsHomeView> {
+  late final MovieSearchController _searchController = MovieSearchController(repository: MovieSearchRepositoryFactory.create());
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const PopcornFluentSplashScreen();
+    // return PopcornFluentSplashScreen(child: VideoPlayerFactory.create(source: Uri.parse('https://web.nxsha.app/embed/movie/533535?lang=en')));
+    return PopcornFluentSplashScreen(child: FluentMovieSearchView(controller: _searchController));
   }
 }
