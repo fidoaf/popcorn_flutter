@@ -7,6 +7,8 @@ import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/search/search.dart';
 
 import 'src/app/view/material/splash_screen.dart';
 
@@ -37,11 +39,42 @@ class _PopcornAndroidApp extends StatelessWidget {
   }
 }
 
-class _AndroidHomeView extends StatelessWidget {
+class _AndroidHomeView extends StatefulWidget {
   const _AndroidHomeView();
 
   @override
+  State<_AndroidHomeView> createState() => _AndroidHomeViewState();
+}
+
+class _AndroidHomeViewState extends State<_AndroidHomeView> {
+  late final MovieSearchController _searchController = MovieSearchController(repository: MovieSearchRepositoryFactory.create());
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _openMovie(Movie movie) {
+    final source = Uri.parse('https://web.nxsha.app/embed/movie/${movie.id}?lang=en&sub=1');
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PopcornMaterialSplashScreen(
+          child: Scaffold(
+            body: SafeArea(child: VideoPlayerFactory.create(source: source)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const PopcornMaterialSplashScreen();
+    return PopcornMaterialSplashScreen(
+      child: Scaffold(
+        appBar: AppBar(title: Text(SearchTranslations.pageTitle.trOf(context))),
+        body: MaterialMovieSearchView(controller: _searchController, onMovieSelected: _openMovie),
+      ),
+    );
   }
 }
