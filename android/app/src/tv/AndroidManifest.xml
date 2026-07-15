@@ -1,0 +1,32 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Fire TV / Android TV support. Both features are optional so the same
+         codebase can still target phones from the "mobile" flavor. -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <!-- Fire TV Home shows sideloaded apps using android:icon (not the banner),
+         so for the TV flavor we point the icon at the banner artwork to give the
+         home-screen tile a branded look. tools:replace overrides the mobile icon. -->
+    <application
+        android:banner="@drawable/tv_banner"
+        android:icon="@drawable/tv_banner"
+        tools:replace="android:icon">
+        <activity
+            android:name=".MainActivity"
+            android:banner="@drawable/tv_banner"
+            android:screenOrientation="landscape"
+            tools:node="merge">
+            <!-- Makes the app appear on the Fire TV home screen / launcher. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

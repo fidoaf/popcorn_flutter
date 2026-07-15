@@ -21,7 +21,20 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
         // Let the embedded player start/handle media without a prior gesture.
         mediaPlaybackRequiresUserGesture: false,
         allowsInlineMediaPlayback: true,
+        // Required so [shouldOverrideUrlLoading] is invoked and can veto
+        // top-level navigations away from the provided URL.
+        useShouldOverrideUrlLoading: true,
       ),
+      // Keep the WebView pinned to the provided URL: allow sub-frame content
+      // (e.g. the embedded player iframe) and same-host navigations, but cancel
+      // any top-level navigation to a different host (external links/redirects).
+      shouldOverrideUrlLoading: (controller, navigationAction) async {
+        final request = navigationAction.request.url;
+        if (request == null || navigationAction.isForMainFrame != true || request.host == source.host) {
+          return NavigationActionPolicy.ALLOW;
+        }
+        return NavigationActionPolicy.CANCEL;
+      },
       onEnterFullscreen: (_) => fullscreenController.setFullscreen(true),
       onExitFullscreen: (_) => fullscreenController.setFullscreen(false),
     );

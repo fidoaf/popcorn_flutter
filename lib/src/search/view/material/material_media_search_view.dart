@@ -8,10 +8,15 @@ import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
 /// Material (Android) UI for searching movies and TV series, driven by a [MediaSearchController].
 class MaterialMediaSearchView extends StatefulWidget {
-  const MaterialMediaSearchView({super.key, required this.controller, this.onMediaSelected});
+  const MaterialMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.enableDpadFocus = false});
 
   final MediaSearchController controller;
   final ValueChanged<MediaItem>? onMediaSelected;
+
+  /// When `true`, results autofocus the first tile and draw a prominent focus
+  /// highlight for D-pad/remote navigation (Fire TV). Defaults to `false` so
+  /// the touch UI stays clean with no persistent focus decoration.
+  final bool enableDpadFocus;
 
   @override
   State<MaterialMediaSearchView> createState() => _MaterialMediaSearchViewState();
@@ -90,31 +95,67 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
       MediaSearchSuccess(:final items) when items.isEmpty => Center(child: Text(SearchTranslations.emptyResults.trOf(context))),
       MediaSearchSuccess(:final items) => ListView.builder(
         itemCount: items.length,
-        itemBuilder: (context, index) => _MediaResultTile(item: items[index], onTap: widget.onMediaSelected),
+        // In D-pad mode, autofocus the first result so a remote has an initial focus target.
+        itemBuilder: (context, index) => _MediaResultTile(
+          item: items[index],
+          onTap: widget.onMediaSelected,
+          dpadFocus: widget.enableDpadFocus,
+          autofocus: widget.enableDpadFocus && index == 0,
+        ),
       ),
     };
   }
 }
 
-class _MediaResultTile extends StatelessWidget {
-  const _MediaResultTile({required this.item, this.onTap});
+class _MediaResultTile extends StatefulWidget {
+  const _MediaResultTile({required this.item, this.onTap, this.autofocus = false, this.dpadFocus = false});
 
   final MediaItem item;
   final ValueChanged<MediaItem>? onTap;
+  final bool autofocus;
+  final bool dpadFocus;
+
+  @override
+  State<_MediaResultTile> createState() => _MediaResultTileState();
+}
+
+class _MediaResultTileState extends State<_MediaResultTile> {
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final year = item.releaseDate?.year;
     final rating = item.voteAverage;
 
-    return ListTile(
+    final tile = ListTile(
+      autofocus: widget.autofocus,
+      onFocusChange: widget.dpadFocus ? (hasFocus) => setState(() => _focused = hasFocus) : null,
       leading: _Poster(url: item.posterUrl),
       title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(year == null ? item.overview : '$year · ${item.overview}', maxLines: 2, overflow: TextOverflow.ellipsis),
       trailing: rating == null
           ? null
           : Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.star, size: 18), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))]),
-      onTap: onTap == null ? null : () => onTap!(item),
+      onTap: widget.onTap == null ? null : () => widget.onTap!(item),
+    );
+
+    // Plain touch UI (Android phones): no persistent focus decoration.
+    if (!widget.dpadFocus) return tile;
+
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Draw a prominent border/background when focused so the selection is
+    // clearly visible from across the room when navigating with a D-pad.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: _focused ? colorScheme.primary.withValues(alpha: 0.22) : Colors.transparent,
+        border: Border.all(color: _focused ? colorScheme.primary : Colors.transparent, width: 2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: tile,
     );
   }
 }
