@@ -20,7 +20,6 @@ class PopcornFluentSplashScreen extends StatelessWidget {
 
     return SplashGate(
       minimumDuration: minimumDuration,
-      child: child,
       splash: ScaffoldPage(
         content: SplashLayout(
           assetPath: SplashAssets.popcornGif,
@@ -28,6 +27,7 @@ class PopcornFluentSplashScreen extends StatelessWidget {
           subtitleWidget: Text(AppTranslations.splashSubtitle.trOf(context), style: theme.typography.body),
         ),
       ),
+      child: child,
     );
   }
 }

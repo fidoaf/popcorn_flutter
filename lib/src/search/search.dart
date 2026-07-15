@@ -1,5 +1,6 @@
-export 'domain/movie.dart';
-export 'domain/movie_search_exception.dart';
-export 'domain/movie_search_repository.dart';
-export 'infrastructure/movie_search_repository_factory.dart';
+export 'domain/media_item.dart';
+export 'domain/media_search_exception.dart';
+export 'domain/media_search_repository.dart';
+export 'domain/media_type.dart';
+export 'infrastructure/media_search_repository_factory.dart';
 export 'view/view.dart';

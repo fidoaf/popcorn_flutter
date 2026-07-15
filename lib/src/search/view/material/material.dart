@@ -1,1 +1,1 @@
-export 'material_movie_search_view.dart';
+export 'material_media_search_view.dart';

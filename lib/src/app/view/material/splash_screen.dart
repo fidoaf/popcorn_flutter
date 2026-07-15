@@ -18,7 +18,6 @@ class PopcornMaterialSplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SplashGate(
       minimumDuration: minimumDuration,
-      child: child,
       splash: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
         body: SplashLayout(
@@ -27,6 +26,7 @@ class PopcornMaterialSplashScreen extends StatelessWidget {
           subtitleWidget: Text(AppTranslations.splashSubtitle.trOf(context), style: Theme.of(context).textTheme.bodyMedium),
         ),
       ),
+      child: child,
     );
   }
 }

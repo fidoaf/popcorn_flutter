@@ -55,7 +55,7 @@ class _WindowsHomeView extends StatefulWidget {
 }
 
 class _WindowsHomeViewState extends State<_WindowsHomeView> {
-  late final MovieSearchController _searchController = MovieSearchController(repository: MovieSearchRepositoryFactory.create());
+  late final MediaSearchController _searchController = MediaSearchController(repository: MediaSearchRepositoryFactory.create());
 
   @override
   void dispose() {
@@ -63,8 +63,9 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
     super.dispose();
   }
 
-  void _openMovie(Movie movie) {
-    final source = Uri.parse('https://web.nxsha.app/embed/movie/${movie.id}?lang=en&sub=1');
+  void _openMedia(MediaItem media) {
+    final mediaSegment = _searchController.mediaType == MediaType.tv ? 'tv' : 'movie';
+    final source = Uri.parse('https://web.nxsha.app/embed/$mediaSegment/${media.id}?lang=en&sub=1');
     Navigator.of(context).push(
       FluentPageRoute<void>(
         builder: (_) => _PopOnEscape(
@@ -77,7 +78,7 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
   @override
   Widget build(BuildContext context) {
     return PopcornFluentSplashScreen(
-      child: FluentMovieSearchView(controller: _searchController, onMovieSelected: _openMovie),
+      child: FluentMediaSearchView(controller: _searchController, onMediaSelected: _openMedia),
     );
   }
 }

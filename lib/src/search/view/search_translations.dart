@@ -5,26 +5,26 @@ import 'package:popcorn_flutter/src/locale/domain/translation.dart';
 class SearchTranslations {
   SearchTranslations._();
 
-  static const pageTitle = Translation({AppLanguage.en: 'Search movies', AppLanguage.es: 'Buscar películas', AppLanguage.ca: 'Cerca de pel·lícules'});
+  static const pageTitle = Translation({AppLanguage.en: 'Search', AppLanguage.es: 'Buscar', AppLanguage.ca: 'Cerca'});
 
-  static const searchPlaceholder = Translation({
-    AppLanguage.en: 'Search movies...',
-    AppLanguage.es: 'Buscar películas...',
-    AppLanguage.ca: 'Cerca pel·lícules...',
-  });
+  static const searchPlaceholder = Translation({AppLanguage.en: 'Search titles...', AppLanguage.es: 'Buscar títulos...', AppLanguage.ca: 'Cerca títols...'});
 
   static const searchButton = Translation({AppLanguage.en: 'Search', AppLanguage.es: 'Buscar', AppLanguage.ca: 'Cerca'});
 
+  static const mediaMovies = Translation({AppLanguage.en: 'Movies', AppLanguage.es: 'Películas', AppLanguage.ca: 'Pel·lícules'});
+
+  static const mediaTvSeries = Translation({AppLanguage.en: 'TV Series', AppLanguage.es: 'Series', AppLanguage.ca: 'Sèries'});
+
   static const idleHint = Translation({
-    AppLanguage.en: 'Type a title to find movies.',
-    AppLanguage.es: 'Escribe un título para encontrar películas.',
-    AppLanguage.ca: 'Escriu un títol per trobar pel·lícules.',
+    AppLanguage.en: 'Type a title to find movies and TV series.',
+    AppLanguage.es: 'Escribe un título para encontrar películas y series.',
+    AppLanguage.ca: 'Escriu un títol per trobar pel·lícules i sèries.',
   });
 
   static const emptyResults = Translation({
-    AppLanguage.en: 'No movies found.',
-    AppLanguage.es: 'No se encontraron películas.',
-    AppLanguage.ca: "No s'han trobat pel·lícules.",
+    AppLanguage.en: 'No results found.',
+    AppLanguage.es: 'No se encontraron resultados.',
+    AppLanguage.ca: "No s'han trobat resultats.",
   });
 
   static const errorTitle = Translation({AppLanguage.en: 'Search failed', AppLanguage.es: 'La búsqueda falló', AppLanguage.ca: 'La cerca ha fallat'});

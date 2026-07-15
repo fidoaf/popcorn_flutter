@@ -47,7 +47,7 @@ class _AndroidHomeView extends StatefulWidget {
 }
 
 class _AndroidHomeViewState extends State<_AndroidHomeView> {
-  late final MovieSearchController _searchController = MovieSearchController(repository: MovieSearchRepositoryFactory.create());
+  late final MediaSearchController _searchController = MediaSearchController(repository: MediaSearchRepositoryFactory.create());
 
   @override
   void dispose() {
@@ -55,8 +55,9 @@ class _AndroidHomeViewState extends State<_AndroidHomeView> {
     super.dispose();
   }
 
-  void _openMovie(Movie movie) {
-    final source = Uri.parse('https://web.nxsha.app/embed/movie/${movie.id}?lang=en&sub=1');
+  void _openMedia(MediaItem media) {
+    final mediaSegment = _searchController.mediaType == MediaType.tv ? 'tv' : 'movie';
+    final source = Uri.parse('https://web.nxsha.app/embed/$mediaSegment/${media.id}?lang=en&sub=1');
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PopcornMaterialSplashScreen(
@@ -73,7 +74,7 @@ class _AndroidHomeViewState extends State<_AndroidHomeView> {
     return PopcornMaterialSplashScreen(
       child: Scaffold(
         appBar: AppBar(title: Text(SearchTranslations.pageTitle.trOf(context))),
-        body: MaterialMovieSearchView(controller: _searchController, onMovieSelected: _openMovie),
+        body: MaterialMediaSearchView(controller: _searchController, onMediaSelected: _openMedia),
       ),
     );
   }

@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
-import 'package:popcorn_flutter/src/search/domain/movie.dart';
-import 'package:popcorn_flutter/src/search/view/movie_search_controller.dart';
-import 'package:popcorn_flutter/src/search/view/movie_search_state.dart';
+import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_type.dart';
+import 'package:popcorn_flutter/src/search/view/media_search_controller.dart';
+import 'package:popcorn_flutter/src/search/view/media_search_state.dart';
 import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
-/// Material (Android) UI for searching movies, driven by a [MovieSearchController].
-class MaterialMovieSearchView extends StatefulWidget {
-  const MaterialMovieSearchView({super.key, required this.controller, this.onMovieSelected});
+/// Material (Android) UI for searching movies and TV series, driven by a [MediaSearchController].
+class MaterialMediaSearchView extends StatefulWidget {
+  const MaterialMediaSearchView({super.key, required this.controller, this.onMediaSelected});
 
-  final MovieSearchController controller;
-  final ValueChanged<Movie>? onMovieSelected;
+  final MediaSearchController controller;
+  final ValueChanged<MediaItem>? onMediaSelected;
 
   @override
-  State<MaterialMovieSearchView> createState() => _MaterialMovieSearchViewState();
+  State<MaterialMediaSearchView> createState() => _MaterialMediaSearchViewState();
 }
 
-class _MaterialMovieSearchViewState extends State<MaterialMovieSearchView> {
+class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
   final TextEditingController _queryController = TextEditingController();
 
   @override
@@ -33,7 +34,7 @@ class _MaterialMovieSearchViewState extends State<MaterialMovieSearchView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: TextField(
             controller: _queryController,
             textInputAction: TextInputAction.search,
@@ -46,6 +47,20 @@ class _MaterialMovieSearchViewState extends State<MaterialMovieSearchView> {
             ),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: ListenableBuilder(
+            listenable: widget.controller,
+            builder: (context, _) => SegmentedButton<MediaType>(
+              segments: [
+                ButtonSegment(value: MediaType.movie, icon: const Icon(Icons.movie_outlined), label: Text(SearchTranslations.mediaMovies.trOf(context))),
+                ButtonSegment(value: MediaType.tv, icon: const Icon(Icons.tv_outlined), label: Text(SearchTranslations.mediaTvSeries.trOf(context))),
+              ],
+              selected: {widget.controller.mediaType},
+              onSelectionChanged: (selection) => widget.controller.setMediaType(selection.first),
+            ),
+          ),
+        ),
         Expanded(
           child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => _buildBody(context, widget.controller.state)),
         ),
@@ -53,11 +68,11 @@ class _MaterialMovieSearchViewState extends State<MaterialMovieSearchView> {
     );
   }
 
-  Widget _buildBody(BuildContext context, MovieSearchState state) {
+  Widget _buildBody(BuildContext context, MediaSearchState state) {
     return switch (state) {
-      MovieSearchIdle() => Center(child: Text(SearchTranslations.idleHint.trOf(context))),
-      MovieSearchLoading() => const Center(child: CircularProgressIndicator()),
-      MovieSearchFailure(:final message) => Center(
+      MediaSearchIdle() => Center(child: Text(SearchTranslations.idleHint.trOf(context))),
+      MediaSearchLoading() => const Center(child: CircularProgressIndicator()),
+      MediaSearchFailure(:final message) => Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -72,34 +87,34 @@ class _MaterialMovieSearchViewState extends State<MaterialMovieSearchView> {
           ),
         ),
       ),
-      MovieSearchSuccess(:final movies) when movies.isEmpty => Center(child: Text(SearchTranslations.emptyResults.trOf(context))),
-      MovieSearchSuccess(:final movies) => ListView.builder(
-        itemCount: movies.length,
-        itemBuilder: (context, index) => _MovieResultTile(movie: movies[index], onTap: widget.onMovieSelected),
+      MediaSearchSuccess(:final items) when items.isEmpty => Center(child: Text(SearchTranslations.emptyResults.trOf(context))),
+      MediaSearchSuccess(:final items) => ListView.builder(
+        itemCount: items.length,
+        itemBuilder: (context, index) => _MediaResultTile(item: items[index], onTap: widget.onMediaSelected),
       ),
     };
   }
 }
 
-class _MovieResultTile extends StatelessWidget {
-  const _MovieResultTile({required this.movie, this.onTap});
+class _MediaResultTile extends StatelessWidget {
+  const _MediaResultTile({required this.item, this.onTap});
 
-  final Movie movie;
-  final ValueChanged<Movie>? onTap;
+  final MediaItem item;
+  final ValueChanged<MediaItem>? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final year = movie.releaseDate?.year;
-    final rating = movie.voteAverage;
+    final year = item.releaseDate?.year;
+    final rating = item.voteAverage;
 
     return ListTile(
-      leading: _Poster(url: movie.posterUrl),
-      title: Text(movie.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(year == null ? movie.overview : '$year · ${movie.overview}', maxLines: 2, overflow: TextOverflow.ellipsis),
+      leading: _Poster(url: item.posterUrl),
+      title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(year == null ? item.overview : '$year · ${item.overview}', maxLines: 2, overflow: TextOverflow.ellipsis),
       trailing: rating == null
           ? null
           : Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.star, size: 18), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))]),
-      onTap: onTap == null ? null : () => onTap!(movie),
+      onTap: onTap == null ? null : () => onTap!(item),
     );
   }
 }

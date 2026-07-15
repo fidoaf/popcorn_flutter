@@ -18,7 +18,6 @@ class PopcornWebSplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SplashGate(
       minimumDuration: minimumDuration,
-      child: child,
       splash: Container(
         color: const Color(0xFF1A1A2E),
         child: SplashLayout(
@@ -33,6 +32,7 @@ class PopcornWebSplashScreen extends StatelessWidget {
           ),
         ),
       ),
+      child: child,
     );
   }
 }
