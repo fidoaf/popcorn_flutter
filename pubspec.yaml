@@ -56,6 +56,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
   flutter_launcher_icons: ^0.14.3
+  msix: ^3.18.0
 
 # App launcher icon configuration for all platforms.
 # Regenerate with: dart run flutter_launcher_icons
