@@ -130,13 +130,22 @@ class _MediaResultTileState extends State<_MediaResultTile> {
 
     final tile = ListTile(
       autofocus: widget.autofocus,
+      // Roomier rows on TV so posters/text aren't tiny from across the room.
+      contentPadding: widget.dpadFocus ? const EdgeInsets.symmetric(horizontal: 20, vertical: 12) : null,
       onFocusChange: widget.dpadFocus ? (hasFocus) => setState(() => _focused = hasFocus) : null,
-      leading: _Poster(url: item.posterUrl),
+      leading: _Poster(url: item.posterUrl, large: widget.dpadFocus),
       title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(year == null ? item.overview : '$year · ${item.overview}', maxLines: 2, overflow: TextOverflow.ellipsis),
       trailing: rating == null
           ? null
-          : Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.star, size: 18), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))]),
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.star, size: widget.dpadFocus ? 28 : 18),
+                const SizedBox(width: 4),
+                Text(rating.toStringAsFixed(1)),
+              ],
+            ),
       onTap: widget.onTap == null ? null : () => widget.onTap!(item),
     );
 
@@ -161,12 +170,15 @@ class _MediaResultTileState extends State<_MediaResultTile> {
 }
 
 class _Poster extends StatelessWidget {
-  const _Poster({this.url});
+  const _Poster({this.url, this.large = false});
 
   final Uri? url;
 
-  static const double _width = 46;
-  static const double _height = 69;
+  /// Larger poster for the 10-foot TV experience.
+  final bool large;
+
+  double get _width => large ? 80 : 46;
+  double get _height => large ? 120 : 69;
 
   @override
   Widget build(BuildContext context) {

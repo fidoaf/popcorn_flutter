@@ -87,7 +87,7 @@ class _TvNavigationScope extends StatelessWidget {
       // 10-foot viewing distance, without touching individual text styles.
       data: media.copyWith(
         navigationMode: NavigationMode.directional,
-        textScaler: TextScaler.linear(media.textScaler.scale(1.35) / media.textScaler.scale(1.0)),
+        textScaler: TextScaler.linear(media.textScaler.scale(1.8) / media.textScaler.scale(1.0)),
       ),
       child: child,
     );

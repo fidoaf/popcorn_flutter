@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
@@ -19,6 +20,17 @@ void main(List<String> args) async {
     runApp(const UnsupportedPlatformView());
     return;
   }
+  // Allow the phone app to rotate freely between portrait and landscape.
+  // Note: a partial set like [portraitUp, landscapeLeft, landscapeRight] makes
+  // Flutter request SCREEN_ORIENTATION_USER_LANDSCAPE (landscape-locked, can't
+  // return to portrait). Passing all four maps to SCREEN_ORIENTATION_FULL_USER,
+  // which rotates both ways and respects the system rotation lock.
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
   await dotenv.load();
   runApp(const _PopcornAndroidApp());
 }
