@@ -52,6 +52,7 @@ class _WebHomeView extends StatefulWidget {
 
 class _WebHomeViewState extends State<_WebHomeView> {
   late final MediaSearchController _searchController = MediaSearchController(repository: MediaSearchRepositoryFactory.create());
+  final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
 
   static final ThemeData _theme = ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.dark);
 
@@ -62,8 +63,7 @@ class _WebHomeViewState extends State<_WebHomeView> {
   }
 
   void _openMedia(MediaItem media) {
-    final mediaSegment = _searchController.mediaType == MediaType.tv ? 'tv' : 'movie';
-    final source = Uri.parse('https://web.nxsha.app/embed/$mediaSegment/${media.id}?lang=en&sub=1');
+    final source = _mediaSourceProvider.resolve(media, _searchController.mediaType);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PopcornWebSplashScreen(

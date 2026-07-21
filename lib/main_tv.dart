@@ -103,6 +103,7 @@ class _TvHomeView extends StatefulWidget {
 
 class _TvHomeViewState extends State<_TvHomeView> {
   late final MediaSearchController _searchController = MediaSearchController(repository: MediaSearchRepositoryFactory.create());
+  final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
 
   @override
   void dispose() {
@@ -111,8 +112,7 @@ class _TvHomeViewState extends State<_TvHomeView> {
   }
 
   void _openMedia(MediaItem media) {
-    final mediaSegment = _searchController.mediaType == MediaType.tv ? 'tv' : 'movie';
-    final source = Uri.parse('https://web.nxsha.app/embed/$mediaSegment/${media.id}?lang=en&sub=1');
+    final source = _mediaSourceProvider.resolve(media, _searchController.mediaType);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => _PopOnBack(

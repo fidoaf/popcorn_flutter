@@ -58,6 +58,7 @@ class _WindowsHomeView extends StatefulWidget {
 
 class _WindowsHomeViewState extends State<_WindowsHomeView> {
   late final MediaSearchController _searchController = MediaSearchController(repository: MediaSearchRepositoryFactory.create());
+  final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
 
   @override
   void dispose() {
@@ -66,8 +67,7 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
   }
 
   void _openMedia(MediaItem media) {
-    final mediaSegment = _searchController.mediaType == MediaType.tv ? 'tv' : 'movie';
-    final source = Uri.parse('https://web.nxsha.app/embed/$mediaSegment/${media.id}?lang=en&sub=1');
+    final source = _mediaSourceProvider.resolve(media, _searchController.mediaType);
     Navigator.of(context).push(
       FluentPageRoute<void>(
         builder: (_) => _PopOnEscape(

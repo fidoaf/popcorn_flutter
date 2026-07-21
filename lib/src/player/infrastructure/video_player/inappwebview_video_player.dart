@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:popcorn_flutter/src/player/domain/fullscreen_controller.dart';
+import 'package:popcorn_flutter/src/player/domain/media_source.dart';
 import 'package:popcorn_flutter/src/player/domain/video_player.dart';
 
 final class InappwebviewVideoPlayer extends VideoPlayer {
@@ -8,10 +9,19 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
 
   final FullscreenController fullscreenController;
 
+  /// Translates the domain [MediaSource] into a WebView request, carrying its
+  /// method, headers and body.
+  URLRequest get _request =>
+      URLRequest(url: WebUri.uri(source.url), method: source.method.value, headers: source.headers.isEmpty ? null : source.headers, body: source.body);
+
   @override
   Widget build(BuildContext context) {
+    final hasCookies = source.cookies.isNotEmpty;
     return InAppWebView(
-      initialUrlRequest: URLRequest(url: WebUri.uri(source)),
+      // Cookies must be installed before the page loads, so when the source
+      // carries any, defer the initial navigation to [onWebViewCreated].
+      initialUrlRequest: hasCookies ? null : _request,
+      onWebViewCreated: hasCookies ? _loadWithCookies : null,
       initialSettings: InAppWebViewSettings(
         // Allow the video/player to request fullscreen. On web the WebView is
         // hosted inside an <iframe>, which must be granted these permissions
@@ -30,7 +40,7 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
       // any top-level navigation to a different host (external links/redirects).
       shouldOverrideUrlLoading: (controller, navigationAction) async {
         final request = navigationAction.request.url;
-        if (request == null || navigationAction.isForMainFrame != true || request.host == source.host) {
+        if (request == null || navigationAction.isForMainFrame != true || request.host == source.url.host) {
           return NavigationActionPolicy.ALLOW;
         }
         return NavigationActionPolicy.CANCEL;
@@ -38,5 +48,16 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
       onEnterFullscreen: (_) => fullscreenController.setFullscreen(true),
       onExitFullscreen: (_) => fullscreenController.setFullscreen(false),
     );
+  }
+
+  /// Installs the source's cookies and then loads the request, used when the
+  /// [MediaSource] requires cookies to be present before the first navigation.
+  Future<void> _loadWithCookies(InAppWebViewController controller) async {
+    final cookieManager = CookieManager.instance();
+    final url = WebUri.uri(source.url);
+    for (final cookie in source.cookies) {
+      await cookieManager.setCookie(url: url, name: cookie.name, value: cookie.value, domain: cookie.domain, path: cookie.path);
+    }
+    await controller.loadUrl(urlRequest: _request);
   }
 }
