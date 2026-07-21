@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_exception.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
@@ -13,7 +14,8 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     : _accessToken = accessToken,
       _client = client ?? http.Client();
 
-  static const String _searchBaseUrl = 'https://api.themoviedb.org/3/search';
+  static const String _baseUrl = 'https://api.themoviedb.org/3';
+  static const String _searchBaseUrl = '$_baseUrl/search';
   static const String _posterBaseUrl = 'https://image.tmdb.org/t/p/w500';
 
   final String _accessToken;
@@ -43,6 +45,35 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final results = (decoded['results'] as List<dynamic>?) ?? const <dynamic>[];
     return results.cast<Map<String, dynamic>>().map(_toMediaItem).toList(growable: false);
+  }
+
+  @override
+  Future<MediaDetails> details(int id, MediaType mediaType) async {
+    final uri = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id');
+
+    final http.Response response;
+    try {
+      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'});
+    } catch (error) {
+      throw MediaSearchException('Unable to reach TMDB: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw MediaSearchException('TMDB details failed with status ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return _toMediaDetails(decoded, mediaType);
+  }
+
+  static MediaDetails _toMediaDetails(Map<String, dynamic> json, MediaType mediaType) {
+    switch (mediaType) {
+      case MediaType.movie:
+        final minutes = (json['runtime'] as num?)?.toInt();
+        return MediaDetails(runtime: minutes == null || minutes <= 0 ? null : Duration(minutes: minutes));
+      case MediaType.tv:
+        return MediaDetails(numberOfSeasons: (json['number_of_seasons'] as num?)?.toInt(), numberOfEpisodes: (json['number_of_episodes'] as num?)?.toInt());
+    }
   }
 
   static String _pathSegment(MediaType mediaType) => switch (mediaType) {

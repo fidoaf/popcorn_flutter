@@ -4,14 +4,20 @@ import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_controller.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_state.dart';
+import 'package:popcorn_flutter/src/search/view/pointer_capability.dart';
 import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
 /// Fluent (Windows) UI for searching movies and TV series, driven by a [MediaSearchController].
 class FluentMediaSearchView extends StatefulWidget {
-  const FluentMediaSearchView({super.key, required this.controller, this.onMediaSelected});
+  const FluentMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.onMediaPlay});
 
   final MediaSearchController controller;
+
+  /// Called when a result row is tapped (opens the details page).
   final ValueChanged<MediaItem>? onMediaSelected;
+
+  /// Called when a result's play button is tapped (goes straight to the player).
+  final ValueChanged<MediaItem>? onMediaPlay;
 
   @override
   State<FluentMediaSearchView> createState() => _FluentMediaSearchViewState();
@@ -94,37 +100,64 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> {
       MediaSearchSuccess(:final items) => ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         itemCount: items.length,
-        itemBuilder: (context, index) => _MediaResultTile(item: items[index], onTap: widget.onMediaSelected),
+        itemBuilder: (context, index) => _MediaResultTile(item: items[index], onTap: widget.onMediaSelected, onPlay: widget.onMediaPlay),
       ),
     };
   }
 }
 
-class _MediaResultTile extends StatelessWidget {
-  const _MediaResultTile({required this.item, this.onTap});
+class _MediaResultTile extends StatefulWidget {
+  const _MediaResultTile({required this.item, this.onTap, this.onPlay});
 
   final MediaItem item;
   final ValueChanged<MediaItem>? onTap;
+  final ValueChanged<MediaItem>? onPlay;
+
+  @override
+  State<_MediaResultTile> createState() => _MediaResultTileState();
+}
+
+class _MediaResultTileState extends State<_MediaResultTile> {
+  bool _hovering = false;
 
   @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final year = item.releaseDate?.year;
-    final rating = item.voteAverage;
     final subtitle = year == null ? item.overview : '$year \u00b7 ${item.overview}';
 
-    return ListTile.selectable(
+    final tile = ListTile.selectable(
       leading: _Poster(url: item.posterUrl),
       title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-      trailing: rating == null
-          ? null
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [const Icon(FluentIcons.favorite_star_fill), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
-            ),
+      trailing: _buildTrailing(context),
       selected: false,
-      onSelectionChange: onTap == null ? null : (_) => onTap!(item),
+      onSelectionChange: widget.onTap == null ? null : (_) => widget.onTap!(item),
     );
+
+    // On touch devices the play button stays visible, so hover tracking isn't
+    // needed; on desktop reveal it while the pointer is over the row.
+    if (isTouchPrimaryPlatform) return tile;
+    return MouseRegion(onEnter: (_) => setState(() => _hovering = true), onExit: (_) => setState(() => _hovering = false), child: tile);
+  }
+
+  /// Builds the trailing area with the rating and, when appropriate, a play
+  /// button. The play button is always shown on touch devices and only while
+  /// hovering on desktop.
+  Widget? _buildTrailing(BuildContext context) {
+    final rating = widget.item.voteAverage;
+    final showPlay = isTouchPrimaryPlatform || _hovering;
+
+    final children = <Widget>[
+      if (rating != null) ...[const Icon(FluentIcons.favorite_star_fill), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
+      if (showPlay && widget.onPlay != null) ...[
+        const SizedBox(width: 8),
+        IconButton(icon: const Icon(FluentIcons.play_solid), onPressed: () => widget.onPlay!(widget.item)),
+      ],
+    ];
+
+    if (children.isEmpty) return null;
+    return Row(mainAxisSize: MainAxisSize.min, children: children);
   }
 }
 

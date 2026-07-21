@@ -4,14 +4,20 @@ import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_controller.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_state.dart';
+import 'package:popcorn_flutter/src/search/view/pointer_capability.dart';
 import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
 /// Material (Android) UI for searching movies and TV series, driven by a [MediaSearchController].
 class MaterialMediaSearchView extends StatefulWidget {
-  const MaterialMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.enableDpadFocus = false});
+  const MaterialMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.onMediaPlay, this.enableDpadFocus = false});
 
   final MediaSearchController controller;
+
+  /// Called when a result row is tapped (opens the details page).
   final ValueChanged<MediaItem>? onMediaSelected;
+
+  /// Called when a result's play button is tapped (goes straight to the player).
+  final ValueChanged<MediaItem>? onMediaPlay;
 
   /// When `true`, results autofocus the first tile and draw a prominent focus
   /// highlight for D-pad/remote navigation (Fire TV). Defaults to `false` so
@@ -99,6 +105,7 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
         itemBuilder: (context, index) => _MediaResultTile(
           item: items[index],
           onTap: widget.onMediaSelected,
+          onPlay: widget.onMediaPlay,
           dpadFocus: widget.enableDpadFocus,
           autofocus: widget.enableDpadFocus && index == 0,
         ),
@@ -108,10 +115,11 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
 }
 
 class _MediaResultTile extends StatefulWidget {
-  const _MediaResultTile({required this.item, this.onTap, this.autofocus = false, this.dpadFocus = false});
+  const _MediaResultTile({required this.item, this.onTap, this.onPlay, this.autofocus = false, this.dpadFocus = false});
 
   final MediaItem item;
   final ValueChanged<MediaItem>? onTap;
+  final ValueChanged<MediaItem>? onPlay;
   final bool autofocus;
   final bool dpadFocus;
 
@@ -121,12 +129,12 @@ class _MediaResultTile extends StatefulWidget {
 
 class _MediaResultTileState extends State<_MediaResultTile> {
   bool _focused = false;
+  bool _hovering = false;
 
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
     final year = item.releaseDate?.year;
-    final rating = item.voteAverage;
 
     final tile = ListTile(
       autofocus: widget.autofocus,
@@ -136,26 +144,47 @@ class _MediaResultTileState extends State<_MediaResultTile> {
       leading: _Poster(url: item.posterUrl, large: widget.dpadFocus),
       title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(year == null ? item.overview : '$year · ${item.overview}', maxLines: 2, overflow: TextOverflow.ellipsis),
-      trailing: rating == null
-          ? null
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.star, size: widget.dpadFocus ? 28 : 18),
-                const SizedBox(width: 4),
-                Text(rating.toStringAsFixed(1)),
-              ],
-            ),
+      trailing: _buildTrailing(context),
       onTap: widget.onTap == null ? null : () => widget.onTap!(item),
     );
 
-    // Plain touch UI (Android phones): no persistent focus decoration.
-    if (!widget.dpadFocus) return tile;
+    // On touch devices the play button is always visible, so no hover tracking
+    // is needed; on desktop reveal it while the pointer is over the row.
+    final decorated = widget.dpadFocus ? _buildDpadDecoration(context, tile) : tile;
+    if (isTouchPrimaryPlatform) return decorated;
+    return MouseRegion(onEnter: (_) => setState(() => _hovering = true), onExit: (_) => setState(() => _hovering = false), child: decorated);
+  }
 
+  /// Builds the trailing area with the rating and, when appropriate, a play
+  /// button. The play button is always shown on touch devices and only while
+  /// hovering on desktop.
+  Widget? _buildTrailing(BuildContext context) {
+    final rating = widget.item.voteAverage;
+    final showPlay = isTouchPrimaryPlatform || _hovering;
+    final iconSize = widget.dpadFocus ? 28.0 : 18.0;
+
+    final children = <Widget>[
+      if (rating != null) ...[Icon(Icons.star, size: iconSize), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
+      if (showPlay && widget.onPlay != null) ...[
+        const SizedBox(width: 4),
+        IconButton(
+          icon: const Icon(Icons.play_circle_fill),
+          iconSize: widget.dpadFocus ? 36 : 28,
+          tooltip: SearchTranslations.playButton.trOf(context),
+          onPressed: () => widget.onPlay!(widget.item),
+        ),
+      ],
+    ];
+
+    if (children.isEmpty) return null;
+    return Row(mainAxisSize: MainAxisSize.min, children: children);
+  }
+
+  /// Wraps [tile] with a prominent border/background when focused so the
+  /// selection is clearly visible from across the room when navigating with a
+  /// D-pad.
+  Widget _buildDpadDecoration(BuildContext context, Widget tile) {
     final colorScheme = Theme.of(context).colorScheme;
-
-    // Draw a prominent border/background when focused so the selection is
-    // clearly visible from across the room when navigating with a D-pad.
     return AnimatedContainer(
       duration: const Duration(milliseconds: 120),
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

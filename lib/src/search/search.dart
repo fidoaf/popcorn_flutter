@@ -1,3 +1,4 @@
+export 'domain/media_details.dart';
 export 'domain/media_item.dart';
 export 'domain/media_search_exception.dart';
 export 'domain/media_search_repository.dart';

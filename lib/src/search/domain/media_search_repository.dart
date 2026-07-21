@@ -1,3 +1,4 @@
+import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 
@@ -10,4 +11,8 @@ abstract interface class MediaSearchRepository {
   /// Returns the entries of [mediaType] matching [query].
   /// An empty [query] yields no results.
   Future<List<MediaItem>> search(String query, MediaType mediaType);
+
+  /// Returns extended [MediaDetails] for the entry [id] of [mediaType]
+  /// (runtime for movies, seasons/episodes for TV series).
+  Future<MediaDetails> details(int id, MediaType mediaType);
 }

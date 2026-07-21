@@ -28,4 +28,6 @@ class SearchTranslations {
   });
 
   static const errorTitle = Translation({AppLanguage.en: 'Search failed', AppLanguage.es: 'La búsqueda falló', AppLanguage.ca: 'La cerca ha fallat'});
+
+  static const playButton = Translation({AppLanguage.en: 'Play', AppLanguage.es: 'Reproducir', AppLanguage.ca: 'Reprodueix'});
 }

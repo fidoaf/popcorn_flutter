@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
+import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -102,7 +103,8 @@ class _TvHomeView extends StatefulWidget {
 }
 
 class _TvHomeViewState extends State<_TvHomeView> {
-  late final MediaSearchController _searchController = MediaSearchController(repository: MediaSearchRepositoryFactory.create());
+  final MediaSearchRepository _repository = MediaSearchRepositoryFactory.create();
+  late final MediaSearchController _searchController = MediaSearchController(repository: _repository);
   final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
 
   @override
@@ -126,12 +128,28 @@ class _TvHomeViewState extends State<_TvHomeView> {
     );
   }
 
+  void _openDetails(MediaItem media) {
+    final details = _repository.details(media.id, _searchController.mediaType);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PopcornMaterialSplashScreen(
+          child: Scaffold(
+            appBar: AppBar(title: Text(media.title)),
+            body: SafeArea(
+              child: MaterialMediaDetailsView(item: media, details: details, onPlay: _openMedia, autofocusPlay: true),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopcornMaterialSplashScreen(
       child: Scaffold(
         appBar: AppBar(title: Text(SearchTranslations.pageTitle.trOf(context))),
-        body: MaterialMediaSearchView(controller: _searchController, onMediaSelected: _openMedia, enableDpadFocus: true),
+        body: MaterialMediaSearchView(controller: _searchController, onMediaSelected: _openDetails, onMediaPlay: _openMedia, enableDpadFocus: true),
       ),
     );
   }

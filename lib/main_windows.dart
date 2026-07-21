@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/fluent/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
+import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -57,7 +58,8 @@ class _WindowsHomeView extends StatefulWidget {
 }
 
 class _WindowsHomeViewState extends State<_WindowsHomeView> {
-  late final MediaSearchController _searchController = MediaSearchController(repository: MediaSearchRepositoryFactory.create());
+  final MediaSearchRepository _repository = MediaSearchRepositoryFactory.create();
+  late final MediaSearchController _searchController = MediaSearchController(repository: _repository);
   final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
 
   @override
@@ -77,10 +79,23 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
     );
   }
 
+  void _openDetails(MediaItem media) {
+    final details = _repository.details(media.id, _searchController.mediaType);
+    Navigator.of(context).push(
+      FluentPageRoute<void>(
+        builder: (_) => _PopOnEscape(
+          child: PopcornFluentSplashScreen(
+            child: FluentMediaDetailsView(item: media, details: details, onPlay: _openMedia),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopcornFluentSplashScreen(
-      child: FluentMediaSearchView(controller: _searchController, onMediaSelected: _openMedia),
+      child: FluentMediaSearchView(controller: _searchController, onMediaSelected: _openDetails, onMediaPlay: _openMedia),
     );
   }
 }
