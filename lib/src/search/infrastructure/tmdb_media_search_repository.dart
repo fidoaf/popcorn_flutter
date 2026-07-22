@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
@@ -34,7 +35,12 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'});
+      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'}).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw MediaSearchException('TMDB search request timeout'),
+      );
+    } on SocketException catch (e) {
+      throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
       throw MediaSearchException('Unable to reach TMDB: $error');
     }
@@ -54,7 +60,12 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'});
+      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'}).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw MediaSearchException('TMDB details request timeout'),
+      );
+    } on SocketException catch (e) {
+      throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
       throw MediaSearchException('Unable to reach TMDB: $error');
     }
@@ -73,7 +84,12 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'});
+      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'}).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw MediaSearchException('TMDB trending request timeout'),
+      );
+    } on SocketException catch (e) {
+      throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
       throw MediaSearchException('Unable to reach TMDB: $error');
     }
@@ -93,7 +109,12 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'});
+      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'}).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw MediaSearchException('TMDB videos request timeout'),
+      );
+    } on SocketException catch (e) {
+      throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
       throw MediaSearchException('Unable to reach TMDB: $error');
     }
