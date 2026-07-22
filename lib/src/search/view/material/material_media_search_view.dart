@@ -105,8 +105,7 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> with 
             decoration: InputDecoration(
               hintText: SearchTranslations.searchPlaceholder.trOf(context),
               border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: hasQuery ? IconButton(icon: const Icon(Icons.clear), onPressed: clearSearch) : null,
+              prefixIcon: hasQuery ? IconButton(icon: const Icon(Icons.clear), onPressed: clearSearch) : const Icon(Icons.search),
             ),
           ),
         ),

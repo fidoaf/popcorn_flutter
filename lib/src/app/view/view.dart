@@ -1,5 +1,6 @@
 export 'cupertino/cupertino.dart';
 export 'fluent/fluent.dart';
+export 'macos/macos.dart';
 export 'material/material.dart';
 export 'splash_assets.dart';
 export 'splash_gate.dart';

@@ -2,12 +2,15 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:macos_ui/macos_ui.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
-import 'package:popcorn_flutter/src/app/view/cupertino/splash_screen.dart';
+import 'package:popcorn_flutter/src/app/view/macos/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
+import 'package:popcorn_flutter/src/details/view/macos/macos_media_details_view.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -28,17 +31,14 @@ class _PopcornMacosApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoApp(
+    return MacosApp(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       locale: PlatformDispatcher.instance.locale,
       supportedLocales: AppLanguage.values.map((lang) => lang.locale),
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
-      theme: const CupertinoThemeData(
-        primaryColor: CupertinoColors.systemOrange,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: Color(0xFF1A1A2E),
-        barBackgroundColor: Color(0xE01A1A2E),
-      ),
+      themeMode: ThemeMode.system,
+      theme: MacosThemeData.light(),
+      darkTheme: MacosThemeData.dark(),
       home: const _MacosHomeView(),
     );
   }
@@ -66,14 +66,13 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
     final source = _mediaSourceProvider.resolve(media, _searchController.mediaType);
     Navigator.of(context).push(
       CupertinoPageRoute<void>(
-        builder: (_) => PopcornCupertinoSplashScreen(
-          child: CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(
-              backgroundColor: const Color(0x001A1A2E),
-              border: null,
-              leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.of(context).pop(), child: const Icon(CupertinoIcons.xmark)),
+        builder: (_) => PopcornMacosSplashScreen(
+          child: MacosScaffold(
+            toolBar: ToolBar(
+              title: Text(media.title),
+              leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
             ),
-            child: SafeArea(child: VideoPlayerFactory.create(source: source)),
+            children: [ContentArea(builder: (context, _) => VideoPlayerFactory.create(source: source))],
           ),
         ),
       ),
@@ -84,14 +83,13 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
     final source = MediaSource(url: video.embedUrl!);
     Navigator.of(context).push(
       CupertinoPageRoute<void>(
-        builder: (_) => PopcornCupertinoSplashScreen(
-          child: CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(
-              backgroundColor: const Color(0x001A1A2E),
-              border: null,
-              leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.of(context).pop(), child: const Icon(CupertinoIcons.xmark)),
+        builder: (_) => PopcornMacosSplashScreen(
+          child: MacosScaffold(
+            toolBar: ToolBar(
+              title: Text(video.name),
+              leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
             ),
-            child: SafeArea(child: VideoPlayerFactory.create(source: source)),
+            children: [ContentArea(builder: (context, _) => VideoPlayerFactory.create(source: source))],
           ),
         ),
       ),
@@ -103,12 +101,17 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
     final videos = _repository.videos(media.id, _searchController.mediaType);
     Navigator.of(context).push(
       CupertinoPageRoute<void>(
-        builder: (_) => PopcornCupertinoSplashScreen(
-          child: CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(middle: Text(media.title), previousPageTitle: SearchTranslations.pageTitle.trOf(context)),
-            child: SafeArea(
-              child: CupertinoMediaDetailsView(item: media, details: details, videos: videos, onPlay: _openMedia, onVideoPlay: _playVideo),
+        builder: (_) => PopcornMacosSplashScreen(
+          child: MacosScaffold(
+            toolBar: ToolBar(
+              title: Text(media.title),
+              leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
             ),
+            children: [
+              ContentArea(
+                builder: (context, _) => MacosMediaDetailsView(item: media, details: details, videos: videos, onPlay: _openMedia, onVideoPlay: _playVideo),
+              ),
+            ],
           ),
         ),
       ),
@@ -117,11 +120,15 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
 
   @override
   Widget build(BuildContext context) {
-    return PopcornCupertinoSplashScreen(
-      child: CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(middle: Text(SearchTranslations.pageTitle.trOf(context))),
-        child: SafeArea(
-          child: CupertinoMediaSearchView(controller: _searchController, onMediaSelected: _openDetails, onMediaPlay: _openMedia),
+    return PopcornMacosSplashScreen(
+      child: MacosWindow(
+        child: MacosScaffold(
+          toolBar: ToolBar(title: Text(SearchTranslations.pageTitle.trOf(context))),
+          children: [
+            ContentArea(
+              builder: (context, _) => MacosMediaSearchView(controller: _searchController, onMediaSelected: _openDetails, onMediaPlay: _openMedia),
+            ),
+          ],
         ),
       ),
     );

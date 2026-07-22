@@ -1,5 +1,6 @@
 export 'cupertino/cupertino.dart';
 export 'fluent/fluent.dart';
+export 'macos/macos.dart';
 export 'material/material.dart';
 export 'media_search_controller.dart';
 export 'media_search_state.dart';
