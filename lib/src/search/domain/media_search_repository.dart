@@ -15,4 +15,7 @@ abstract interface class MediaSearchRepository {
   /// Returns extended [MediaDetails] for the entry [id] of [mediaType]
   /// (runtime for movies, seasons/episodes for TV series).
   Future<MediaDetails> details(int id, MediaType mediaType);
+
+  /// Returns the trending entries of [mediaType] for the current week.
+  Future<List<MediaItem>> trending(MediaType mediaType);
 }

@@ -88,6 +88,7 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> {
 
   Widget _buildBody(BuildContext context, MediaSearchState state) {
     return switch (state) {
+      MediaSearchIdle(:final trendingItems) when trendingItems.isNotEmpty => _buildTrendingList(context, trendingItems),
       MediaSearchIdle() => Center(child: Text(SearchTranslations.idleHint.trOf(context))),
       MediaSearchLoading() => const Center(child: ProgressRing()),
       MediaSearchFailure(:final message) => Center(
@@ -103,6 +104,22 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> {
         itemBuilder: (context, index) => _MediaResultTile(item: items[index], onTap: widget.onMediaSelected, onPlay: widget.onMediaPlay),
       ),
     };
+  }
+
+  Widget _buildTrendingList(BuildContext context, List<MediaItem> items) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      itemCount: items.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+            child: Text(SearchTranslations.trendingTitle.trOf(context), style: FluentTheme.of(context).typography.subtitle),
+          );
+        }
+        return _MediaResultTile(item: items[index - 1], onTap: widget.onMediaSelected, onPlay: widget.onMediaPlay);
+      },
+    );
   }
 }
 

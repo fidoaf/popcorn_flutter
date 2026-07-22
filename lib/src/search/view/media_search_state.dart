@@ -7,7 +7,9 @@ sealed class MediaSearchState {
 
 /// No search has been performed yet.
 final class MediaSearchIdle extends MediaSearchState {
-  const MediaSearchIdle();
+  const MediaSearchIdle({this.trendingItems = const []});
+
+  final List<MediaItem> trendingItems;
 }
 
 /// A search request is in flight.

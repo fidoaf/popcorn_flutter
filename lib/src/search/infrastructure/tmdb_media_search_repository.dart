@@ -66,6 +66,26 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     return _toMediaDetails(decoded, mediaType);
   }
 
+  @override
+  Future<List<MediaItem>> trending(MediaType mediaType) async {
+    final uri = Uri.parse('$_baseUrl/trending/${_pathSegment(mediaType)}/week');
+
+    final http.Response response;
+    try {
+      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'});
+    } catch (error) {
+      throw MediaSearchException('Unable to reach TMDB: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw MediaSearchException('TMDB trending failed with status ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = (decoded['results'] as List<dynamic>?) ?? const <dynamic>[];
+    return results.cast<Map<String, dynamic>>().map(_toMediaItem).toList(growable: false);
+  }
+
   static MediaDetails _toMediaDetails(Map<String, dynamic> json, MediaType mediaType) {
     switch (mediaType) {
       case MediaType.movie:

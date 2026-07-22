@@ -81,6 +81,7 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
 
   Widget _buildBody(BuildContext context, MediaSearchState state) {
     return switch (state) {
+      MediaSearchIdle(:final trendingItems) when trendingItems.isNotEmpty => _buildTrendingList(context, trendingItems),
       MediaSearchIdle() => Center(child: Text(SearchTranslations.idleHint.trOf(context))),
       MediaSearchLoading() => const Center(child: CircularProgressIndicator()),
       MediaSearchFailure(:final message) => Center(
@@ -111,6 +112,27 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
         ),
       ),
     };
+  }
+
+  Widget _buildTrendingList(BuildContext context, List<MediaItem> items) {
+    return ListView.builder(
+      itemCount: items.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text(SearchTranslations.trendingTitle.trOf(context), style: Theme.of(context).textTheme.titleMedium),
+          );
+        }
+        return _MediaResultTile(
+          item: items[index - 1],
+          onTap: widget.onMediaSelected,
+          onPlay: widget.onMediaPlay,
+          dpadFocus: widget.enableDpadFocus,
+          autofocus: widget.enableDpadFocus && index == 1,
+        );
+      },
+    );
   }
 }
 

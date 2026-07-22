@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_exception.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -10,7 +11,9 @@ import 'package:popcorn_flutter/src/search/view/media_search_state.dart';
 /// any data source and is trivial to unit test.
 class MediaSearchController extends ChangeNotifier {
   // ignore: prefer_initializing_formals -- named parameters cannot be private.
-  MediaSearchController({required MediaSearchRepository repository}) : _repository = repository;
+  MediaSearchController({required MediaSearchRepository repository}) : _repository = repository {
+    _loadTrending();
+  }
 
   final MediaSearchRepository _repository;
 
@@ -28,11 +31,32 @@ class MediaSearchController extends ChangeNotifier {
   // Guards against out-of-order responses when searches are issued rapidly.
   int _latestRequest = 0;
 
+  // Cached trending items so returning to idle can restore them.
+  List<MediaItem> _trendingItems = const [];
+
   /// Switches the searched catalogue and re-runs the current query, if any.
   void setMediaType(MediaType mediaType) {
     if (_mediaType == mediaType) return;
     _mediaType = mediaType;
-    search(_lastQuery);
+    if (_lastQuery.isNotEmpty) {
+      search(_lastQuery);
+    } else {
+      _loadTrending();
+    }
+  }
+
+  Future<void> _loadTrending() async {
+    _trendingItems = const [];
+    _setState(const MediaSearchIdle());
+    try {
+      final items = await _repository.trending(_mediaType);
+      _trendingItems = items;
+      if (_state is MediaSearchIdle) {
+        _setState(MediaSearchIdle(trendingItems: _trendingItems));
+      }
+    } catch (_) {
+      // Trending is not critical – keep the idle state without items.
+    }
   }
 
   Future<void> search(String query) async {
@@ -58,7 +82,7 @@ class MediaSearchController extends ChangeNotifier {
 
   void clear() {
     _latestRequest++;
-    _setState(const MediaSearchIdle());
+    _setState(MediaSearchIdle(trendingItems: _trendingItems));
   }
 
   void _setState(MediaSearchState state) {
