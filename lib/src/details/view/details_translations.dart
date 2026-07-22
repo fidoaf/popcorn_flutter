@@ -22,4 +22,6 @@ class DetailsTranslations {
   static const episode = Translation({AppLanguage.en: 'episode', AppLanguage.es: 'episodio', AppLanguage.ca: 'episodi'});
 
   static const episodes = Translation({AppLanguage.en: 'episodes', AppLanguage.es: 'episodios', AppLanguage.ca: 'episodis'});
+
+  static const videos = Translation({AppLanguage.en: 'Videos', AppLanguage.es: 'Vídeos', AppLanguage.ca: 'Vídeos'});
 }

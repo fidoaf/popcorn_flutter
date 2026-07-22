@@ -27,12 +27,26 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> {
   final TextEditingController _queryController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _queryController.addListener(_onQueryChanged);
+  }
+
+  @override
   void dispose() {
+    _queryController.removeListener(_onQueryChanged);
     _queryController.dispose();
     super.dispose();
   }
 
+  void _onQueryChanged() => setState(() {});
+
   void _submit() => widget.controller.search(_queryController.text);
+
+  void _clear() {
+    _queryController.clear();
+    widget.controller.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +62,7 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> {
               placeholder: SearchTranslations.searchPlaceholder.trOf(context),
               onSubmitted: (_) => _submit(),
               prefix: const Padding(padding: EdgeInsets.only(left: 10, right: 4), child: Icon(FluentIcons.search)),
-              suffix: IconButton(icon: const Icon(FluentIcons.chevron_right), onPressed: _submit),
+              suffix: _queryController.text.isNotEmpty ? IconButton(icon: const Icon(FluentIcons.clear), onPressed: _clear) : null,
             ),
           ),
           Padding(

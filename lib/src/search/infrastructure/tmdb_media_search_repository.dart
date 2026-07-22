@@ -6,6 +6,7 @@ import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_exception.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
+import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// [MediaSearchRepository] backed by The Movie Database (TMDB) REST API.
 final class TmdbMediaSearchRepository implements MediaSearchRepository {
@@ -86,6 +87,26 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     return results.cast<Map<String, dynamic>>().map(_toMediaItem).toList(growable: false);
   }
 
+  @override
+  Future<List<MediaVideo>> videos(int id, MediaType mediaType) async {
+    final uri = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id/videos');
+
+    final http.Response response;
+    try {
+      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'});
+    } catch (error) {
+      throw MediaSearchException('Unable to reach TMDB: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw MediaSearchException('TMDB videos failed with status ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = (decoded['results'] as List<dynamic>?) ?? const <dynamic>[];
+    return results.cast<Map<String, dynamic>>().map(_toMediaVideo).toList(growable: false);
+  }
+
   static MediaDetails _toMediaDetails(Map<String, dynamic> json, MediaType mediaType) {
     switch (mediaType) {
       case MediaType.movie:
@@ -121,5 +142,15 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
       return null;
     }
     return DateTime.tryParse(value);
+  }
+
+  static MediaVideo _toMediaVideo(Map<String, dynamic> json) {
+    return MediaVideo(
+      id: json['id'] as String,
+      key: json['key'] as String,
+      name: (json['name'] as String?) ?? '',
+      site: (json['site'] as String?) ?? '',
+      type: (json['type'] as String?) ?? '',
+    );
   }
 }

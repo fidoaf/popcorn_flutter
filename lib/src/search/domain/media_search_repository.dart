@@ -1,6 +1,7 @@
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
+import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// Contract for searching movies and TV series from a remote catalogue.
 ///
@@ -18,4 +19,7 @@ abstract interface class MediaSearchRepository {
 
   /// Returns the trending entries of [mediaType] for the current week.
   Future<List<MediaItem>> trending(MediaType mediaType);
+
+  /// Returns the videos (trailers, teasers, clips) for the entry [id] of [mediaType].
+  Future<List<MediaVideo>> videos(int id, MediaType mediaType);
 }

@@ -81,8 +81,26 @@ class _WebHomeViewState extends State<_WebHomeView> {
     );
   }
 
+  void _playVideo(MediaVideo video) {
+    final source = MediaSource(url: video.embedUrl!);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PopcornWebSplashScreen(
+          child: Theme(
+            data: _theme,
+            child: Material(
+              color: _PopcornWebApp._background,
+              child: VideoPlayerFactory.create(source: source),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openDetails(MediaItem media) {
     final details = _repository.details(media.id, _searchController.mediaType);
+    final videos = _repository.videos(media.id, _searchController.mediaType);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PopcornWebSplashScreen(
@@ -91,7 +109,7 @@ class _WebHomeViewState extends State<_WebHomeView> {
             child: Material(
               color: _PopcornWebApp._background,
               child: SafeArea(
-                child: MaterialMediaDetailsView(item: media, details: details, onPlay: _openMedia),
+                child: MaterialMediaDetailsView(item: media, details: details, videos: videos, onPlay: _openMedia, onVideoPlay: _playVideo),
               ),
             ),
           ),

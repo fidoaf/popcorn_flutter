@@ -32,12 +32,26 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
   final TextEditingController _queryController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _queryController.addListener(_onQueryChanged);
+  }
+
+  @override
   void dispose() {
+    _queryController.removeListener(_onQueryChanged);
     _queryController.dispose();
     super.dispose();
   }
 
+  void _onQueryChanged() => setState(() {});
+
   void _submit() => widget.controller.search(_queryController.text);
+
+  void _clear() {
+    _queryController.clear();
+    widget.controller.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +68,7 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
               hintText: SearchTranslations.searchPlaceholder.trOf(context),
               border: const OutlineInputBorder(),
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: _submit),
+              suffixIcon: _queryController.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: _clear) : null,
             ),
           ),
         ),

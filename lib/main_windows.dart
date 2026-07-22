@@ -73,7 +73,40 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
     Navigator.of(context).push(
       FluentPageRoute<void>(
         builder: (_) => _PopOnEscape(
-          child: PopcornFluentSplashScreen(child: VideoPlayerFactory.create(source: source)),
+          child: PopcornFluentSplashScreen(
+            child: Stack(
+              children: [
+                VideoPlayerFactory.create(source: source),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: IconButton(icon: const Icon(FluentIcons.chrome_close), onPressed: () => Navigator.of(context).pop()),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _playVideo(MediaVideo video) {
+    final source = MediaSource(url: video.embedUrl!);
+    Navigator.of(context).push(
+      FluentPageRoute<void>(
+        builder: (_) => _PopOnEscape(
+          child: PopcornFluentSplashScreen(
+            child: Stack(
+              children: [
+                VideoPlayerFactory.create(source: source),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: IconButton(icon: const Icon(FluentIcons.chrome_close), onPressed: () => Navigator.of(context).pop()),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -81,11 +114,12 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
 
   void _openDetails(MediaItem media) {
     final details = _repository.details(media.id, _searchController.mediaType);
+    final videos = _repository.videos(media.id, _searchController.mediaType);
     Navigator.of(context).push(
       FluentPageRoute<void>(
         builder: (_) => _PopOnEscape(
           child: PopcornFluentSplashScreen(
-            child: FluentMediaDetailsView(item: media, details: details, onPlay: _openMedia),
+            child: FluentMediaDetailsView(item: media, details: details, videos: videos, onPlay: _openMedia, onVideoPlay: _playVideo),
           ),
         ),
       ),

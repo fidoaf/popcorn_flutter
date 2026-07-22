@@ -4,13 +4,14 @@ import 'package:popcorn_flutter/src/details/view/media_details_format.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// Material (Android / web) details page for a single [MediaItem].
 ///
 /// Shows the poster, title, release year, rating and overview along with a
 /// prominent play button that launches the player via [onPlay].
 class MaterialMediaDetailsView extends StatelessWidget {
-  const MaterialMediaDetailsView({super.key, required this.item, this.details, this.onPlay, this.autofocusPlay = false});
+  const MaterialMediaDetailsView({super.key, required this.item, this.details, this.videos, this.onPlay, this.onVideoPlay, this.autofocusPlay = false});
 
   final MediaItem item;
 
@@ -18,8 +19,14 @@ class MaterialMediaDetailsView extends StatelessWidget {
   /// loaded on demand. `null` when no extended metadata is available.
   final Future<MediaDetails>? details;
 
+  /// Videos (trailers, teasers, etc.) for this item, loaded on demand.
+  final Future<List<MediaVideo>>? videos;
+
   /// Called when the play button is tapped (launches the player).
   final ValueChanged<MediaItem>? onPlay;
+
+  /// Called when a video tile is tapped (plays the video in-app).
+  final ValueChanged<MediaVideo>? onVideoPlay;
 
   /// Autofocus the play button so a D-pad/remote has an initial focus target.
   final bool autofocusPlay;
@@ -73,6 +80,8 @@ class MaterialMediaDetailsView extends StatelessWidget {
         Text(DetailsTranslations.overview.trOf(context), style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         Text(overview.isEmpty ? DetailsTranslations.noOverview.trOf(context) : overview, style: theme.textTheme.bodyMedium),
+        const SizedBox(height: 24),
+        _VideosSection(videos: videos, onVideoPlay: onVideoPlay),
       ],
     );
   }
@@ -106,6 +115,43 @@ class _MetadataLine extends StatelessWidget {
               Text(text, style: theme.textTheme.titleMedium),
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+class _VideosSection extends StatelessWidget {
+  const _VideosSection({this.videos, this.onVideoPlay});
+
+  final Future<List<MediaVideo>>? videos;
+  final ValueChanged<MediaVideo>? onVideoPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    if (videos == null) return const SizedBox.shrink();
+    return FutureBuilder<List<MediaVideo>>(
+      future: videos,
+      builder: (context, snapshot) {
+        final items = snapshot.data;
+        if (items == null || items.isEmpty) return const SizedBox.shrink();
+        final theme = Theme.of(context);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(DetailsTranslations.videos.trOf(context), style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ...items
+                .where((v) => v.embedUrl != null)
+                .map(
+                  (video) => ListTile(
+                    leading: const Icon(Icons.play_circle_outline),
+                    title: Text(video.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(video.type),
+                    onTap: onVideoPlay == null ? null : () => onVideoPlay!(video),
+                  ),
+                ),
+          ],
         );
       },
     );
