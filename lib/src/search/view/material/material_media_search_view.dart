@@ -3,7 +3,7 @@ import 'package:popcorn_flutter/src/locale/view/translation_context_extension.da
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_controller.dart';
-import 'package:popcorn_flutter/src/search/view/media_search_state.dart';
+import 'package:popcorn_flutter/src/search/view/media_search_view_mixin.dart';
 import 'package:popcorn_flutter/src/search/view/pointer_capability.dart';
 import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
@@ -28,30 +28,68 @@ class MaterialMediaSearchView extends StatefulWidget {
   State<MaterialMediaSearchView> createState() => _MaterialMediaSearchViewState();
 }
 
-class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
-  final TextEditingController _queryController = TextEditingController();
+class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> with MediaSearchViewMixin {
+  @override
+  MediaSearchController get searchController => widget.controller;
+
+  @override
+  ValueChanged<MediaItem>? get onMediaSelected => widget.onMediaSelected;
+
+  @override
+  ValueChanged<MediaItem>? get onMediaPlay => widget.onMediaPlay;
 
   @override
   void initState() {
     super.initState();
-    _queryController.addListener(_onQueryChanged);
+    initSearchView();
   }
 
   @override
   void dispose() {
-    _queryController.removeListener(_onQueryChanged);
-    _queryController.dispose();
+    disposeSearchView();
     super.dispose();
   }
 
-  void _onQueryChanged() => setState(() {});
+  @override
+  Widget buildIdleHint(BuildContext context) => Center(child: Text(SearchTranslations.idleHint.trOf(context)));
 
-  void _submit() => widget.controller.search(_queryController.text);
+  @override
+  Widget buildLoading(BuildContext context) => const Center(child: CircularProgressIndicator());
 
-  void _clear() {
-    _queryController.clear();
-    widget.controller.clear();
-  }
+  @override
+  Widget buildError(BuildContext context, String message) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 40),
+          const SizedBox(height: 8),
+          Text(SearchTranslations.errorTitle.trOf(context), style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(message, textAlign: TextAlign.center),
+        ],
+      ),
+    ),
+  );
+
+  @override
+  Widget buildEmptyResults(BuildContext context) => Center(child: Text(SearchTranslations.emptyResults.trOf(context)));
+
+  @override
+  Widget buildResultItem(BuildContext context, MediaItem item, int index) => _MediaResultTile(
+    item: item,
+    onTap: onMediaSelected,
+    onPlay: onMediaPlay,
+    dpadFocus: widget.enableDpadFocus,
+    autofocus: widget.enableDpadFocus && index == 0,
+  );
+
+  @override
+  Widget buildTrendingHeader(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+    child: Text(SearchTranslations.trendingTitle.trOf(context), style: Theme.of(context).textTheme.titleMedium),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -61,14 +99,14 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: TextField(
-            controller: _queryController,
+            controller: queryController,
             textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _submit(),
+            onSubmitted: (_) => submitSearch(),
             decoration: InputDecoration(
               hintText: SearchTranslations.searchPlaceholder.trOf(context),
               border: const OutlineInputBorder(),
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: _queryController.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: _clear) : null,
+              suffixIcon: hasQuery ? IconButton(icon: const Icon(Icons.clear), onPressed: clearSearch) : null,
             ),
           ),
         ),
@@ -87,65 +125,9 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> {
           ),
         ),
         Expanded(
-          child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => _buildBody(context, widget.controller.state)),
+          child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => buildBody(context)),
         ),
       ],
-    );
-  }
-
-  Widget _buildBody(BuildContext context, MediaSearchState state) {
-    return switch (state) {
-      MediaSearchIdle(:final trendingItems) when trendingItems.isNotEmpty => _buildTrendingList(context, trendingItems),
-      MediaSearchIdle() => Center(child: Text(SearchTranslations.idleHint.trOf(context))),
-      MediaSearchLoading() => const Center(child: CircularProgressIndicator()),
-      MediaSearchFailure(:final message) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 40),
-              const SizedBox(height: 8),
-              Text(SearchTranslations.errorTitle.trOf(context), style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(message, textAlign: TextAlign.center),
-            ],
-          ),
-        ),
-      ),
-      MediaSearchSuccess(:final items) when items.isEmpty => Center(child: Text(SearchTranslations.emptyResults.trOf(context))),
-      MediaSearchSuccess(:final items) => ListView.builder(
-        itemCount: items.length,
-        // In D-pad mode, autofocus the first result so a remote has an initial focus target.
-        itemBuilder: (context, index) => _MediaResultTile(
-          item: items[index],
-          onTap: widget.onMediaSelected,
-          onPlay: widget.onMediaPlay,
-          dpadFocus: widget.enableDpadFocus,
-          autofocus: widget.enableDpadFocus && index == 0,
-        ),
-      ),
-    };
-  }
-
-  Widget _buildTrendingList(BuildContext context, List<MediaItem> items) {
-    return ListView.builder(
-      itemCount: items.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text(SearchTranslations.trendingTitle.trOf(context), style: Theme.of(context).textTheme.titleMedium),
-          );
-        }
-        return _MediaResultTile(
-          item: items[index - 1],
-          onTap: widget.onMediaSelected,
-          onPlay: widget.onMediaPlay,
-          dpadFocus: widget.enableDpadFocus,
-          autofocus: widget.enableDpadFocus && index == 1,
-        );
-      },
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
-import 'package:popcorn_flutter/src/details/view/media_details_format.dart';
+import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
@@ -62,7 +62,22 @@ class MaterialMediaDetailsView extends StatelessWidget {
                       ],
                     ],
                   ),
-                  _MetadataLine(details: details),
+                  MetadataLineBuilder(
+                    details: details,
+                    builder: (context, text, isRuntime) {
+                      final icon = isRuntime ? Icons.schedule : Icons.tv;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 4),
+                            Text(text, style: theme.textTheme.titleMedium),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -81,79 +96,17 @@ class MaterialMediaDetailsView extends StatelessWidget {
         const SizedBox(height: 8),
         Text(overview.isEmpty ? DetailsTranslations.noOverview.trOf(context) : overview, style: theme.textTheme.bodyMedium),
         const SizedBox(height: 24),
-        _VideosSection(videos: videos, onVideoPlay: onVideoPlay),
-      ],
-    );
-  }
-}
-
-/// Renders the runtime (movies) or season/episode counts (TV series) once the
-/// [details] future resolves. Shows nothing while loading or on failure.
-class _MetadataLine extends StatelessWidget {
-  const _MetadataLine({this.details});
-
-  final Future<MediaDetails>? details;
-
-  @override
-  Widget build(BuildContext context) {
-    if (details == null) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    return FutureBuilder<MediaDetails>(
-      future: details,
-      builder: (context, snapshot) {
-        final data = snapshot.data;
-        if (data == null) return const SizedBox.shrink();
-        final text = formatMediaDetails(context, data);
-        if (text == null) return const SizedBox.shrink();
-        final icon = data.runtime != null ? Icons.schedule : Icons.tv;
-        return Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(
-            children: [
-              Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
-              const SizedBox(width: 4),
-              Text(text, style: theme.textTheme.titleMedium),
-            ],
+        VideosListBuilder(
+          videos: videos,
+          headerBuilder: (context) => Text(DetailsTranslations.videos.trOf(context), style: theme.textTheme.titleMedium),
+          tileBuilder: (context, video) => ListTile(
+            leading: const Icon(Icons.play_circle_outline),
+            title: Text(video.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text(video.type),
+            onTap: onVideoPlay == null ? null : () => onVideoPlay!(video),
           ),
-        );
-      },
-    );
-  }
-}
-
-class _VideosSection extends StatelessWidget {
-  const _VideosSection({this.videos, this.onVideoPlay});
-
-  final Future<List<MediaVideo>>? videos;
-  final ValueChanged<MediaVideo>? onVideoPlay;
-
-  @override
-  Widget build(BuildContext context) {
-    if (videos == null) return const SizedBox.shrink();
-    return FutureBuilder<List<MediaVideo>>(
-      future: videos,
-      builder: (context, snapshot) {
-        final items = snapshot.data;
-        if (items == null || items.isEmpty) return const SizedBox.shrink();
-        final theme = Theme.of(context);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(DetailsTranslations.videos.trOf(context), style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ...items
-                .where((v) => v.embedUrl != null)
-                .map(
-                  (video) => ListTile(
-                    leading: const Icon(Icons.play_circle_outline),
-                    title: Text(video.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(video.type),
-                    onTap: onVideoPlay == null ? null : () => onVideoPlay!(video),
-                  ),
-                ),
-          ],
-        );
-      },
+        ),
+      ],
     );
   }
 }

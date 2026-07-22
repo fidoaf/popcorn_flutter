@@ -1,6 +1,6 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
-import 'package:popcorn_flutter/src/details/view/media_details_format.dart';
+import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
@@ -63,7 +63,22 @@ class FluentMediaDetailsView extends StatelessWidget {
                         ],
                       ],
                     ),
-                    _MetadataLine(details: details),
+                    MetadataLineBuilder(
+                      details: details,
+                      builder: (context, text, isRuntime) {
+                        final icon = isRuntime ? FluentIcons.clock : FluentIcons.t_v_monitor;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Row(
+                            children: [
+                              Icon(icon),
+                              const SizedBox(width: 6),
+                              Text(text, style: typography.subtitle),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                     const SizedBox(height: 16),
                     if (onPlay != null)
                       FilledButton(
@@ -83,81 +98,19 @@ class FluentMediaDetailsView extends StatelessWidget {
           const SizedBox(height: 8),
           Text(overview.isEmpty ? DetailsTranslations.noOverview.trOf(context) : overview, style: typography.body),
           const SizedBox(height: 24),
-          _VideosSection(videos: videos, onVideoPlay: onVideoPlay),
+          VideosListBuilder(
+            videos: videos,
+            headerBuilder: (context) => Text(DetailsTranslations.videos.trOf(context), style: typography.subtitle),
+            tileBuilder: (context, video) => ListTile.selectable(
+              leading: const Icon(FluentIcons.play),
+              title: Text(video.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text(video.type),
+              selected: false,
+              onSelectionChange: onVideoPlay == null ? null : (_) => onVideoPlay!(video),
+            ),
+          ),
         ],
       ),
-    );
-  }
-}
-
-/// Renders the runtime (movies) or season/episode counts (TV series) once the
-/// [details] future resolves. Shows nothing while loading or on failure.
-class _MetadataLine extends StatelessWidget {
-  const _MetadataLine({this.details});
-
-  final Future<MediaDetails>? details;
-
-  @override
-  Widget build(BuildContext context) {
-    if (details == null) return const SizedBox.shrink();
-    final typography = FluentTheme.of(context).typography;
-    return FutureBuilder<MediaDetails>(
-      future: details,
-      builder: (context, snapshot) {
-        final data = snapshot.data;
-        if (data == null) return const SizedBox.shrink();
-        final text = formatMediaDetails(context, data);
-        if (text == null) return const SizedBox.shrink();
-        final icon = data.runtime != null ? FluentIcons.clock : FluentIcons.t_v_monitor;
-        return Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(
-            children: [
-              Icon(icon),
-              const SizedBox(width: 6),
-              Text(text, style: typography.subtitle),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _VideosSection extends StatelessWidget {
-  const _VideosSection({this.videos, this.onVideoPlay});
-
-  final Future<List<MediaVideo>>? videos;
-  final ValueChanged<MediaVideo>? onVideoPlay;
-
-  @override
-  Widget build(BuildContext context) {
-    if (videos == null) return const SizedBox.shrink();
-    return FutureBuilder<List<MediaVideo>>(
-      future: videos,
-      builder: (context, snapshot) {
-        final items = snapshot.data;
-        if (items == null || items.isEmpty) return const SizedBox.shrink();
-        final typography = FluentTheme.of(context).typography;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(DetailsTranslations.videos.trOf(context), style: typography.subtitle),
-            const SizedBox(height: 8),
-            ...items
-                .where((v) => v.embedUrl != null)
-                .map(
-                  (video) => ListTile.selectable(
-                    leading: const Icon(FluentIcons.play),
-                    title: Text(video.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(video.type),
-                    selected: false,
-                    onSelectionChange: onVideoPlay == null ? null : (_) => onVideoPlay!(video),
-                  ),
-                ),
-          ],
-        );
-      },
     );
   }
 }

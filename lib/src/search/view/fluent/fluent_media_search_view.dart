@@ -3,7 +3,7 @@ import 'package:popcorn_flutter/src/locale/view/translation_context_extension.da
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_controller.dart';
-import 'package:popcorn_flutter/src/search/view/media_search_state.dart';
+import 'package:popcorn_flutter/src/search/view/media_search_view_mixin.dart';
 import 'package:popcorn_flutter/src/search/view/pointer_capability.dart';
 import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
@@ -23,30 +23,56 @@ class FluentMediaSearchView extends StatefulWidget {
   State<FluentMediaSearchView> createState() => _FluentMediaSearchViewState();
 }
 
-class _FluentMediaSearchViewState extends State<FluentMediaSearchView> {
-  final TextEditingController _queryController = TextEditingController();
+class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with MediaSearchViewMixin {
+  @override
+  MediaSearchController get searchController => widget.controller;
+
+  @override
+  ValueChanged<MediaItem>? get onMediaSelected => widget.onMediaSelected;
+
+  @override
+  ValueChanged<MediaItem>? get onMediaPlay => widget.onMediaPlay;
+
+  @override
+  EdgeInsets? get resultListPadding => const EdgeInsets.symmetric(horizontal: 8, vertical: 8);
 
   @override
   void initState() {
     super.initState();
-    _queryController.addListener(_onQueryChanged);
+    initSearchView();
   }
 
   @override
   void dispose() {
-    _queryController.removeListener(_onQueryChanged);
-    _queryController.dispose();
+    disposeSearchView();
     super.dispose();
   }
 
-  void _onQueryChanged() => setState(() {});
+  @override
+  Widget buildIdleHint(BuildContext context) => Center(child: Text(SearchTranslations.idleHint.trOf(context)));
 
-  void _submit() => widget.controller.search(_queryController.text);
+  @override
+  Widget buildLoading(BuildContext context) => const Center(child: ProgressRing());
 
-  void _clear() {
-    _queryController.clear();
-    widget.controller.clear();
-  }
+  @override
+  Widget buildError(BuildContext context, String message) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: InfoBar(title: Text(SearchTranslations.errorTitle.trOf(context)), content: Text(message), severity: InfoBarSeverity.error),
+    ),
+  );
+
+  @override
+  Widget buildEmptyResults(BuildContext context) => Center(child: Text(SearchTranslations.emptyResults.trOf(context)));
+
+  @override
+  Widget buildResultItem(BuildContext context, MediaItem item, int index) => _MediaResultTile(item: item, onTap: onMediaSelected, onPlay: onMediaPlay);
+
+  @override
+  Widget buildTrendingHeader(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+    child: Text(SearchTranslations.trendingTitle.trOf(context), style: FluentTheme.of(context).typography.subtitle),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -58,11 +84,11 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextBox(
-              controller: _queryController,
+              controller: queryController,
               placeholder: SearchTranslations.searchPlaceholder.trOf(context),
-              onSubmitted: (_) => _submit(),
+              onSubmitted: (_) => submitSearch(),
               prefix: const Padding(padding: EdgeInsets.only(left: 10, right: 4), child: Icon(FluentIcons.search)),
-              suffix: _queryController.text.isNotEmpty ? IconButton(icon: const Icon(FluentIcons.clear), onPressed: _clear) : null,
+              suffix: hasQuery ? IconButton(icon: const Icon(FluentIcons.clear), onPressed: clearSearch) : null,
             ),
           ),
           Padding(
@@ -93,46 +119,10 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> {
             ),
           ),
           Expanded(
-            child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => _buildBody(context, widget.controller.state)),
+            child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => buildBody(context)),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildBody(BuildContext context, MediaSearchState state) {
-    return switch (state) {
-      MediaSearchIdle(:final trendingItems) when trendingItems.isNotEmpty => _buildTrendingList(context, trendingItems),
-      MediaSearchIdle() => Center(child: Text(SearchTranslations.idleHint.trOf(context))),
-      MediaSearchLoading() => const Center(child: ProgressRing()),
-      MediaSearchFailure(:final message) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: InfoBar(title: Text(SearchTranslations.errorTitle.trOf(context)), content: Text(message), severity: InfoBarSeverity.error),
-        ),
-      ),
-      MediaSearchSuccess(:final items) when items.isEmpty => Center(child: Text(SearchTranslations.emptyResults.trOf(context))),
-      MediaSearchSuccess(:final items) => ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        itemCount: items.length,
-        itemBuilder: (context, index) => _MediaResultTile(item: items[index], onTap: widget.onMediaSelected, onPlay: widget.onMediaPlay),
-      ),
-    };
-  }
-
-  Widget _buildTrendingList(BuildContext context, List<MediaItem> items) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      itemCount: items.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
-            child: Text(SearchTranslations.trendingTitle.trOf(context), style: FluentTheme.of(context).typography.subtitle),
-          );
-        }
-        return _MediaResultTile(item: items[index - 1], onTap: widget.onMediaSelected, onPlay: widget.onMediaPlay);
-      },
     );
   }
 }
