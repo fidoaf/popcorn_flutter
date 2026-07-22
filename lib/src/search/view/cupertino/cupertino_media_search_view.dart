@@ -108,11 +108,17 @@ class _CupertinoMediaSearchViewState extends State<CupertinoMediaSearchView> wit
               children: {
                 MediaType.movie: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Text(SearchTranslations.mediaMovies.trOf(context)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [const Icon(CupertinoIcons.film, size: 16), const SizedBox(width: 6), Text(SearchTranslations.mediaMovies.trOf(context))],
+                  ),
                 ),
                 MediaType.tv: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Text(SearchTranslations.mediaTvSeries.trOf(context)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [const Icon(CupertinoIcons.tv, size: 16), const SizedBox(width: 6), Text(SearchTranslations.mediaTvSeries.trOf(context))],
+                  ),
                 ),
               },
             ),
