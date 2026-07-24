@@ -3,9 +3,11 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
+import 'package:popcorn_flutter/src/search/domain/media_episode.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_exception.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
+import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
@@ -19,6 +21,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   static const String _baseUrl = 'https://api.themoviedb.org/3';
   static const String _searchBaseUrl = '$_baseUrl/search';
   static const String _posterBaseUrl = 'https://image.tmdb.org/t/p/w500';
+  static const String _stillBaseUrl = 'https://image.tmdb.org/t/p/w300';
 
   final String _accessToken;
   final http.Client _client;
@@ -35,10 +38,9 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'}).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw MediaSearchException('TMDB search request timeout'),
-      );
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB search request timeout'));
     } on SocketException catch (e) {
       throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
@@ -60,10 +62,9 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'}).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw MediaSearchException('TMDB details request timeout'),
-      );
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB details request timeout'));
     } on SocketException catch (e) {
       throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
@@ -84,10 +85,9 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'}).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw MediaSearchException('TMDB trending request timeout'),
-      );
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB trending request timeout'));
     } on SocketException catch (e) {
       throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
@@ -109,10 +109,9 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'}).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw MediaSearchException('TMDB videos request timeout'),
-      );
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB videos request timeout'));
     } on SocketException catch (e) {
       throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
@@ -128,14 +127,72 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     return results.cast<Map<String, dynamic>>().map(_toMediaVideo).toList(growable: false);
   }
 
+  @override
+  Future<List<MediaEpisode>> episodes(int seriesId, int seasonNumber) async {
+    final uri = Uri.parse('$_baseUrl/tv/$seriesId/season/$seasonNumber');
+
+    final http.Response response;
+    try {
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB episodes request timeout'));
+    } on SocketException catch (e) {
+      throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
+    } catch (error) {
+      throw MediaSearchException('Unable to reach TMDB: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw MediaSearchException('TMDB episodes failed with status ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = (decoded['episodes'] as List<dynamic>?) ?? const <dynamic>[];
+    return results.cast<Map<String, dynamic>>().map(_toMediaEpisode).toList(growable: false);
+  }
+
+  static MediaEpisode _toMediaEpisode(Map<String, dynamic> json) {
+    final stillPath = json['still_path'] as String?;
+    final runtime = (json['runtime'] as num?)?.toInt();
+    return MediaEpisode(
+      episodeNumber: (json['episode_number'] as num?)?.toInt() ?? 0,
+      name: (json['name'] as String?) ?? '',
+      overview: (json['overview'] as String?) ?? '',
+      stillUrl: stillPath == null ? null : Uri.parse('$_stillBaseUrl$stillPath'),
+      airDate: _parseDate(json['air_date'] as String?),
+      runtime: runtime == null || runtime <= 0 ? null : Duration(minutes: runtime),
+      voteAverage: (json['vote_average'] as num?)?.toDouble(),
+    );
+  }
+
   static MediaDetails _toMediaDetails(Map<String, dynamic> json, MediaType mediaType) {
     switch (mediaType) {
       case MediaType.movie:
         final minutes = (json['runtime'] as num?)?.toInt();
         return MediaDetails(runtime: minutes == null || minutes <= 0 ? null : Duration(minutes: minutes));
       case MediaType.tv:
-        return MediaDetails(numberOfSeasons: (json['number_of_seasons'] as num?)?.toInt(), numberOfEpisodes: (json['number_of_episodes'] as num?)?.toInt());
+        final seasonsJson = (json['seasons'] as List<dynamic>?) ?? const <dynamic>[];
+        final seasons = seasonsJson.cast<Map<String, dynamic>>().map(_toMediaSeason).toList(growable: false);
+        return MediaDetails(
+          numberOfSeasons: (json['number_of_seasons'] as num?)?.toInt(),
+          numberOfEpisodes: (json['number_of_episodes'] as num?)?.toInt(),
+          seasons: seasons,
+        );
     }
+  }
+
+  static MediaSeason _toMediaSeason(Map<String, dynamic> json) {
+    final posterPath = json['poster_path'] as String?;
+    final episodeCount = (json['episode_count'] as num?)?.toInt();
+    return MediaSeason(
+      seasonNumber: (json['season_number'] as num?)?.toInt() ?? 0,
+      name: (json['name'] as String?) ?? '',
+      episodeCount: episodeCount == null || episodeCount <= 0 ? null : episodeCount,
+      airDate: _parseDate(json['air_date'] as String?),
+      overview: (json['overview'] as String?) ?? '',
+      posterUrl: posterPath == null ? null : Uri.parse('$_posterBaseUrl$posterPath'),
+      voteAverage: (json['vote_average'] as num?)?.toDouble(),
+    );
   }
 
   static String _pathSegment(MediaType mediaType) => switch (mediaType) {

@@ -1,7 +1,9 @@
 export 'domain/media_details.dart';
+export 'domain/media_episode.dart';
 export 'domain/media_item.dart';
 export 'domain/media_search_exception.dart';
 export 'domain/media_search_repository.dart';
+export 'domain/media_season.dart';
 export 'domain/media_type.dart';
 export 'domain/media_video.dart';
 export 'infrastructure/media_search_repository_factory.dart';

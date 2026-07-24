@@ -1,4 +1,5 @@
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
+import 'package:popcorn_flutter/src/search/domain/media_episode.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
@@ -22,4 +23,7 @@ abstract interface class MediaSearchRepository {
 
   /// Returns the videos (trailers, teasers, clips) for the entry [id] of [mediaType].
   Future<List<MediaVideo>> videos(int id, MediaType mediaType);
+
+  /// Returns the episodes of season [seasonNumber] for the TV series [seriesId].
+  Future<List<MediaEpisode>> episodes(int seriesId, int seasonNumber);
 }

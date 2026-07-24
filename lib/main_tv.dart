@@ -135,7 +135,7 @@ class _TvHomeViewState extends State<_TvHomeView> {
   }
 
   void _playVideo(MediaVideo video) {
-    final source = MediaSource(url: video.embedUrl!);
+    final source = MediaSource(url: video.embedUrl!, data: video.embedHtml);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => _PopOnBack(
@@ -164,7 +164,15 @@ class _TvHomeViewState extends State<_TvHomeView> {
           child: Scaffold(
             appBar: AppBar(title: Text(media.title)),
             body: SafeArea(
-              child: MaterialMediaDetailsView(item: media, details: details, videos: videos, onPlay: _openMedia, onVideoPlay: _playVideo, autofocusPlay: true),
+              child: MaterialMediaDetailsView(
+                item: media,
+                details: details,
+                videos: videos,
+                onPlay: _openMedia,
+                onVideoPlay: _playVideo,
+                episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
+                autofocusPlay: true,
+              ),
             ),
           ),
         ),

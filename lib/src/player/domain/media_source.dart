@@ -34,6 +34,7 @@ final class MediaSource {
     this.headers = const <String, String>{},
     this.cookies = const <MediaCookie>[],
     this.body,
+    this.data,
   });
 
   final Uri url;
@@ -41,4 +42,10 @@ final class MediaSource {
   final Map<String, String> headers;
   final List<MediaCookie> cookies;
   final Uint8List? body;
+
+  /// Optional self-contained HTML document to render instead of navigating to
+  /// [url]. When present, the player loads this markup using [url] as the base
+  /// URL (so its origin/referrer is honoured). Used to host embedded players
+  /// that reject a bare navigation (e.g. YouTube inside a WebView).
+  final String? data;
 }

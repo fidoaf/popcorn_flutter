@@ -12,9 +12,9 @@ class MetadataLineBuilder extends StatelessWidget {
 
   final Future<MediaDetails>? details;
 
-  /// Called with the formatted text and whether the metadata represents a
-  /// runtime (`true`) or season/episode count (`false`).
-  final Widget Function(BuildContext context, String text, bool isRuntime) builder;
+  /// Called with the formatted text and the resolved [MediaDetails] so callers
+  /// can pick an icon (runtime vs. seasons) or wire up a per-season sheet.
+  final Widget Function(BuildContext context, String text, MediaDetails data) builder;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,7 @@ class MetadataLineBuilder extends StatelessWidget {
         if (data == null) return const SizedBox.shrink();
         final text = formatMediaDetails(context, data);
         if (text == null) return const SizedBox.shrink();
-        return builder(context, text, data.runtime != null);
+        return builder(context, text, data);
       },
     );
   }

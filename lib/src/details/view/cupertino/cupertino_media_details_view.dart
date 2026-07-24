@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
+import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// Cupertino (macOS) details page for a single [MediaItem].
@@ -11,7 +13,7 @@ import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 /// Shows the poster, title, release year, rating and overview along with a
 /// prominent play button that launches the player via [onPlay].
 class CupertinoMediaDetailsView extends StatelessWidget {
-  const CupertinoMediaDetailsView({super.key, required this.item, this.details, this.videos, this.onPlay, this.onVideoPlay});
+  const CupertinoMediaDetailsView({super.key, required this.item, this.details, this.videos, this.onPlay, this.onVideoPlay, this.episodesLoader});
 
   final MediaItem item;
 
@@ -27,6 +29,9 @@ class CupertinoMediaDetailsView extends StatelessWidget {
 
   /// Called when a video tile is tapped (plays the video in-app).
   final ValueChanged<MediaVideo>? onVideoPlay;
+
+  /// Loads the episodes for a tapped season in the seasons sheet.
+  final SeasonEpisodesLoader? episodesLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -61,18 +66,26 @@ class CupertinoMediaDetailsView extends StatelessWidget {
                   ),
                   MetadataLineBuilder(
                     details: details,
-                    builder: (context, text, isRuntime) {
+                    builder: (context, text, data) {
+                      final isRuntime = data.runtime != null;
                       final icon = isRuntime ? CupertinoIcons.clock : CupertinoIcons.tv;
-                      return Padding(
+                      final hasSeasons = data.seasons.isNotEmpty;
+                      final row = Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Row(
                           children: [
                             Icon(icon, size: 16, color: CupertinoColors.secondaryLabel),
                             const SizedBox(width: 4),
-                            Text(text, style: textTheme.textStyle),
+                            Flexible(child: Text(text, style: textTheme.textStyle)),
+                            if (hasSeasons) ...[
+                              const SizedBox(width: 2),
+                              const Icon(CupertinoIcons.chevron_right, size: 14, color: CupertinoColors.secondaryLabel),
+                            ],
                           ],
                         ),
                       );
+                      if (!hasSeasons) return row;
+                      return GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => _showSeasonsSheet(context, data.seasons), child: row);
                     },
                   ),
                 ],
@@ -123,6 +136,23 @@ class CupertinoMediaDetailsView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showSeasonsSheet(BuildContext context, List<MediaSeason> seasons) {
+    final textTheme = CupertinoTheme.of(context).textTheme;
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: SeasonsSheetContent(
+          seasons: seasons,
+          titleStyle: textTheme.navTitleTextStyle,
+          subtitleColor: CupertinoColors.secondaryLabel.resolveFrom(context),
+          episodesLoader: episodesLoader,
+        ),
+      ),
     );
   }
 }

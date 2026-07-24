@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
+import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// Material (Android / web) details page for a single [MediaItem].
@@ -11,7 +13,16 @@ import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 /// Shows the poster, title, release year, rating and overview along with a
 /// prominent play button that launches the player via [onPlay].
 class MaterialMediaDetailsView extends StatelessWidget {
-  const MaterialMediaDetailsView({super.key, required this.item, this.details, this.videos, this.onPlay, this.onVideoPlay, this.autofocusPlay = false});
+  const MaterialMediaDetailsView({
+    super.key,
+    required this.item,
+    this.details,
+    this.videos,
+    this.onPlay,
+    this.onVideoPlay,
+    this.episodesLoader,
+    this.autofocusPlay = false,
+  });
 
   final MediaItem item;
 
@@ -27,6 +38,9 @@ class MaterialMediaDetailsView extends StatelessWidget {
 
   /// Called when a video tile is tapped (plays the video in-app).
   final ValueChanged<MediaVideo>? onVideoPlay;
+
+  /// Loads the episodes for a tapped season in the seasons sheet.
+  final SeasonEpisodesLoader? episodesLoader;
 
   /// Autofocus the play button so a D-pad/remote has an initial focus target.
   final bool autofocusPlay;
@@ -64,18 +78,23 @@ class MaterialMediaDetailsView extends StatelessWidget {
                   ),
                   MetadataLineBuilder(
                     details: details,
-                    builder: (context, text, isRuntime) {
+                    builder: (context, text, data) {
+                      final isRuntime = data.runtime != null;
                       final icon = isRuntime ? Icons.schedule : Icons.tv;
-                      return Padding(
+                      final hasSeasons = data.seasons.isNotEmpty;
+                      final row = Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Row(
                           children: [
                             Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
                             const SizedBox(width: 4),
-                            Text(text, style: theme.textTheme.titleMedium),
+                            Flexible(child: Text(text, style: theme.textTheme.titleMedium)),
+                            if (hasSeasons) ...[const SizedBox(width: 4), Icon(Icons.chevron_right, size: 18, color: theme.colorScheme.onSurfaceVariant)],
                           ],
                         ),
                       );
+                      if (!hasSeasons) return row;
+                      return InkWell(borderRadius: BorderRadius.circular(8), onTap: () => _showSeasonsSheet(context, data.seasons), child: row);
                     },
                   ),
                 ],
@@ -107,6 +126,24 @@ class MaterialMediaDetailsView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showSeasonsSheet(BuildContext context, List<MediaSeason> seasons) {
+    final theme = Theme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: false,
+      isScrollControlled: true,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: 0.75,
+        child: SeasonsSheetContent(
+          seasons: seasons,
+          titleStyle: theme.textTheme.titleLarge,
+          subtitleColor: theme.colorScheme.onSurfaceVariant,
+          episodesLoader: episodesLoader,
+        ),
+      ),
     );
   }
 }

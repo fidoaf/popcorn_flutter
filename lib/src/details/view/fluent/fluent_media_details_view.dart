@@ -1,9 +1,11 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
+import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// Fluent (Windows) details page for a single [MediaItem].
@@ -11,7 +13,7 @@ import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 /// Shows the poster, title, release year, rating and overview along with a
 /// prominent play button that launches the player via [onPlay].
 class FluentMediaDetailsView extends StatelessWidget {
-  const FluentMediaDetailsView({super.key, required this.item, this.details, this.videos, this.onPlay, this.onVideoPlay});
+  const FluentMediaDetailsView({super.key, required this.item, this.details, this.videos, this.onPlay, this.onVideoPlay, this.episodesLoader});
 
   final MediaItem item;
 
@@ -27,6 +29,9 @@ class FluentMediaDetailsView extends StatelessWidget {
 
   /// Called when a video tile is tapped (plays the video in-app).
   final ValueChanged<MediaVideo>? onVideoPlay;
+
+  /// Loads the episodes for a tapped season in the seasons sheet.
+  final SeasonEpisodesLoader? episodesLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -65,18 +70,23 @@ class FluentMediaDetailsView extends StatelessWidget {
                     ),
                     MetadataLineBuilder(
                       details: details,
-                      builder: (context, text, isRuntime) {
+                      builder: (context, text, data) {
+                        final isRuntime = data.runtime != null;
                         final icon = isRuntime ? FluentIcons.clock : FluentIcons.t_v_monitor;
-                        return Padding(
+                        final hasSeasons = data.seasons.isNotEmpty;
+                        final row = Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Row(
                             children: [
                               Icon(icon),
                               const SizedBox(width: 6),
-                              Text(text, style: typography.subtitle),
+                              Flexible(child: Text(text, style: typography.subtitle)),
+                              if (hasSeasons) ...[const SizedBox(width: 4), const Icon(FluentIcons.chevron_right)],
                             ],
                           ),
                         );
+                        if (!hasSeasons) return row;
+                        return HoverButton(onPressed: () => _showSeasonsSheet(context, data.seasons), builder: (context, states) => row);
                       },
                     ),
                     const SizedBox(height: 16),
@@ -110,6 +120,37 @@ class FluentMediaDetailsView extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showSeasonsSheet(BuildContext context, List<MediaSeason> seasons) {
+    final theme = FluentTheme.of(context);
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: DetailsTranslations.seasonsTitle.trOf(context),
+      barrierColor: const Color(0x8A000000),
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (context, _, _) => Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          ),
+          child: SeasonsSheetContent(
+            seasons: seasons,
+            titleStyle: theme.typography.subtitle,
+            subtitleColor: theme.resources.textFillColorSecondary,
+            episodesLoader: episodesLoader,
+          ),
+        ),
+      ),
+      transitionBuilder: (context, animation, _, child) => SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+        child: child,
       ),
     );
   }

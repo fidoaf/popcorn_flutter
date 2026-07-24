@@ -79,11 +79,7 @@ class _AndroidHomeViewState extends State<_AndroidHomeView> {
         builder: (_) => PopcornMaterialSplashScreen(
           child: Scaffold(
             extendBodyBehindAppBar: true,
-            appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
-            ),
+            appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
             body: SafeArea(child: VideoPlayerFactory.create(source: source)),
           ),
         ),
@@ -92,17 +88,13 @@ class _AndroidHomeViewState extends State<_AndroidHomeView> {
   }
 
   void _playVideo(MediaVideo video) {
-    final source = MediaSource(url: video.embedUrl!);
+    final source = MediaSource(url: video.embedUrl!, data: video.embedHtml);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PopcornMaterialSplashScreen(
           child: Scaffold(
             extendBodyBehindAppBar: true,
-            appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
-            ),
+            appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
             body: SafeArea(child: VideoPlayerFactory.create(source: source)),
           ),
         ),
@@ -119,7 +111,14 @@ class _AndroidHomeViewState extends State<_AndroidHomeView> {
           child: Scaffold(
             appBar: AppBar(title: Text(media.title)),
             body: SafeArea(
-              child: MaterialMediaDetailsView(item: media, details: details, videos: videos, onPlay: _openMedia, onVideoPlay: _playVideo),
+              child: MaterialMediaDetailsView(
+                item: media,
+                details: details,
+                videos: videos,
+                onPlay: _openMedia,
+                onVideoPlay: _playVideo,
+                episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
+              ),
             ),
           ),
         ),

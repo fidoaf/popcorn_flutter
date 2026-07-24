@@ -23,5 +23,19 @@ class DetailsTranslations {
 
   static const episodes = Translation({AppLanguage.en: 'episodes', AppLanguage.es: 'episodios', AppLanguage.ca: 'episodis'});
 
+  static const seasonsTitle = Translation({AppLanguage.en: 'Seasons', AppLanguage.es: 'Temporadas', AppLanguage.ca: 'Temporades'});
+
+  static const noEpisodes = Translation({
+    AppLanguage.en: 'No episodes available.',
+    AppLanguage.es: 'No hay episodios disponibles.',
+    AppLanguage.ca: 'No hi ha episodis disponibles.',
+  });
+
+  static const episodesError = Translation({
+    AppLanguage.en: 'Could not load episodes.',
+    AppLanguage.es: 'No se pudieron cargar los episodios.',
+    AppLanguage.ca: 'No s\'han pogut carregar els episodis.',
+  });
+
   static const videos = Translation({AppLanguage.en: 'Videos', AppLanguage.es: 'Vídeos', AppLanguage.ca: 'Vídeos'});
 }

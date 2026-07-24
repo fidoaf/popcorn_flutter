@@ -109,7 +109,14 @@ class _WebHomeViewState extends State<_WebHomeView> {
             child: Material(
               color: _PopcornWebApp._background,
               child: SafeArea(
-                child: MaterialMediaDetailsView(item: media, details: details, videos: videos, onPlay: _openMedia, onVideoPlay: _playVideo),
+                child: MaterialMediaDetailsView(
+                  item: media,
+                  details: details,
+                  videos: videos,
+                  onPlay: _openMedia,
+                  onVideoPlay: _playVideo,
+                  episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
+                ),
               ),
             ),
           ),

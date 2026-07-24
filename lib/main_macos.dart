@@ -80,7 +80,7 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
   }
 
   void _playVideo(MediaVideo video) {
-    final source = MediaSource(url: video.embedUrl!);
+    final source = MediaSource(url: video.embedUrl!, data: video.embedHtml);
     Navigator.of(context).push(
       CupertinoPageRoute<void>(
         builder: (_) => PopcornMacosSplashScreen(
@@ -109,7 +109,14 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
             ),
             children: [
               ContentArea(
-                builder: (context, _) => MacosMediaDetailsView(item: media, details: details, videos: videos, onPlay: _openMedia, onVideoPlay: _playVideo),
+                builder: (context, _) => MacosMediaDetailsView(
+                  item: media,
+                  details: details,
+                  videos: videos,
+                  onPlay: _openMedia,
+                  onVideoPlay: _playVideo,
+                  episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
+                ),
               ),
             ],
           ),
