@@ -8,11 +8,13 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 /// Callers keep a single stable reference while the actual source-resolution
 /// strategy (e.g. a different streaming backend) is replaced on the fly.
 final class ConfigurableMediaSourceProvider implements MediaSourceProvider {
-  ConfigurableMediaSourceProvider({required MediaSourceProvider initialProvider}) : delegate = initialProvider;
+  ConfigurableMediaSourceProvider({required this.providers, MediaSourceProvider? initialProvider}) : delegate = initialProvider ?? providers.first;
 
   /// The active provider. Assigning a new value takes effect immediately for
   /// every subsequent [resolve] call.
   MediaSourceProvider delegate;
+
+  Iterable<MediaSourceProvider> providers;
 
   @override
   MediaSource resolve(MediaItem media, MediaType mediaType) => delegate.resolve(media, mediaType);

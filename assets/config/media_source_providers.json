@@ -1,0 +1,35 @@
+{
+  "initialProvider": "nxsha",
+  "providers": [
+    {
+      "name": "nxsha",
+      "scheme": "https",
+      "host": "web.nxsha.app",
+      "path": "/embed/{type}/{id}",
+      "method": "GET",
+      "parameters": { "lang": "en", "sub": "1" },
+      "headers": {},
+      "cookies": []
+    },
+    {
+      "name": "vidlux",
+      "scheme": "https",
+      "host": "vidlux.xyz",
+      "path": "/embed/{type}/{id}",
+      "method": "GET",
+      "parameters": { "lang": "en", "sub": "1" },
+      "headers": {},
+      "cookies": []
+    },
+    {
+      "name": "vidsrcme",
+      "scheme": "https",
+      "host": "vidsrcme.ru",
+      "path": "/embed/{type}/{id}",
+      "method": "GET",
+      "parameters": { "lang": "en", "sub": "1" },
+      "headers": {},
+      "cookies": []
+    }
+  ]
+}

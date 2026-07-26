@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:popcorn_flutter/src/player/domain/fullscreen_controller.dart';
@@ -23,6 +26,17 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
   /// inline documents, otherwise the source's own host.
   WebUri get _baseUrl => source.data != null ? WebUri(_embedBaseUrl) : WebUri.uri(source.url);
 
+  /// Whether inline embed HTML must be delivered through request interception
+  /// rather than `InAppWebViewInitialData`.
+  ///
+  /// On Windows the WebView2 engine loads inline data via `NavigateToString`,
+  /// which discards the supplied base URL and assigns the document a `null`
+  /// origin. YouTube's embedded player then rejects playback ("error 153").
+  /// Serving the very same HTML as the response to a real navigation to
+  /// [_embedBaseUrl] gives the document a genuine origin, matching the behaviour
+  /// other platforms get for free from `baseUrl`.
+  bool get _serveEmbedViaInterception => source.data != null && !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
   /// Translates the domain [MediaSource] into a WebView request, carrying its
   /// method, headers and body.
   ///
@@ -47,12 +61,26 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
     final hasData = source.data != null;
     final hasCookies = source.cookies.isNotEmpty;
     final homeHost = _baseUrl.host;
+    // On Windows the inline document is delivered by intercepting a real
+    // navigation to the base URL (see [_serveEmbedViaInterception]); elsewhere
+    // it is handed to the WebView directly as initial data.
+    final serveViaInterception = _serveEmbedViaInterception;
+    final useInitialData = hasData && !serveViaInterception;
     return InAppWebView(
       // Cookies must be installed before the page loads, so when the source
-      // carries any, defer the initial navigation to [onWebViewCreated].
-      initialUrlRequest: hasData || hasCookies ? null : _request,
-      initialData: hasData ? InAppWebViewInitialData(data: source.data!, baseUrl: _baseUrl) : null,
+      // carries any, defer the initial navigation to [onWebViewCreated]. When
+      // serving inline data through interception, navigate to the base URL so
+      // the intercepted response establishes a real document origin.
+      initialUrlRequest: hasCookies || useInitialData
+          ? null
+          : serveViaInterception
+          ? URLRequest(url: _baseUrl)
+          : _request,
+      initialData: useInitialData ? InAppWebViewInitialData(data: source.data!, baseUrl: _baseUrl) : null,
       onWebViewCreated: hasCookies ? _loadWithCookies : null,
+      // Intercept the base-URL navigation on Windows to return the inline embed
+      // HTML, letting the embedded player's own requests load normally.
+      shouldInterceptRequest: serveViaInterception ? _serveEmbedDocument : null,
       initialSettings: InAppWebViewSettings(
         // Present a mainstream browser identity for inline embed documents to
         // avoid YouTube's WebView bot detection.
@@ -68,6 +96,9 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
         // Required so [shouldOverrideUrlLoading] is invoked and can veto
         // top-level navigations away from the provided URL.
         useShouldOverrideUrlLoading: true,
+        // Required so [shouldInterceptRequest] is invoked to serve the inline
+        // embed document under a real origin on Windows.
+        useShouldInterceptRequest: serveViaInterception,
       ),
       // Keep the WebView pinned to the provided URL: allow sub-frame content
       // (e.g. the embedded player iframe) and same-host navigations, but cancel
@@ -82,6 +113,16 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
       onEnterFullscreen: (_) => fullscreenController.setFullscreen(true),
       onExitFullscreen: (_) => fullscreenController.setFullscreen(false),
     );
+  }
+
+  /// Answers the top-level navigation to [_baseUrl] with the inline embed HTML,
+  /// so the document loads under a real origin (see [_serveEmbedViaInterception]).
+  /// All other requests (the embedded player and its resources) return `null`
+  /// to load normally.
+  Future<WebResourceResponse?> _serveEmbedDocument(InAppWebViewController controller, WebResourceRequest request) async {
+    final isBaseDocument = request.url.host == _baseUrl.host && (request.url.path.isEmpty || request.url.path == '/');
+    if (!isBaseDocument) return null;
+    return WebResourceResponse(contentType: 'text/html', contentEncoding: 'utf-8', data: Uint8List.fromList(utf8.encode(source.data!)));
   }
 
   /// Installs the source's cookies and then loads the request, used when the

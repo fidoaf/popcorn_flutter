@@ -23,11 +23,7 @@ void main(List<String> args) async {
   }
   await dotenv.load();
   await windowManager.ensureInitialized();
-  const WindowOptions windowOptions = WindowOptions(
-    title: 'Popcorn',
-    center: true,
-    size: Size(800, 600),
-  );
+  const WindowOptions windowOptions = WindowOptions(title: 'Popcorn', center: true, size: Size(800, 600));
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
@@ -45,11 +41,7 @@ class _PopcornWindowsApp extends StatelessWidget {
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       locale: PlatformDispatcher.instance.locale,
       supportedLocales: AppLanguage.values.map((lang) => lang.locale),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
       themeMode: ThemeMode.system,
       theme: FluentThemeData.light(),
       darkTheme: FluentThemeData.dark(),
@@ -66,13 +58,9 @@ class _WindowsHomeView extends StatefulWidget {
 }
 
 class _WindowsHomeViewState extends State<_WindowsHomeView> {
-  final MediaSearchRepository _repository =
-      MediaSearchRepositoryFactory.create();
-  late final MediaSearchController _searchController = MediaSearchController(
-    repository: _repository,
-  );
-  final ConfigurableMediaSourceProvider _mediaSourceProvider =
-      MediaSourceProviderFactory.create();
+  final MediaSearchRepository _repository = MediaSearchRepositoryFactory.create();
+  late final MediaSearchController _searchController = MediaSearchController(repository: _repository);
+  final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
 
   @override
   void dispose() {
@@ -81,10 +69,7 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
   }
 
   void _openMedia(MediaItem media) {
-    final source = _mediaSourceProvider.resolve(
-      media,
-      _searchController.mediaType,
-    );
+    final source = _mediaSourceProvider.resolve(media, _searchController.mediaType);
     Navigator.of(context).push(
       FluentPageRoute<void>(
         builder: (_) => _PopOnEscape(
@@ -95,10 +80,7 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
                 Positioned(
                   top: 8,
                   left: 8,
-                  child: IconButton(
-                    icon: const Icon(FluentIcons.chrome_close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
+                  child: IconButton(icon: const Icon(FluentIcons.chrome_close), onPressed: () => Navigator.of(context).pop()),
                 ),
               ],
             ),
@@ -120,10 +102,7 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
                 Positioned(
                   top: 8,
                   left: 8,
-                  child: IconButton(
-                    icon: const Icon(FluentIcons.chrome_close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
+                  child: IconButton(icon: const Icon(FluentIcons.chrome_close), onPressed: () => Navigator.of(context).pop()),
                 ),
               ],
             ),
@@ -146,8 +125,7 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
               videos: videos,
               onPlay: _openMedia,
               onVideoPlay: _playVideo,
-              episodesLoader: (season) =>
-                  _repository.episodes(media.id, season.seasonNumber),
+              episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
             ),
           ),
         ),
@@ -158,11 +136,7 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
   @override
   Widget build(BuildContext context) {
     return PopcornFluentSplashScreen(
-      child: FluentMediaSearchView(
-        controller: _searchController,
-        onMediaSelected: _openDetails,
-        onMediaPlay: _openMedia,
-      ),
+      child: FluentMediaSearchView(controller: _searchController, onMediaSelected: _openDetails, onMediaPlay: _openMedia),
     );
   }
 }
@@ -178,8 +152,7 @@ class _PopOnEscape extends StatelessWidget {
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            event.logicalKey == LogicalKeyboardKey.escape) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
           Navigator.of(context).maybePop();
           return KeyEventResult.handled;
         }
