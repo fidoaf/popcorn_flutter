@@ -1,6 +1,6 @@
 {
-    "name": "popcorn_flutter",
-    "short_name": "popcorn_flutter",
+    "name": "Popcorn",
+    "short_name": "Popcorn",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#hexcode",
