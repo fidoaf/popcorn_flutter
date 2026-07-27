@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links
   flutter_inappwebview_windows
   fullscreen_window
   screen_retriever_windows

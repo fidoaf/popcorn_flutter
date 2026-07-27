@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
+import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
+import 'package:popcorn_flutter/src/favorites/view/material/material_favorite_button.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -9,9 +12,19 @@ import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
 /// Material (Android) UI for searching movies and TV series, driven by a [MediaSearchController].
 class MaterialMediaSearchView extends StatefulWidget {
-  const MaterialMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.onMediaPlay, this.enableDpadFocus = false});
+  const MaterialMediaSearchView({
+    super.key,
+    required this.controller,
+    this.onMediaSelected,
+    this.onMediaPlay,
+    this.favoritesController,
+    this.enableDpadFocus = false,
+  });
 
   final MediaSearchController controller;
+
+  /// Drives the per-result favorite toggle. When `null`, no favorite button is shown.
+  final FavoritesController? favoritesController;
 
   /// Called when a result row is tapped (opens the details page).
   final ValueChanged<MediaItem>? onMediaSelected;
@@ -81,6 +94,8 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> with 
     item: item,
     onTap: onMediaSelected,
     onPlay: onMediaPlay,
+    favoritesController: widget.favoritesController,
+    mediaType: widget.controller.mediaType,
     dpadFocus: widget.enableDpadFocus,
     autofocus: widget.enableDpadFocus && index == 0,
   );
@@ -132,11 +147,21 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> with 
 }
 
 class _MediaResultTile extends StatefulWidget {
-  const _MediaResultTile({required this.item, this.onTap, this.onPlay, this.autofocus = false, this.dpadFocus = false});
+  const _MediaResultTile({
+    required this.item,
+    this.onTap,
+    this.onPlay,
+    this.favoritesController,
+    required this.mediaType,
+    this.autofocus = false,
+    this.dpadFocus = false,
+  });
 
   final MediaItem item;
   final ValueChanged<MediaItem>? onTap;
   final ValueChanged<MediaItem>? onPlay;
+  final FavoritesController? favoritesController;
+  final MediaType mediaType;
   final bool autofocus;
   final bool dpadFocus;
 
@@ -182,6 +207,14 @@ class _MediaResultTileState extends State<_MediaResultTile> {
 
     final children = <Widget>[
       if (rating != null) ...[Icon(Icons.star, size: iconSize), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
+      if (widget.favoritesController != null) ...[
+        const SizedBox(width: 4),
+        MaterialFavoriteButton(
+          controller: widget.favoritesController!,
+          favorite: FavoriteMedia(item: widget.item, type: widget.mediaType),
+          iconSize: widget.dpadFocus ? 28 : 22,
+        ),
+      ],
       if (showPlay && widget.onPlay != null) ...[
         const SizedBox(width: 4),
         IconButton(

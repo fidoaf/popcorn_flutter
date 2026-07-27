@@ -2,10 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
+import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
+import 'package:popcorn_flutter/src/favorites/view/cupertino/cupertino_favorite_button.dart';
+import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
+import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// Cupertino (macOS) details page for a single [MediaItem].
@@ -13,7 +17,17 @@ import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 /// Shows the poster, title, release year, rating and overview along with a
 /// prominent play button that launches the player via [onPlay].
 class CupertinoMediaDetailsView extends StatelessWidget {
-  const CupertinoMediaDetailsView({super.key, required this.item, this.details, this.videos, this.onPlay, this.onVideoPlay, this.episodesLoader});
+  const CupertinoMediaDetailsView({
+    super.key,
+    required this.item,
+    this.details,
+    this.videos,
+    this.onPlay,
+    this.onVideoPlay,
+    this.episodesLoader,
+    this.favoritesController,
+    this.mediaType,
+  });
 
   final MediaItem item;
 
@@ -32,6 +46,13 @@ class CupertinoMediaDetailsView extends StatelessWidget {
 
   /// Loads the episodes for a tapped season in the seasons sheet.
   final SeasonEpisodesLoader? episodesLoader;
+
+  /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
+  /// favorite button is shown.
+  final FavoritesController? favoritesController;
+
+  /// The [MediaType] of [item], needed to persist the favorite.
+  final MediaType? mediaType;
 
   @override
   Widget build(BuildContext context) {
@@ -94,16 +115,22 @@ class CupertinoMediaDetailsView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        if (onPlay != null)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: CupertinoButton.filled(
-              onPressed: () => onPlay!(item),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [const Icon(CupertinoIcons.play_fill, size: 18), const SizedBox(width: 6), Text(DetailsTranslations.play.trOf(context))],
-              ),
-            ),
+        if (onPlay != null || (favoritesController != null && mediaType != null))
+          Row(
+            children: [
+              if (onPlay != null)
+                CupertinoButton.filled(
+                  onPressed: () => onPlay!(item),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [const Icon(CupertinoIcons.play_fill, size: 18), const SizedBox(width: 6), Text(DetailsTranslations.play.trOf(context))],
+                  ),
+                ),
+              if (favoritesController != null && mediaType != null) ...[
+                const SizedBox(width: 8),
+                CupertinoFavoriteButton(controller: favoritesController!, favorite: FavoriteMedia(item: item, type: mediaType!), iconSize: 28),
+              ],
+            ],
           ),
         const SizedBox(height: 24),
         Text(DetailsTranslations.overview.trOf(context), style: textTheme.navTitleTextStyle),

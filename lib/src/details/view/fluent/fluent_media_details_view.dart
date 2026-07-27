@@ -2,10 +2,14 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
+import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
+import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
+import 'package:popcorn_flutter/src/favorites/view/fluent/fluent_favorite_button.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
+import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// Fluent (Windows) details page for a single [MediaItem].
@@ -13,7 +17,17 @@ import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 /// Shows the poster, title, release year, rating and overview along with a
 /// prominent play button that launches the player via [onPlay].
 class FluentMediaDetailsView extends StatelessWidget {
-  const FluentMediaDetailsView({super.key, required this.item, this.details, this.videos, this.onPlay, this.onVideoPlay, this.episodesLoader});
+  const FluentMediaDetailsView({
+    super.key,
+    required this.item,
+    this.details,
+    this.videos,
+    this.onPlay,
+    this.onVideoPlay,
+    this.episodesLoader,
+    this.favoritesController,
+    this.mediaType,
+  });
 
   final MediaItem item;
 
@@ -32,6 +46,13 @@ class FluentMediaDetailsView extends StatelessWidget {
 
   /// Loads the episodes for a tapped season in the seasons sheet.
   final SeasonEpisodesLoader? episodesLoader;
+
+  /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
+  /// favorite button is shown.
+  final FavoritesController? favoritesController;
+
+  /// The [MediaType] of [item], needed to persist the favorite.
+  final MediaType? mediaType;
 
   @override
   Widget build(BuildContext context) {
@@ -90,13 +111,26 @@ class FluentMediaDetailsView extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 16),
-                    if (onPlay != null)
-                      FilledButton(
-                        onPressed: () => onPlay!(item),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [const Icon(FluentIcons.play_solid), const SizedBox(width: 8), Text(DetailsTranslations.play.trOf(context))],
-                        ),
+                    if (onPlay != null || (favoritesController != null && mediaType != null))
+                      Row(
+                        children: [
+                          if (onPlay != null)
+                            FilledButton(
+                              onPressed: () => onPlay!(item),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [const Icon(FluentIcons.play_solid), const SizedBox(width: 8), Text(DetailsTranslations.play.trOf(context))],
+                              ),
+                            ),
+                          if (favoritesController != null && mediaType != null) ...[
+                            const SizedBox(width: 8),
+                            FluentFavoriteButton(
+                              controller: favoritesController!,
+                              favorite: FavoriteMedia(item: item, type: mediaType!),
+                              iconSize: 22,
+                            ),
+                          ],
+                        ],
                       ),
                   ],
                 ),

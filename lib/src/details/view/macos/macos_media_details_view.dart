@@ -3,10 +3,14 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
+import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
+import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
+import 'package:popcorn_flutter/src/favorites/view/macos/macos_favorite_button.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
+import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// macOS-native details page for a single [MediaItem].
@@ -14,7 +18,17 @@ import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 /// Uses `macos_ui` widgets for a proper desktop macOS look. Shows the poster,
 /// title, release year, rating and overview along with a prominent play button.
 class MacosMediaDetailsView extends StatelessWidget {
-  const MacosMediaDetailsView({super.key, required this.item, this.details, this.videos, this.onPlay, this.onVideoPlay, this.episodesLoader});
+  const MacosMediaDetailsView({
+    super.key,
+    required this.item,
+    this.details,
+    this.videos,
+    this.onPlay,
+    this.onVideoPlay,
+    this.episodesLoader,
+    this.favoritesController,
+    this.mediaType,
+  });
 
   final MediaItem item;
 
@@ -33,6 +47,13 @@ class MacosMediaDetailsView extends StatelessWidget {
 
   /// Loads the episodes for a tapped season in the seasons sheet.
   final SeasonEpisodesLoader? episodesLoader;
+
+  /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
+  /// favorite button is shown.
+  final FavoritesController? favoritesController;
+
+  /// The [MediaType] of [item], needed to persist the favorite.
+  final MediaType? mediaType;
 
   @override
   Widget build(BuildContext context) {
@@ -90,18 +111,31 @@ class MacosMediaDetailsView extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 16),
-                  if (onPlay != null)
-                    PushButton(
-                      controlSize: ControlSize.large,
-                      onPressed: () => onPlay!(item),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const MacosIcon(CupertinoIcons.play_fill, size: 14, color: MacosColors.white),
-                          const SizedBox(width: 6),
-                          Text(DetailsTranslations.play.trOf(context)),
+                  if (onPlay != null || (favoritesController != null && mediaType != null))
+                    Row(
+                      children: [
+                        if (onPlay != null)
+                          PushButton(
+                            controlSize: ControlSize.large,
+                            onPressed: () => onPlay!(item),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const MacosIcon(CupertinoIcons.play_fill, size: 14, color: MacosColors.white),
+                                const SizedBox(width: 6),
+                                Text(DetailsTranslations.play.trOf(context)),
+                              ],
+                            ),
+                          ),
+                        if (favoritesController != null && mediaType != null) ...[
+                          const SizedBox(width: 8),
+                          MacosFavoriteButton(
+                            controller: favoritesController!,
+                            favorite: FavoriteMedia(item: item, type: mediaType!),
+                            iconSize: 22,
+                          ),
                         ],
-                      ),
+                      ],
                     ),
                 ],
               ),

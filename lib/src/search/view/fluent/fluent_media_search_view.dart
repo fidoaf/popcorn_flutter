@@ -1,4 +1,8 @@
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
+import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
+import 'package:popcorn_flutter/src/favorites/view/favorites_translations.dart';
+import 'package:popcorn_flutter/src/favorites/view/fluent/fluent_favorite_button.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -9,9 +13,16 @@ import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
 /// Fluent (Windows) UI for searching movies and TV series, driven by a [MediaSearchController].
 class FluentMediaSearchView extends StatefulWidget {
-  const FluentMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.onMediaPlay});
+  const FluentMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.onMediaPlay, this.favoritesController, this.onOpenFavorites});
 
   final MediaSearchController controller;
+
+  /// Drives the per-result favorite toggle. When `null`, no favorite button is shown.
+  final FavoritesController? favoritesController;
+
+  /// Called when the favorites command bar button is tapped. When `null`, no
+  /// favorites button is shown in the header.
+  final VoidCallback? onOpenFavorites;
 
   /// Called when a result row is tapped (opens the details page).
   final ValueChanged<MediaItem>? onMediaSelected;
@@ -66,7 +77,8 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
   Widget buildEmptyResults(BuildContext context) => Center(child: Text(SearchTranslations.emptyResults.trOf(context)));
 
   @override
-  Widget buildResultItem(BuildContext context, MediaItem item, int index) => _MediaResultTile(item: item, onTap: onMediaSelected, onPlay: onMediaPlay);
+  Widget buildResultItem(BuildContext context, MediaItem item, int index) =>
+      _MediaResultTile(item: item, onTap: onMediaSelected, onPlay: onMediaPlay, favoritesController: widget.favoritesController, mediaType: widget.controller.mediaType);
 
   @override
   Widget buildTrendingHeader(BuildContext context) => Padding(
@@ -77,7 +89,22 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
   @override
   Widget build(BuildContext context) {
     return ScaffoldPage(
-      header: PageHeader(padding: 16, title: Text(SearchTranslations.pageTitle.trOf(context))),
+      header: PageHeader(
+        padding: 16,
+        title: Text(SearchTranslations.pageTitle.trOf(context)),
+        commandBar: widget.onOpenFavorites == null
+            ? null
+            : CommandBar(
+                mainAxisAlignment: MainAxisAlignment.end,
+                primaryItems: [
+                  CommandBarButton(
+                    icon: const Icon(FluentIcons.heart),
+                    label: Text(FavoritesTranslations.pageTitle.trOf(context)),
+                    onPressed: widget.onOpenFavorites,
+                  ),
+                ],
+              ),
+      ),
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -128,11 +155,13 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
 }
 
 class _MediaResultTile extends StatefulWidget {
-  const _MediaResultTile({required this.item, this.onTap, this.onPlay});
+  const _MediaResultTile({required this.item, this.onTap, this.onPlay, this.favoritesController, required this.mediaType});
 
   final MediaItem item;
   final ValueChanged<MediaItem>? onTap;
   final ValueChanged<MediaItem>? onPlay;
+  final FavoritesController? favoritesController;
+  final MediaType mediaType;
 
   @override
   State<_MediaResultTile> createState() => _MediaResultTileState();
@@ -171,6 +200,10 @@ class _MediaResultTileState extends State<_MediaResultTile> {
 
     final children = <Widget>[
       if (rating != null) ...[const Icon(FluentIcons.favorite_star_fill), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
+      if (widget.favoritesController != null) ...[
+        const SizedBox(width: 4),
+        FluentFavoriteButton(controller: widget.favoritesController!, favorite: FavoriteMedia(item: widget.item, type: widget.mediaType)),
+      ],
       if (showPlay && widget.onPlay != null) ...[
         const SizedBox(width: 8),
         IconButton(icon: const Icon(FluentIcons.play_solid), onPressed: () => widget.onPlay!(widget.item)),

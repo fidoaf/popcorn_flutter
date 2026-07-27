@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
+import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
+import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
+import 'package:popcorn_flutter/src/favorites/view/material/material_favorite_button.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
+import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 
 /// Material (Android / web) details page for a single [MediaItem].
@@ -21,6 +25,8 @@ class MaterialMediaDetailsView extends StatelessWidget {
     this.onPlay,
     this.onVideoPlay,
     this.episodesLoader,
+    this.favoritesController,
+    this.mediaType,
     this.autofocusPlay = false,
   });
 
@@ -41,6 +47,13 @@ class MaterialMediaDetailsView extends StatelessWidget {
 
   /// Loads the episodes for a tapped season in the seasons sheet.
   final SeasonEpisodesLoader? episodesLoader;
+
+  /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
+  /// favorite button is shown.
+  final FavoritesController? favoritesController;
+
+  /// The [MediaType] of [item], needed to persist the favorite.
+  final MediaType? mediaType;
 
   /// Autofocus the play button so a D-pad/remote has an initial focus target.
   final bool autofocusPlay;
@@ -103,12 +116,25 @@ class MaterialMediaDetailsView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        if (onPlay != null)
-          FilledButton.icon(
-            autofocus: autofocusPlay,
-            onPressed: () => onPlay!(item),
-            icon: const Icon(Icons.play_arrow),
-            label: Text(DetailsTranslations.play.trOf(context)),
+        if (onPlay != null || (favoritesController != null && mediaType != null))
+          Row(
+            children: [
+              if (onPlay != null)
+                FilledButton.icon(
+                  autofocus: autofocusPlay,
+                  onPressed: () => onPlay!(item),
+                  icon: const Icon(Icons.play_arrow),
+                  label: Text(DetailsTranslations.play.trOf(context)),
+                ),
+              if (favoritesController != null && mediaType != null) ...[
+                const SizedBox(width: 8),
+                MaterialFavoriteButton(
+                  controller: favoritesController!,
+                  favorite: FavoriteMedia(item: item, type: mediaType!),
+                  iconSize: 28,
+                ),
+              ],
+            ],
           ),
         const SizedBox(height: 24),
         Text(DetailsTranslations.overview.trOf(context), style: theme.textTheme.titleMedium),

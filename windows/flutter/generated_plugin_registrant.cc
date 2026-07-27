@@ -6,6 +6,7 @@
 
 #include "generated_plugin_registrant.h"
 
+#include <app_links/app_links_plugin_c_api.h>
 #include <flutter_inappwebview_windows/flutter_inappwebview_windows_plugin_c_api.h>
 #include <fullscreen_window/fullscreen_window_plugin_c_api.h>
 #include <screen_retriever_windows/screen_retriever_windows_plugin_c_api.h>
@@ -13,6 +14,8 @@
 #include <window_manager/window_manager_plugin.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
+  AppLinksPluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("AppLinksPluginCApi"));
   FlutterInappwebviewWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FlutterInappwebviewWindowsPluginCApi"));
   FullscreenWindowPluginCApiRegisterWithRegistrar(

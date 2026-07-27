@@ -1,4 +1,7 @@
 import 'package:flutter/cupertino.dart';
+import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
+import 'package:popcorn_flutter/src/favorites/view/cupertino/cupertino_favorite_button.dart';
+import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -9,9 +12,12 @@ import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
 /// Cupertino (macOS / iOS) UI for searching movies and TV series, driven by a [MediaSearchController].
 class CupertinoMediaSearchView extends StatefulWidget {
-  const CupertinoMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.onMediaPlay});
+  const CupertinoMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.onMediaPlay, this.favoritesController});
 
   final MediaSearchController controller;
+
+  /// Drives the per-result favorite toggle. When `null`, no favorite button is shown.
+  final FavoritesController? favoritesController;
 
   /// Called when a result row is tapped (opens the details page).
   final ValueChanged<MediaItem>? onMediaSelected;
@@ -77,7 +83,8 @@ class _CupertinoMediaSearchViewState extends State<CupertinoMediaSearchView> wit
       Center(child: Text(SearchTranslations.emptyResults.trOf(context), style: CupertinoTheme.of(context).textTheme.textStyle));
 
   @override
-  Widget buildResultItem(BuildContext context, MediaItem item, int index) => _MediaResultTile(item: item, onTap: onMediaSelected, onPlay: onMediaPlay);
+  Widget buildResultItem(BuildContext context, MediaItem item, int index) =>
+      _MediaResultTile(item: item, onTap: onMediaSelected, onPlay: onMediaPlay, favoritesController: widget.favoritesController, mediaType: widget.controller.mediaType);
 
   @override
   Widget buildTrendingHeader(BuildContext context) => Padding(
@@ -133,11 +140,13 @@ class _CupertinoMediaSearchViewState extends State<CupertinoMediaSearchView> wit
 }
 
 class _MediaResultTile extends StatefulWidget {
-  const _MediaResultTile({required this.item, this.onTap, this.onPlay});
+  const _MediaResultTile({required this.item, this.onTap, this.onPlay, this.favoritesController, required this.mediaType});
 
   final MediaItem item;
   final ValueChanged<MediaItem>? onTap;
   final ValueChanged<MediaItem>? onPlay;
+  final FavoritesController? favoritesController;
+  final MediaType mediaType;
 
   @override
   State<_MediaResultTile> createState() => _MediaResultTileState();
@@ -182,6 +191,15 @@ class _MediaResultTileState extends State<_MediaResultTile> {
               const SizedBox(width: 4),
               Text(rating.toStringAsFixed(1), style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle),
             ],
+            if (widget.favoritesController != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: CupertinoFavoriteButton(
+                  controller: widget.favoritesController!,
+                  favorite: FavoriteMedia(item: item, type: widget.mediaType),
+                  iconSize: 22,
+                ),
+              ),
             if (showPlay && widget.onPlay != null)
               CupertinoButton(
                 padding: const EdgeInsets.only(left: 8),

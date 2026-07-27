@@ -9,6 +9,7 @@ import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/fluent/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
+import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -61,15 +62,19 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
   final MediaSearchRepository _repository = MediaSearchRepositoryFactory.create();
   late final MediaSearchController _searchController = MediaSearchController(repository: _repository);
   final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
+  final FavoritesController _favoritesController = FavoritesController(repository: FavoritesRepositoryFactory.create());
 
   @override
   void dispose() {
     _searchController.dispose();
+    _favoritesController.dispose();
     super.dispose();
   }
 
-  void _openMedia(MediaItem media) {
-    final source = _mediaSourceProvider.resolve(media, _searchController.mediaType);
+  void _openMedia(MediaItem media) => _openMediaFor(media, _searchController.mediaType);
+
+  void _openMediaFor(MediaItem media, MediaType type) {
+    final source = _mediaSourceProvider.resolve(media, type);
     Navigator.of(context).push(
       FluentPageRoute<void>(
         builder: (_) => _PopOnEscape(
@@ -112,9 +117,11 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
     );
   }
 
-  void _openDetails(MediaItem media) {
-    final details = _repository.details(media.id, _searchController.mediaType);
-    final videos = _repository.videos(media.id, _searchController.mediaType);
+  void _openDetails(MediaItem media) => _openDetailsFor(media, _searchController.mediaType);
+
+  void _openDetailsFor(MediaItem media, MediaType type) {
+    final details = _repository.details(media.id, type);
+    final videos = _repository.videos(media.id, type);
     Navigator.of(context).push(
       FluentPageRoute<void>(
         builder: (_) => _PopOnEscape(
@@ -123,9 +130,26 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
               item: media,
               details: details,
               videos: videos,
-              onPlay: _openMedia,
+              favoritesController: _favoritesController,
+              mediaType: type,
+              onPlay: (item) => _openMediaFor(item, type),
               onVideoPlay: _playVideo,
               episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openFavorites() {
+    Navigator.of(context).push(
+      FluentPageRoute<void>(
+        builder: (_) => _PopOnEscape(
+          child: PopcornFluentSplashScreen(
+            child: FluentFavoritesView(
+              controller: _favoritesController,
+              onMediaSelected: (favorite) => _openDetailsFor(favorite.item, favorite.type),
             ),
           ),
         ),
@@ -136,7 +160,13 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
   @override
   Widget build(BuildContext context) {
     return PopcornFluentSplashScreen(
-      child: FluentMediaSearchView(controller: _searchController, onMediaSelected: _openDetails, onMediaPlay: _openMedia),
+      child: FluentMediaSearchView(
+        controller: _searchController,
+        favoritesController: _favoritesController,
+        onMediaSelected: _openDetails,
+        onMediaPlay: _openMedia,
+        onOpenFavorites: _openFavorites,
+      ),
     );
   }
 }

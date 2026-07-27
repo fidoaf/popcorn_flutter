@@ -11,6 +11,7 @@ import 'package:popcorn_flutter/src/app/view/macos/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/details/view/macos/macos_media_details_view.dart';
+import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -55,15 +56,19 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
   final MediaSearchRepository _repository = MediaSearchRepositoryFactory.create();
   late final MediaSearchController _searchController = MediaSearchController(repository: _repository);
   final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
+  final FavoritesController _favoritesController = FavoritesController(repository: FavoritesRepositoryFactory.create());
 
   @override
   void dispose() {
     _searchController.dispose();
+    _favoritesController.dispose();
     super.dispose();
   }
 
-  void _openMedia(MediaItem media) {
-    final source = _mediaSourceProvider.resolve(media, _searchController.mediaType);
+  void _openMedia(MediaItem media) => _openMediaFor(media, _searchController.mediaType);
+
+  void _openMediaFor(MediaItem media, MediaType type) {
+    final source = _mediaSourceProvider.resolve(media, type);
     Navigator.of(context).push(
       CupertinoPageRoute<void>(
         builder: (_) => PopcornMacosSplashScreen(
@@ -96,9 +101,11 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
     );
   }
 
-  void _openDetails(MediaItem media) {
-    final details = _repository.details(media.id, _searchController.mediaType);
-    final videos = _repository.videos(media.id, _searchController.mediaType);
+  void _openDetails(MediaItem media) => _openDetailsFor(media, _searchController.mediaType);
+
+  void _openDetailsFor(MediaItem media, MediaType type) {
+    final details = _repository.details(media.id, type);
+    final videos = _repository.videos(media.id, type);
     Navigator.of(context).push(
       CupertinoPageRoute<void>(
         builder: (_) => PopcornMacosSplashScreen(
@@ -113,9 +120,34 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
                   item: media,
                   details: details,
                   videos: videos,
-                  onPlay: _openMedia,
+                  favoritesController: _favoritesController,
+                  mediaType: type,
+                  onPlay: (item) => _openMediaFor(item, type),
                   onVideoPlay: _playVideo,
                   episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openFavorites() {
+    Navigator.of(context).push(
+      CupertinoPageRoute<void>(
+        builder: (_) => PopcornMacosSplashScreen(
+          child: MacosScaffold(
+            toolBar: ToolBar(
+              title: Text(FavoritesTranslations.pageTitle.trOf(context)),
+              leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+            ),
+            children: [
+              ContentArea(
+                builder: (context, _) => MacosFavoritesView(
+                  controller: _favoritesController,
+                  onMediaSelected: (favorite) => _openDetailsFor(favorite.item, favorite.type),
                 ),
               ),
             ],
@@ -130,10 +162,25 @@ class _MacosHomeViewState extends State<_MacosHomeView> {
     return PopcornMacosSplashScreen(
       child: MacosWindow(
         child: MacosScaffold(
-          toolBar: ToolBar(title: Text(SearchTranslations.pageTitle.trOf(context))),
+          toolBar: ToolBar(
+            title: Text(SearchTranslations.pageTitle.trOf(context)),
+            actions: [
+              ToolBarIconButton(
+                label: FavoritesTranslations.pageTitle.trOf(context),
+                icon: const MacosIcon(CupertinoIcons.heart),
+                onPressed: _openFavorites,
+                showLabel: false,
+              ),
+            ],
+          ),
           children: [
             ContentArea(
-              builder: (context, _) => MacosMediaSearchView(controller: _searchController, onMediaSelected: _openDetails, onMediaPlay: _openMedia),
+              builder: (context, _) => MacosMediaSearchView(
+                controller: _searchController,
+                favoritesController: _favoritesController,
+                onMediaSelected: _openDetails,
+                onMediaPlay: _openMedia,
+              ),
             ),
           ],
         ),
