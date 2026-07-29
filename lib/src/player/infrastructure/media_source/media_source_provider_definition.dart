@@ -84,8 +84,18 @@ final class MediaSourceProviderDefinition {
 
   /// Builds a concrete [MediaSource] for [media]/[mediaType] by substituting
   /// every placeholder across the request template.
-  MediaSource buildRequest(MediaItem media, MediaType mediaType) {
-    String sub(String template) => template.replaceAll('{id}', media.id.toString()).replaceAll('{type}', mediaType.name);
+  ///
+  /// [variables] supplies extra, externally-controlled placeholders (e.g. the
+  /// `{language}`/`{subtitles}` playback preferences) that are substituted
+  /// alongside the built-in `{id}` and `{type}`.
+  MediaSource buildRequest(MediaItem media, MediaType mediaType, {Map<String, String> variables = const <String, String>{}}) {
+    String sub(String template) {
+      var result = template.replaceAll('{id}', media.id.toString()).replaceAll('{type}', mediaType.name);
+      for (final entry in variables.entries) {
+        result = result.replaceAll('{${entry.key}}', entry.value);
+      }
+      return result;
+    }
 
     final resolvedParameters = parameters.map((key, value) => MapEntry(sub(key), sub(value)));
     final resolvedHeaders = headers.map((key, value) => MapEntry(sub(key), sub(value)));

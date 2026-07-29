@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/configurable_media_source_provider.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/json_media_source_provider.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_preferences.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_provider_definition.dart';
 
 /// Builds the [ConfigurableMediaSourceProvider] used by the app from a JSON
@@ -31,7 +32,8 @@ import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_sou
 /// Each provider entry is a request template: the optional `scheme`, `path`,
 /// `method`, `parameters`, `headers`, `cookies` and `body` fields describe how
 /// to build the HTTP request (see [MediaSourceProviderDefinition]). String
-/// values may use the `{id}` and `{type}` placeholders.
+/// values may use the `{id}` and `{type}` placeholders, plus the
+/// externally-controlled `{language}` and `{subtitles}` playback preferences.
 abstract final class MediaSourceProviderFactory {
   const MediaSourceProviderFactory._();
 
@@ -51,7 +53,7 @@ abstract final class MediaSourceProviderFactory {
       "host": "web.nxsha.app",
       "path": "/embed/{type}/{id}",
       "method": "GET",
-      "parameters": { "lang": "en", "sub": "1" }
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" }
     },
     {
       "name": "vidlux",
@@ -59,7 +61,7 @@ abstract final class MediaSourceProviderFactory {
       "host": "vidlux.xyz",
       "path": "/embed/{type}/{id}",
       "method": "GET",
-      "parameters": { "lang": "en", "sub": "1" }
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" }
     },
     {
       "name": "vidsrcme",
@@ -67,27 +69,32 @@ abstract final class MediaSourceProviderFactory {
       "host": "vidsrcme.ru",
       "path": "/embed/{type}/{id}",
       "method": "GET",
-      "parameters": { "lang": "en", "sub": "1" }
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" }
     }
   ]
 }
 ''';
 
   /// Builds the provider from the embedded default definition.
-  static ConfigurableMediaSourceProvider create() => createFromJson(_defaultJson);
+  ///
+  /// An optional [preferences] instance lets callers control language and
+  /// subtitles from outside; when omitted a default instance is created.
+  static ConfigurableMediaSourceProvider create({MediaSourcePreferences? preferences}) => createFromJson(_defaultJson, preferences: preferences);
 
   /// Builds the provider from a raw JSON [source] string.
-  static ConfigurableMediaSourceProvider createFromJson(String source) => createFromMap(jsonDecode(source) as Map<String, dynamic>);
+  static ConfigurableMediaSourceProvider createFromJson(String source, {MediaSourcePreferences? preferences}) =>
+      createFromMap(jsonDecode(source) as Map<String, dynamic>, preferences: preferences);
 
   /// Builds the provider from an already-decoded JSON [config] map.
-  static ConfigurableMediaSourceProvider createFromMap(Map<String, dynamic> config) {
+  static ConfigurableMediaSourceProvider createFromMap(Map<String, dynamic> config, {MediaSourcePreferences? preferences}) {
+    final resolvedPreferences = preferences ?? MediaSourcePreferences();
     final rawProviders = config['providers'];
     if (rawProviders is! List || rawProviders.isEmpty) {
       throw const FormatException('Media source configuration must list at least one provider.');
     }
 
     final providers = rawProviders
-        .map((raw) => JsonMediaSourceProvider(MediaSourceProviderDefinition.fromJson(raw as Map<String, dynamic>)))
+        .map((raw) => JsonMediaSourceProvider(MediaSourceProviderDefinition.fromJson(raw as Map<String, dynamic>), preferences: resolvedPreferences))
         .toList(growable: false);
 
     final initialName = config['initialProvider'] as String?;
@@ -98,12 +105,12 @@ abstract final class MediaSourceProviderFactory {
             orElse: () => throw FormatException('Unknown initialProvider "$initialName".'),
           );
 
-    return ConfigurableMediaSourceProvider(providers: providers, initialProvider: initial);
+    return ConfigurableMediaSourceProvider(providers: providers, preferences: resolvedPreferences, initialProvider: initial);
   }
 
   /// Loads the provider definition from a bundled JSON asset.
-  static Future<ConfigurableMediaSourceProvider> createFromAsset([String assetPath = defaultAssetPath]) async {
+  static Future<ConfigurableMediaSourceProvider> createFromAsset([String assetPath = defaultAssetPath, MediaSourcePreferences? preferences]) async {
     final source = await rootBundle.loadString(assetPath);
-    return createFromJson(source);
+    return createFromJson(source, preferences: preferences);
   }
 }
