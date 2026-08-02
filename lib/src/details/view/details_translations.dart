@@ -38,4 +38,8 @@ class DetailsTranslations {
   });
 
   static const videos = Translation({AppLanguage.en: 'Videos', AppLanguage.es: 'Vídeos', AppLanguage.ca: 'Vídeos'});
+
+  static const director = Translation({AppLanguage.en: 'Director', AppLanguage.es: 'Director', AppLanguage.ca: 'Director'});
+
+  static const cast = Translation({AppLanguage.en: 'Cast', AppLanguage.es: 'Reparto', AppLanguage.ca: 'Repartiment'});
 }

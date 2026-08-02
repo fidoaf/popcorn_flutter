@@ -12,8 +12,14 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 /// blueprint covering the URL, method, query [parameters], [headers], [cookies]
 /// and [body]. Dynamic parts are injected through placeholders substituted at
 /// [buildRequest] time:
-///   * `{id}`   -> the media identifier
-///   * `{type}` -> the media type (`movie` / `tv`)
+///   * `{id}`       -> the media identifier
+///   * `{type}`     -> the media type (`movie` / `tv`)
+///   * `{season}`   -> the TV season number (empty for movies)
+///   * `{episode}`  -> the TV episode number (empty for movies)
+///
+/// Placeholders that resolve to an empty string produce empty URL path
+/// segments, which are collapsed so a template like `/embed/{type}/{id}/{season}/{episode}`
+/// yields `/embed/movie/123` for movies and `/embed/tv/123/1/1` for TV series.
 final class MediaSourceProviderDefinition {
   const MediaSourceProviderDefinition({
     required this.name,
@@ -63,8 +69,8 @@ final class MediaSourceProviderDefinition {
   /// URL scheme, defaulting to `https`.
   final String scheme;
 
-  /// URL path template with `{id}`/`{type}` placeholders, e.g.
-  /// `/embed/{type}/{id}`.
+  /// URL path template with `{id}`/`{type}`/`{season}`/`{episode}`
+  /// placeholders, e.g. `/embed/{type}/{id}/{season}/{episode}`.
   final String path;
 
   /// HTTP method used for the request.
@@ -88,9 +94,21 @@ final class MediaSourceProviderDefinition {
   /// [variables] supplies extra, externally-controlled placeholders (e.g. the
   /// `{language}`/`{subtitles}` playback preferences) that are substituted
   /// alongside the built-in `{id}` and `{type}`.
-  MediaSource buildRequest(MediaItem media, MediaType mediaType, {Map<String, String> variables = const <String, String>{}}) {
+  ///
+  /// For TV series, [season] and [episode] fill the `{season}`/`{episode}`
+  /// placeholders, defaulting to `1` when omitted. For movies both resolve to
+  /// an empty string and their (now empty) URL path segments are collapsed.
+  MediaSource buildRequest(MediaItem media, MediaType mediaType, {Map<String, String> variables = const <String, String>{}, int? season, int? episode}) {
+    final isSeries = mediaType == MediaType.tv;
+    final seasonValue = isSeries ? '${season ?? 1}' : '';
+    final episodeValue = isSeries ? '${episode ?? 1}' : '';
+
     String sub(String template) {
-      var result = template.replaceAll('{id}', media.id.toString()).replaceAll('{type}', mediaType.name);
+      var result = template
+          .replaceAll('{id}', media.id.toString())
+          .replaceAll('{type}', mediaType.name)
+          .replaceAll('{season}', seasonValue)
+          .replaceAll('{episode}', episodeValue);
       for (final entry in variables.entries) {
         result = result.replaceAll('{${entry.key}}', entry.value);
       }
@@ -108,12 +126,22 @@ final class MediaSourceProviderDefinition {
     final resolvedBody = body == null ? null : Uint8List.fromList(utf8.encode(sub(body!)));
 
     return MediaSource(
-      url: Uri(scheme: scheme, host: host, path: sub(path), queryParameters: resolvedParameters.isEmpty ? null : resolvedParameters),
+      url: Uri(scheme: scheme, host: host, path: _normalizePath(sub(path)), queryParameters: resolvedParameters.isEmpty ? null : resolvedParameters),
       method: method,
       headers: resolvedHeaders,
       cookies: resolvedCookies,
       body: resolvedBody,
     );
+  }
+
+  /// Removes empty path segments left behind by placeholders that resolved to
+  /// an empty string (e.g. `{season}`/`{episode}` for movies), preserving the
+  /// leading slash.
+  static String _normalizePath(String path) {
+    if (path.isEmpty) return path;
+    final segments = path.split('/').where((segment) => segment.isNotEmpty);
+    final normalized = segments.join('/');
+    return path.startsWith('/') ? '/$normalized' : normalized;
   }
 
   static MediaSourceMethod _parseMethod(Object? raw) {

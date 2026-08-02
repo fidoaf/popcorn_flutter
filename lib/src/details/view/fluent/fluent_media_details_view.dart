@@ -141,6 +141,28 @@ class FluentMediaDetailsView extends StatelessWidget {
           Text(DetailsTranslations.overview.trOf(context), style: typography.subtitle),
           const SizedBox(height: 8),
           Text(overview.isEmpty ? DetailsTranslations.noOverview.trOf(context) : overview, style: typography.body),
+          CreditsBuilder(
+            details: details,
+            builder: (context, director, cast) => Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (director != null) ...[
+                    Text(DetailsTranslations.director.trOf(context), style: typography.subtitle),
+                    const SizedBox(height: 8),
+                    Text(director, style: typography.body),
+                  ],
+                  if (director != null && cast != null) const SizedBox(height: 16),
+                  if (cast != null) ...[
+                    Text(DetailsTranslations.cast.trOf(context), style: typography.subtitle),
+                    const SizedBox(height: 8),
+                    Text(cast, style: typography.body),
+                  ],
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
           VideosListBuilder(
             videos: videos,
@@ -171,7 +193,7 @@ class FluentMediaDetailsView extends StatelessWidget {
         child: Container(
           constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
           decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
+            color: theme.resources.solidBackgroundFillColorBase,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
           ),
           child: SeasonsSheetContent(

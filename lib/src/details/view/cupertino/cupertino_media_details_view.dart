@@ -128,7 +128,11 @@ class CupertinoMediaDetailsView extends StatelessWidget {
                 ),
               if (favoritesController != null && mediaType != null) ...[
                 const SizedBox(width: 8),
-                CupertinoFavoriteButton(controller: favoritesController!, favorite: FavoriteMedia(item: item, type: mediaType!), iconSize: 28),
+                CupertinoFavoriteButton(
+                  controller: favoritesController!,
+                  favorite: FavoriteMedia(item: item, type: mediaType!),
+                  iconSize: 28,
+                ),
               ],
             ],
           ),
@@ -136,6 +140,28 @@ class CupertinoMediaDetailsView extends StatelessWidget {
         Text(DetailsTranslations.overview.trOf(context), style: textTheme.navTitleTextStyle),
         const SizedBox(height: 8),
         Text(overview.isEmpty ? DetailsTranslations.noOverview.trOf(context) : overview, style: textTheme.textStyle),
+        CreditsBuilder(
+          details: details,
+          builder: (context, director, cast) => Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (director != null) ...[
+                  Text(DetailsTranslations.director.trOf(context), style: textTheme.navTitleTextStyle),
+                  const SizedBox(height: 8),
+                  Text(director, style: textTheme.textStyle),
+                ],
+                if (director != null && cast != null) const SizedBox(height: 16),
+                if (cast != null) ...[
+                  Text(DetailsTranslations.cast.trOf(context), style: textTheme.navTitleTextStyle),
+                  const SizedBox(height: 8),
+                  Text(cast, style: textTheme.textStyle),
+                ],
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 24),
         VideosListBuilder(
           videos: videos,

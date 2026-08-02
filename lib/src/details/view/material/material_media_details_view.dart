@@ -140,6 +140,28 @@ class MaterialMediaDetailsView extends StatelessWidget {
         Text(DetailsTranslations.overview.trOf(context), style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         Text(overview.isEmpty ? DetailsTranslations.noOverview.trOf(context) : overview, style: theme.textTheme.bodyMedium),
+        CreditsBuilder(
+          details: details,
+          builder: (context, director, cast) => Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (director != null) ...[
+                  Text(DetailsTranslations.director.trOf(context), style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text(director, style: theme.textTheme.bodyMedium),
+                ],
+                if (director != null && cast != null) const SizedBox(height: 16),
+                if (cast != null) ...[
+                  Text(DetailsTranslations.cast.trOf(context), style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text(cast, style: theme.textTheme.bodyMedium),
+                ],
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 24),
         VideosListBuilder(
           videos: videos,

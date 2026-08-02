@@ -65,3 +65,34 @@ class VideosListBuilder extends StatelessWidget {
     );
   }
 }
+
+/// Shared builder that resolves a [Future<MediaDetails>] and exposes the
+/// director and formatted cast so each platform view can render them.
+///
+/// Hides itself when [details] is null, loading, or carries neither a director
+/// nor any cast members.
+class CreditsBuilder extends StatelessWidget {
+  const CreditsBuilder({super.key, this.details, required this.builder});
+
+  final Future<MediaDetails>? details;
+
+  /// Called with the director (may be null) and the cast names joined into a
+  /// single line (may be null when empty).
+  final Widget Function(BuildContext context, String? director, String? cast) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    if (details == null) return const SizedBox.shrink();
+    return FutureBuilder<MediaDetails>(
+      future: details,
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+        if (data == null) return const SizedBox.shrink();
+        final director = data.director;
+        final cast = data.cast.isEmpty ? null : data.cast.join(', ');
+        if (director == null && cast == null) return const SizedBox.shrink();
+        return builder(context, director, cast);
+      },
+    );
+  }
+}

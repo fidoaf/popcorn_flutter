@@ -51,7 +51,7 @@ abstract final class MediaSourceProviderFactory {
       "name": "nxsha",
       "scheme": "https",
       "host": "web.nxsha.app",
-      "path": "/embed/{type}/{id}",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" }
     },
@@ -59,7 +59,7 @@ abstract final class MediaSourceProviderFactory {
       "name": "vidlux",
       "scheme": "https",
       "host": "vidlux.xyz",
-      "path": "/embed/{type}/{id}",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" }
     },
@@ -67,7 +67,7 @@ abstract final class MediaSourceProviderFactory {
       "name": "vidsrcme",
       "scheme": "https",
       "host": "vidsrcme.ru",
-      "path": "/embed/{type}/{id}",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" }
     }

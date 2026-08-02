@@ -23,5 +23,6 @@ final class ConfigurableMediaSourceProvider implements MediaSourceProvider {
   final MediaSourcePreferences preferences;
 
   @override
-  MediaSource resolve(MediaItem media, MediaType mediaType) => delegate.resolve(media, mediaType);
+  MediaSource resolve(MediaItem media, MediaType mediaType, {int? season, int? episode}) =>
+      delegate.resolve(media, mediaType, season: season, episode: episode);
 }

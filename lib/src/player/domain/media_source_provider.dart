@@ -8,6 +8,9 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 /// a concrete request (URL, method, headers, cookies, body), keeping the player
 /// decoupled from any particular streaming backend. The active provider can be
 /// swapped at runtime through `ConfigurableMediaSourceProvider`.
+///
+/// For TV series, [season] and [episode] select the episode to play; they are
+/// ignored for movies.
 abstract interface class MediaSourceProvider {
-  MediaSource resolve(MediaItem media, MediaType mediaType);
+  MediaSource resolve(MediaItem media, MediaType mediaType, {int? season, int? episode});
 }

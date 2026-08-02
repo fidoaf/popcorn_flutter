@@ -8,6 +8,7 @@ import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
+import 'package:popcorn_flutter/src/history/history.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -57,6 +58,7 @@ class _WebHomeViewState extends State<_WebHomeView> {
   late final MediaSearchController _searchController = MediaSearchController(repository: _repository);
   final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
   final FavoritesController _favoritesController = FavoritesController(repository: FavoritesRepositoryFactory.create());
+  final WatchHistoryController _historyController = WatchHistoryController(repository: WatchHistoryRepositoryFactory.create());
 
   static final ThemeData _theme = ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.dark);
 
@@ -64,13 +66,17 @@ class _WebHomeViewState extends State<_WebHomeView> {
   void dispose() {
     _searchController.dispose();
     _favoritesController.dispose();
+    _historyController.dispose();
     super.dispose();
   }
 
   void _openMedia(MediaItem media) => _openMediaFor(media, _searchController.mediaType);
 
-  void _openMediaFor(MediaItem media, MediaType type) {
-    final source = _mediaSourceProvider.resolve(media, type);
+  void _openMediaFor(MediaItem media, MediaType type, {int? season, int? episode}) {
+    final resolvedSeason = type == MediaType.tv ? (season ?? 1) : null;
+    final resolvedEpisode = type == MediaType.tv ? (episode ?? 1) : null;
+    _historyController.record(media, type, season: resolvedSeason, episode: resolvedEpisode);
+    final source = _mediaSourceProvider.resolve(media, type, season: resolvedSeason, episode: resolvedEpisode);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PopcornWebSplashScreen(
@@ -144,9 +150,29 @@ class _WebHomeViewState extends State<_WebHomeView> {
               backgroundColor: _PopcornWebApp._background,
               appBar: AppBar(backgroundColor: _PopcornWebApp._background, title: Text(FavoritesTranslations.pageTitle.trOf(context))),
               body: SafeArea(
-                child: MaterialFavoritesView(
-                  controller: _favoritesController,
-                  onMediaSelected: (favorite) => _openDetailsFor(favorite.item, favorite.type),
+                child: MaterialFavoritesView(controller: _favoritesController, onMediaSelected: (favorite) => _openDetailsFor(favorite.item, favorite.type)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openContinueWatching() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PopcornWebSplashScreen(
+          child: Theme(
+            data: _theme,
+            child: Scaffold(
+              backgroundColor: _PopcornWebApp._background,
+              appBar: AppBar(backgroundColor: _PopcornWebApp._background, title: Text(WatchHistoryTranslations.pageTitle.trOf(context))),
+              body: SafeArea(
+                child: MaterialContinueWatchingView(
+                  controller: _historyController,
+                  onMediaSelected: (entry) => _openDetailsFor(entry.item, entry.type),
+                  onMediaPlay: (entry) => _openMediaFor(entry.item, entry.type, season: entry.season, episode: entry.episode),
                 ),
               ),
             ),
@@ -167,11 +193,8 @@ class _WebHomeViewState extends State<_WebHomeView> {
             backgroundColor: _PopcornWebApp._background,
             title: Text(SearchTranslations.pageTitle.trOf(context)),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.favorite),
-                tooltip: FavoritesTranslations.pageTitle.trOf(context),
-                onPressed: _openFavorites,
-              ),
+              IconButton(icon: const Icon(Icons.history), tooltip: WatchHistoryTranslations.pageTitle.trOf(context), onPressed: _openContinueWatching),
+              IconButton(icon: const Icon(Icons.favorite), tooltip: FavoritesTranslations.pageTitle.trOf(context), onPressed: _openFavorites),
             ],
           ),
           body: SafeArea(

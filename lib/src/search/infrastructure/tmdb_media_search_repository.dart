@@ -40,7 +40,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     try {
       response = await _client
           .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB search request timeout'));
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw const MediaSearchException('TMDB search request timeout'));
     } on SocketException catch (e) {
       throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
@@ -58,13 +58,14 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
   @override
   Future<MediaDetails> details(int id, MediaType mediaType) async {
-    final uri = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id');
+    final endpoint = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id');
+    final uri = endpoint.replace(queryParameters: {'append_to_response': 'credits'});
 
     final http.Response response;
     try {
       response = await _client
           .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB details request timeout'));
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw const MediaSearchException('TMDB details request timeout'));
     } on SocketException catch (e) {
       throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
@@ -87,7 +88,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     try {
       response = await _client
           .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB trending request timeout'));
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw const MediaSearchException('TMDB trending request timeout'));
     } on SocketException catch (e) {
       throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
@@ -111,7 +112,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     try {
       response = await _client
           .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB videos request timeout'));
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw const MediaSearchException('TMDB videos request timeout'));
     } on SocketException catch (e) {
       throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
@@ -135,7 +136,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     try {
       response = await _client
           .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 10), onTimeout: () => throw MediaSearchException('TMDB episodes request timeout'));
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw const MediaSearchException('TMDB episodes request timeout'));
     } on SocketException catch (e) {
       throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
     } catch (error) {
@@ -166,10 +167,16 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   }
 
   static MediaDetails _toMediaDetails(Map<String, dynamic> json, MediaType mediaType) {
+    final director = _director(json, mediaType);
+    final cast = _cast(json);
     switch (mediaType) {
       case MediaType.movie:
         final minutes = (json['runtime'] as num?)?.toInt();
-        return MediaDetails(runtime: minutes == null || minutes <= 0 ? null : Duration(minutes: minutes));
+        return MediaDetails(
+          runtime: minutes == null || minutes <= 0 ? null : Duration(minutes: minutes),
+          director: director,
+          cast: cast,
+        );
       case MediaType.tv:
         final seasonsJson = (json['seasons'] as List<dynamic>?) ?? const <dynamic>[];
         final seasons = seasonsJson.cast<Map<String, dynamic>>().map(_toMediaSeason).toList(growable: false);
@@ -177,8 +184,46 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
           numberOfSeasons: (json['number_of_seasons'] as num?)?.toInt(),
           numberOfEpisodes: (json['number_of_episodes'] as num?)?.toInt(),
           seasons: seasons,
+          director: director,
+          cast: cast,
         );
     }
+  }
+
+  /// Maximum number of leading cast members to surface on the details page.
+  static const int _maxCastMembers = 5;
+
+  /// Resolves the director of a movie (crew member with job `Director`) or the
+  /// creator(s) of a TV series (`created_by`). Returns `null` when unknown.
+  static String? _director(Map<String, dynamic> json, MediaType mediaType) {
+    final crew = (json['credits'] as Map<String, dynamic>?)?['crew'] as List<dynamic>?;
+    final directors = <String>[];
+    for (final member in (crew ?? const <dynamic>[]).cast<Map<String, dynamic>>()) {
+      if (member['job'] == 'Director') {
+        final name = (member['name'] as String?)?.trim();
+        if (name != null && name.isNotEmpty && !directors.contains(name)) directors.add(name);
+      }
+    }
+    if (directors.isEmpty && mediaType == MediaType.tv) {
+      final creators = (json['created_by'] as List<dynamic>?) ?? const <dynamic>[];
+      for (final creator in creators.cast<Map<String, dynamic>>()) {
+        final name = (creator['name'] as String?)?.trim();
+        if (name != null && name.isNotEmpty && !directors.contains(name)) directors.add(name);
+      }
+    }
+    return directors.isEmpty ? null : directors.join(', ');
+  }
+
+  /// Resolves the leading [_maxCastMembers] cast members, ordered by billing.
+  static List<String> _cast(Map<String, dynamic> json) {
+    final cast = (json['credits'] as Map<String, dynamic>?)?['cast'] as List<dynamic>?;
+    final names = <String>[];
+    for (final member in (cast ?? const <dynamic>[]).cast<Map<String, dynamic>>()) {
+      final name = (member['name'] as String?)?.trim();
+      if (name != null && name.isNotEmpty) names.add(name);
+      if (names.length >= _maxCastMembers) break;
+    }
+    return List<String>.unmodifiable(names);
   }
 
   static MediaSeason _toMediaSeason(Map<String, dynamic> json) {

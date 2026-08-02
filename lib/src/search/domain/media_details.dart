@@ -7,7 +7,14 @@ import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 /// [numberOfEpisodes] and the per-season [seasons] list. Fields that do not
 /// apply to a given entry are `null` (or empty for [seasons]).
 final class MediaDetails {
-  const MediaDetails({this.runtime, this.numberOfSeasons, this.numberOfEpisodes, this.seasons = const <MediaSeason>[]});
+  const MediaDetails({
+    this.runtime,
+    this.numberOfSeasons,
+    this.numberOfEpisodes,
+    this.seasons = const <MediaSeason>[],
+    this.director,
+    this.cast = const <String>[],
+  });
 
   /// Total running time of a movie.
   final Duration? runtime;
@@ -20,4 +27,11 @@ final class MediaDetails {
 
   /// Per-season information for a TV series. Empty for movies.
   final List<MediaSeason> seasons;
+
+  /// Director of a movie or creator(s) of a TV series. `null` when unknown.
+  final String? director;
+
+  /// Leading cast members (actor names), most prominent first. Empty when
+  /// unknown.
+  final List<String> cast;
 }

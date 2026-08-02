@@ -23,6 +23,6 @@ final class JsonMediaSourceProvider implements MediaSourceProvider {
   final MediaSourcePreferences? preferences;
 
   @override
-  MediaSource resolve(MediaItem media, MediaType mediaType) =>
-      definition.buildRequest(media, mediaType, variables: preferences?.variables ?? const <String, String>{});
+  MediaSource resolve(MediaItem media, MediaType mediaType, {int? season, int? episode}) =>
+      definition.buildRequest(media, mediaType, variables: preferences?.variables ?? const <String, String>{}, season: season, episode: episode);
 }

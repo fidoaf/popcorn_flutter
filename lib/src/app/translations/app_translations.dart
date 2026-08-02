@@ -7,9 +7,9 @@ class AppTranslations {
   static const appTitle = Translation({AppLanguage.en: 'Popcorn', AppLanguage.es: 'Popcorn', AppLanguage.ca: 'Popcorn'});
 
   static const splashSubtitle = Translation({
-    AppLanguage.en: 'Loading your bucket...',
-    AppLanguage.es: 'Preparando tu cubo...',
-    AppLanguage.ca: 'Preparant el teu cubell...',
+    AppLanguage.en: 'Filling up your bucket...',
+    AppLanguage.es: 'Preparando las palomitas...',
+    AppLanguage.ca: 'Preparant les mongetes...',
   });
 
   static const unsupportedPlatform = Translation({

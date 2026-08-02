@@ -10,10 +10,12 @@ import 'package:popcorn_flutter/src/app/view/fluent/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
+import 'package:popcorn_flutter/src/history/history.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main(List<String> args) async {
@@ -24,12 +26,75 @@ void main(List<String> args) async {
   }
   await dotenv.load();
   await windowManager.ensureInitialized();
-  const WindowOptions windowOptions = WindowOptions(title: 'Popcorn', center: true, size: Size(800, 600));
+  final prefs = await SharedPreferences.getInstance();
+  final savedBounds = _WindowStatePersistence.readBounds(prefs);
+  final wasMaximized = _WindowStatePersistence.readMaximized(prefs);
+  final WindowOptions windowOptions = WindowOptions(title: 'Popcorn', center: savedBounds == null, size: savedBounds?.size ?? const Size(800, 600));
   windowManager.waitUntilReadyToShow(windowOptions, () async {
+    if (savedBounds != null) {
+      await windowManager.setBounds(savedBounds);
+    }
+    if (wasMaximized) {
+      await windowManager.maximize();
+    }
     await windowManager.show();
     await windowManager.focus();
   });
+  windowManager.addListener(_WindowStatePersistence(prefs));
   runApp(const _PopcornWindowsApp(home: _WindowsHomeView()));
+}
+
+/// Persists the window position, size and maximized state across launches.
+class _WindowStatePersistence extends WindowListener {
+  _WindowStatePersistence(this._prefs);
+
+  static const String _keyX = 'window_x';
+  static const String _keyY = 'window_y';
+  static const String _keyWidth = 'window_width';
+  static const String _keyHeight = 'window_height';
+  static const String _keyMaximized = 'window_maximized';
+
+  final SharedPreferences _prefs;
+
+  static Rect? readBounds(SharedPreferences prefs) {
+    final width = prefs.getDouble(_keyWidth);
+    final height = prefs.getDouble(_keyHeight);
+    final x = prefs.getDouble(_keyX);
+    final y = prefs.getDouble(_keyY);
+    if (width == null || height == null || x == null || y == null) {
+      return null;
+    }
+    return Rect.fromLTWH(x, y, width, height);
+  }
+
+  static bool readMaximized(SharedPreferences prefs) => prefs.getBool(_keyMaximized) ?? false;
+
+  Future<void> _saveState() async {
+    final isMaximized = await windowManager.isMaximized();
+    await _prefs.setBool(_keyMaximized, isMaximized);
+    // Keep the last non-maximized bounds so restoring from maximized works.
+    if (isMaximized) return;
+    final bounds = await windowManager.getBounds();
+    await _prefs.setDouble(_keyX, bounds.left);
+    await _prefs.setDouble(_keyY, bounds.top);
+    await _prefs.setDouble(_keyWidth, bounds.width);
+    await _prefs.setDouble(_keyHeight, bounds.height);
+  }
+
+  @override
+  void onWindowResized() => _saveState();
+
+  @override
+  void onWindowMoved() => _saveState();
+
+  @override
+  void onWindowMaximize() => _saveState();
+
+  @override
+  void onWindowUnmaximize() => _saveState();
+
+  @override
+  void onWindowClose() => _saveState();
 }
 
 class _PopcornWindowsApp extends StatelessWidget {
@@ -63,18 +128,23 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
   late final MediaSearchController _searchController = MediaSearchController(repository: _repository);
   final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
   final FavoritesController _favoritesController = FavoritesController(repository: FavoritesRepositoryFactory.create());
+  final WatchHistoryController _historyController = WatchHistoryController(repository: WatchHistoryRepositoryFactory.create());
 
   @override
   void dispose() {
     _searchController.dispose();
     _favoritesController.dispose();
+    _historyController.dispose();
     super.dispose();
   }
 
   void _openMedia(MediaItem media) => _openMediaFor(media, _searchController.mediaType);
 
-  void _openMediaFor(MediaItem media, MediaType type) {
-    final source = _mediaSourceProvider.resolve(media, type);
+  void _openMediaFor(MediaItem media, MediaType type, {int? season, int? episode}) {
+    final resolvedSeason = type == MediaType.tv ? (season ?? 1) : null;
+    final resolvedEpisode = type == MediaType.tv ? (episode ?? 1) : null;
+    _historyController.record(media, type, season: resolvedSeason, episode: resolvedEpisode);
+    final source = _mediaSourceProvider.resolve(media, type, season: resolvedSeason, episode: resolvedEpisode);
     Navigator.of(context).push(
       FluentPageRoute<void>(
         builder: (_) => _PopOnEscape(
@@ -147,9 +217,22 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
       FluentPageRoute<void>(
         builder: (_) => _PopOnEscape(
           child: PopcornFluentSplashScreen(
-            child: FluentFavoritesView(
-              controller: _favoritesController,
-              onMediaSelected: (favorite) => _openDetailsFor(favorite.item, favorite.type),
+            child: FluentFavoritesView(controller: _favoritesController, onMediaSelected: (favorite) => _openDetailsFor(favorite.item, favorite.type)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openContinueWatching() {
+    Navigator.of(context).push(
+      FluentPageRoute<void>(
+        builder: (_) => _PopOnEscape(
+          child: PopcornFluentSplashScreen(
+            child: FluentContinueWatchingView(
+              controller: _historyController,
+              onMediaSelected: (entry) => _openDetailsFor(entry.item, entry.type),
+              onMediaPlay: (entry) => _openMediaFor(entry.item, entry.type, season: entry.season, episode: entry.episode),
             ),
           ),
         ),
@@ -166,6 +249,7 @@ class _WindowsHomeViewState extends State<_WindowsHomeView> {
         onMediaSelected: _openDetails,
         onMediaPlay: _openMedia,
         onOpenFavorites: _openFavorites,
+        onOpenContinueWatching: _openContinueWatching,
       ),
     );
   }

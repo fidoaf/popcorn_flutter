@@ -3,6 +3,7 @@ import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_translations.dart';
 import 'package:popcorn_flutter/src/favorites/view/fluent/fluent_favorite_button.dart';
+import 'package:popcorn_flutter/src/history/view/watch_history_translations.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -13,7 +14,15 @@ import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
 /// Fluent (Windows) UI for searching movies and TV series, driven by a [MediaSearchController].
 class FluentMediaSearchView extends StatefulWidget {
-  const FluentMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.onMediaPlay, this.favoritesController, this.onOpenFavorites});
+  const FluentMediaSearchView({
+    super.key,
+    required this.controller,
+    this.onMediaSelected,
+    this.onMediaPlay,
+    this.favoritesController,
+    this.onOpenFavorites,
+    this.onOpenContinueWatching,
+  });
 
   final MediaSearchController controller;
 
@@ -23,6 +32,10 @@ class FluentMediaSearchView extends StatefulWidget {
   /// Called when the favorites command bar button is tapped. When `null`, no
   /// favorites button is shown in the header.
   final VoidCallback? onOpenFavorites;
+
+  /// Called when the continue-watching command bar button is tapped. When
+  /// `null`, no continue-watching button is shown in the header.
+  final VoidCallback? onOpenContinueWatching;
 
   /// Called when a result row is tapped (opens the details page).
   final ValueChanged<MediaItem>? onMediaSelected;
@@ -77,8 +90,13 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
   Widget buildEmptyResults(BuildContext context) => Center(child: Text(SearchTranslations.emptyResults.trOf(context)));
 
   @override
-  Widget buildResultItem(BuildContext context, MediaItem item, int index) =>
-      _MediaResultTile(item: item, onTap: onMediaSelected, onPlay: onMediaPlay, favoritesController: widget.favoritesController, mediaType: widget.controller.mediaType);
+  Widget buildResultItem(BuildContext context, MediaItem item, int index) => _MediaResultTile(
+    item: item,
+    onTap: onMediaSelected,
+    onPlay: onMediaPlay,
+    favoritesController: widget.favoritesController,
+    mediaType: widget.controller.mediaType,
+  );
 
   @override
   Widget buildTrendingHeader(BuildContext context) => Padding(
@@ -92,16 +110,23 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
       header: PageHeader(
         padding: 16,
         title: Text(SearchTranslations.pageTitle.trOf(context)),
-        commandBar: widget.onOpenFavorites == null
+        commandBar: widget.onOpenFavorites == null && widget.onOpenContinueWatching == null
             ? null
             : CommandBar(
                 mainAxisAlignment: MainAxisAlignment.end,
                 primaryItems: [
-                  CommandBarButton(
-                    icon: const Icon(FluentIcons.heart),
-                    label: Text(FavoritesTranslations.pageTitle.trOf(context)),
-                    onPressed: widget.onOpenFavorites,
-                  ),
+                  if (widget.onOpenContinueWatching != null)
+                    CommandBarButton(
+                      icon: const Icon(FluentIcons.play),
+                      label: Text(WatchHistoryTranslations.pageTitle.trOf(context)),
+                      onPressed: widget.onOpenContinueWatching,
+                    ),
+                  if (widget.onOpenFavorites != null)
+                    CommandBarButton(
+                      icon: const Icon(FluentIcons.heart),
+                      label: Text(FavoritesTranslations.pageTitle.trOf(context)),
+                      onPressed: widget.onOpenFavorites,
+                    ),
                 ],
               ),
       ),
@@ -202,7 +227,10 @@ class _MediaResultTileState extends State<_MediaResultTile> {
       if (rating != null) ...[const Icon(FluentIcons.favorite_star_fill), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
       if (widget.favoritesController != null) ...[
         const SizedBox(width: 4),
-        FluentFavoriteButton(controller: widget.favoritesController!, favorite: FavoriteMedia(item: widget.item, type: widget.mediaType)),
+        FluentFavoriteButton(
+          controller: widget.favoritesController!,
+          favorite: FavoriteMedia(item: widget.item, type: widget.mediaType),
+        ),
       ],
       if (showPlay && widget.onPlay != null) ...[
         const SizedBox(width: 8),
