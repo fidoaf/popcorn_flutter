@@ -8,6 +8,9 @@ import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 /// Loads the episodes for a given [MediaSeason] on demand.
 typedef SeasonEpisodesLoader = Future<List<MediaEpisode>> Function(MediaSeason season);
 
+/// Invoked when the play button of an [episode] within a [season] is tapped.
+typedef EpisodePlayCallback = void Function(MediaSeason season, MediaEpisode episode);
+
 /// Framework-agnostic content for the "seasons" bottom sheet.
 ///
 /// Lists every [MediaSeason] with its poster, episode count, air year and
@@ -16,7 +19,7 @@ typedef SeasonEpisodesLoader = Future<List<MediaEpisode>> Function(MediaSeason s
 /// platform's modal chrome (Material bottom sheet, Cupertino popup, etc.) and
 /// provide the [titleStyle] so the header matches the surrounding typography.
 class SeasonsSheetContent extends StatelessWidget {
-  const SeasonsSheetContent({super.key, required this.seasons, this.titleStyle, this.subtitleColor, this.episodesLoader});
+  const SeasonsSheetContent({super.key, required this.seasons, this.titleStyle, this.subtitleColor, this.episodesLoader, this.onPlayEpisode});
 
   final List<MediaSeason> seasons;
 
@@ -29,6 +32,10 @@ class SeasonsSheetContent extends StatelessWidget {
   /// Loads the episodes for a tapped season. When `null`, seasons are not
   /// expandable.
   final SeasonEpisodesLoader? episodesLoader;
+
+  /// Invoked when an episode's play button is tapped. When `null`, no play
+  /// button is shown.
+  final EpisodePlayCallback? onPlayEpisode;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +62,8 @@ class SeasonsSheetContent extends StatelessWidget {
                 shrinkWrap: true,
                 itemCount: seasons.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 16),
-                itemBuilder: (context, index) => _SeasonTile(season: seasons[index], subtitleColor: subtitleColor, episodesLoader: episodesLoader),
+                itemBuilder: (context, index) =>
+                    _SeasonTile(season: seasons[index], subtitleColor: subtitleColor, episodesLoader: episodesLoader, onPlayEpisode: onPlayEpisode),
               ),
             ),
           ],
@@ -66,11 +74,12 @@ class SeasonsSheetContent extends StatelessWidget {
 }
 
 class _SeasonTile extends StatefulWidget {
-  const _SeasonTile({required this.season, this.subtitleColor, this.episodesLoader});
+  const _SeasonTile({required this.season, this.subtitleColor, this.episodesLoader, this.onPlayEpisode});
 
   final MediaSeason season;
   final Color? subtitleColor;
   final SeasonEpisodesLoader? episodesLoader;
+  final EpisodePlayCallback? onPlayEpisode;
 
   @override
   State<_SeasonTile> createState() => _SeasonTileState();
@@ -126,12 +135,24 @@ class _SeasonTileState extends State<_SeasonTile> {
       ],
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        GestureDetector(behavior: HitTestBehavior.opaque, onTap: _expandable ? _toggle : null, child: header),
-        if (_expanded) Padding(padding: const EdgeInsets.only(top: 12), child: _episodesSection(context, subtitleColor)),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0x1FFFFFFF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x40FFFFFF)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x40000000), blurRadius: 16, offset: Offset(0, 6)),
+          BoxShadow(color: Color(0x1AFFFFFF), blurRadius: 1, offset: Offset(0, -1)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GestureDetector(behavior: HitTestBehavior.opaque, onTap: _expandable ? _toggle : null, child: header),
+          if (_expanded) Padding(padding: const EdgeInsets.only(top: 12), child: _episodesSection(context, subtitleColor)),
+        ],
+      ),
     );
   }
 
@@ -164,7 +185,11 @@ class _SeasonTileState extends State<_SeasonTile> {
             for (final episode in episodes)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _EpisodeTile(episode: episode, subtitleColor: subtitleColor),
+                child: _EpisodeTile(
+                  episode: episode,
+                  subtitleColor: subtitleColor,
+                  onPlay: widget.onPlayEpisode == null ? null : () => widget.onPlayEpisode!(widget.season, episode),
+                ),
               ),
           ],
         );
@@ -207,10 +232,11 @@ class _SeasonTileState extends State<_SeasonTile> {
 }
 
 class _EpisodeTile extends StatelessWidget {
-  const _EpisodeTile({required this.episode, required this.subtitleColor});
+  const _EpisodeTile({required this.episode, required this.subtitleColor, this.onPlay});
 
   final MediaEpisode episode;
   final Color subtitleColor;
+  final VoidCallback? onPlay;
 
   static const double _stillWidth = 96;
   static const double _stillHeight = 54;
@@ -242,6 +268,7 @@ class _EpisodeTile extends StatelessWidget {
             ],
           ),
         ),
+        if (onPlay != null) ...[const SizedBox(width: 8), _PlayButton(onTap: onPlay!)],
       ],
     );
   }
@@ -285,6 +312,50 @@ Widget _imagePlaceholder(double width, double height) {
     height: height,
     decoration: BoxDecoration(color: const Color(0x22808080), borderRadius: BorderRadius.circular(6)),
   );
+}
+
+/// A circular play button, drawn on the widgets layer so this sheet stays
+/// independent of Material/Cupertino.
+class _PlayButton extends StatelessWidget {
+  const _PlayButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  static const double _size = 32;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: CustomPaint(size: const Size.square(_size), painter: _PlayPainter(const Color(0xFFE50914))),
+    );
+  }
+}
+
+class _PlayPainter extends CustomPainter {
+  _PlayPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2;
+    canvas.drawCircle(center, radius, Paint()..color = color);
+
+    final side = size.width * 0.34;
+    final height = side * 0.866;
+    final path = Path()
+      ..moveTo(center.dx - height / 3, center.dy - side / 2)
+      ..lineTo(center.dx - height / 3, center.dy + side / 2)
+      ..lineTo(center.dx + (height * 2 / 3), center.dy)
+      ..close();
+    canvas.drawPath(path, Paint()..color = const Color(0xFFFFFFFF));
+  }
+
+  @override
+  bool shouldRepaint(covariant _PlayPainter oldDelegate) => oldDelegate.color != color;
 }
 
 /// A standard expand/collapse chevron, backed by an SVG asset so icons can be

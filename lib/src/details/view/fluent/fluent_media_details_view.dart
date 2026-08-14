@@ -25,6 +25,7 @@ class FluentMediaDetailsView extends StatelessWidget {
     this.onPlay,
     this.onVideoPlay,
     this.episodesLoader,
+    this.onPlayEpisode,
     this.favoritesController,
     this.mediaType,
   });
@@ -46,6 +47,9 @@ class FluentMediaDetailsView extends StatelessWidget {
 
   /// Loads the episodes for a tapped season in the seasons sheet.
   final SeasonEpisodesLoader? episodesLoader;
+
+  /// Called when an episode's play button is tapped (launches the player).
+  final EpisodePlayCallback? onPlayEpisode;
 
   /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
   /// favorite button is shown.
@@ -201,6 +205,7 @@ class FluentMediaDetailsView extends StatelessWidget {
             titleStyle: theme.typography.subtitle,
             subtitleColor: theme.resources.textFillColorSecondary,
             episodesLoader: episodesLoader,
+            onPlayEpisode: onPlayEpisode,
           ),
         ),
       ),

@@ -133,6 +133,7 @@ class _AndroidHomeViewState extends State<_AndroidHomeView> {
                 onPlay: (item) => _openMediaFor(item, type),
                 onVideoPlay: _playVideo,
                 episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
+                onPlayEpisode: (season, episode) => _openMediaFor(media, type, season: season.seasonNumber, episode: episode.episodeNumber),
               ),
             ),
           ),

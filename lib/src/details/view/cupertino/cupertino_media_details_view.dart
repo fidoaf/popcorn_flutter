@@ -25,6 +25,7 @@ class CupertinoMediaDetailsView extends StatelessWidget {
     this.onPlay,
     this.onVideoPlay,
     this.episodesLoader,
+    this.onPlayEpisode,
     this.favoritesController,
     this.mediaType,
   });
@@ -46,6 +47,9 @@ class CupertinoMediaDetailsView extends StatelessWidget {
 
   /// Loads the episodes for a tapped season in the seasons sheet.
   final SeasonEpisodesLoader? episodesLoader;
+
+  /// Called when an episode's play button is tapped (launches the player).
+  final EpisodePlayCallback? onPlayEpisode;
 
   /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
   /// favorite button is shown.
@@ -204,6 +208,7 @@ class CupertinoMediaDetailsView extends StatelessWidget {
           titleStyle: textTheme.navTitleTextStyle,
           subtitleColor: CupertinoColors.secondaryLabel.resolveFrom(context),
           episodesLoader: episodesLoader,
+          onPlayEpisode: onPlayEpisode,
         ),
       ),
     );

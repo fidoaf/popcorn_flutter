@@ -26,6 +26,7 @@ class MacosMediaDetailsView extends StatelessWidget {
     this.onPlay,
     this.onVideoPlay,
     this.episodesLoader,
+    this.onPlayEpisode,
     this.favoritesController,
     this.mediaType,
   });
@@ -47,6 +48,9 @@ class MacosMediaDetailsView extends StatelessWidget {
 
   /// Loads the episodes for a tapped season in the seasons sheet.
   final SeasonEpisodesLoader? episodesLoader;
+
+  /// Called when an episode's play button is tapped (launches the player).
+  final EpisodePlayCallback? onPlayEpisode;
 
   /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
   /// favorite button is shown.
@@ -185,7 +189,13 @@ class MacosMediaDetailsView extends StatelessWidget {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.75,
         color: MacosTheme.of(context).canvasColor,
-        child: SeasonsSheetContent(seasons: seasons, titleStyle: typography.title1, subtitleColor: MacosColors.systemGrayColor, episodesLoader: episodesLoader),
+        child: SeasonsSheetContent(
+          seasons: seasons,
+          titleStyle: typography.title1,
+          subtitleColor: MacosColors.systemGrayColor,
+          episodesLoader: episodesLoader,
+          onPlayEpisode: onPlayEpisode,
+        ),
       ),
     );
   }
