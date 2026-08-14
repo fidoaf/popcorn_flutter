@@ -24,7 +24,7 @@ void main(List<String> args) async {
     runApp(const UnsupportedPlatformView());
     return;
   }
-  await dotenv.load();
+  await dotenv.load(fileName: 'assets/config/app.env');
   await windowManager.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final savedBounds = _WindowStatePersistence.readBounds(prefs);

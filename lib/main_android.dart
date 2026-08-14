@@ -34,7 +34,7 @@ void main(List<String> args) async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  await dotenv.load();
+  await dotenv.load(fileName: 'assets/config/app.env');
   runApp(const _PopcornAndroidApp());
 }
 

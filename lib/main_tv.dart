@@ -27,7 +27,7 @@ void main(List<String> args) async {
   // orientation and hide the system bars for a full-screen 10-foot experience.
   await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  await dotenv.load();
+  await dotenv.load(fileName: 'assets/config/app.env');
   runApp(const _PopcornTvApp());
 }
 

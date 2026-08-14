@@ -37,8 +37,8 @@ jobs:
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
-          mkdir -p docs/assets
-          printf '%s\n' "$ENV_FILE" > docs/assets/.env
+          mkdir -p docs/assets/assets/config
+          printf '%s\n' "$ENV_FILE" > docs/assets/assets/config/app.env
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

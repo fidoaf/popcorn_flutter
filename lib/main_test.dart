@@ -33,7 +33,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///     flutter run -t lib/main_supabase_example.dart
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load();
+  await dotenv.load(fileName: 'assets/config/app.env');
 
   await Supabase.initialize(url: dotenv.env['supabase.url']!, publishableKey: dotenv.env['supabase.publishableKey']!);
 

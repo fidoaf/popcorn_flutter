@@ -22,7 +22,7 @@ void main(List<String> args) async {
     return;
   }
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load();
+  await dotenv.load(fileName: 'assets/config/app.env');
   runApp(const _PopcornWebApp());
 }
 

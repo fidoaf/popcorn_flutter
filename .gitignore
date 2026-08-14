@@ -51,6 +51,7 @@ lib/**/**.g.dart
 devtools_options.yaml
 
 .env
+assets/config/app.env
 
 .local-chrome
 android/.gradle/file-system.probe
