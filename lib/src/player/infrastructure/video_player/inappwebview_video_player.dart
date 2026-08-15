@@ -22,6 +22,12 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
   /// origin, so a neutral site-like base URL is presented instead.
   static const _embedBaseUrl = 'https://popcorn.flutter.app';
 
+  /// Sandbox applied to the hosting `<iframe>` on the web. It grants only what
+  /// playback needs and deliberately omits `allow-popups`,
+  /// `allow-popups-to-escape-sandbox` and top-navigation, so ad scripts inside
+  /// the embed cannot spawn pop-up windows or hijack the tab.
+  static final _webSandbox = <Sandbox>{Sandbox.ALLOW_SCRIPTS, Sandbox.ALLOW_SAME_ORIGIN, Sandbox.ALLOW_FORMS, Sandbox.ALLOW_MODALS, Sandbox.ALLOW_PRESENTATION};
+
   /// The document origin the WebView is pinned to: the embed base URL for
   /// inline documents, otherwise the source's own host.
   WebUri get _baseUrl => source.data != null ? WebUri(_embedBaseUrl) : WebUri.uri(source.url);
@@ -103,6 +109,9 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
         // for `window.open`/`target="_blank"` links (see [onCreateWindow]).
         supportMultipleWindows: false,
         javaScriptCanOpenWindowsAutomatically: false,
+        // On the web the WebView is an <iframe>; restrict its sandbox so embedded
+        // ad scripts cannot open pop-up windows (see [_webSandbox]).
+        iframeSandbox: _webSandbox,
       ),
       // Keep the WebView pinned to the provided URL: allow sub-frame content
       // (e.g. the embedded player iframe) and same-host navigations, but cancel
