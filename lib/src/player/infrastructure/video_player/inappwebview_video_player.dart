@@ -99,6 +99,10 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
         // Required so [shouldInterceptRequest] is invoked to serve the inline
         // embed document under a real origin on Windows.
         useShouldInterceptRequest: serveViaInterception,
+        // Keep everything inside this WebView: never spawn a separate window
+        // for `window.open`/`target="_blank"` links (see [onCreateWindow]).
+        supportMultipleWindows: false,
+        javaScriptCanOpenWindowsAutomatically: false,
       ),
       // Keep the WebView pinned to the provided URL: allow sub-frame content
       // (e.g. the embedded player iframe) and same-host navigations, but cancel
@@ -110,6 +114,9 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
         }
         return NavigationActionPolicy.CANCEL;
       },
+      // Veto any request to open a new window (pop-ups, `target="_blank"`,
+      // `window.open`), so nothing escapes the player.
+      onCreateWindow: (controller, createWindowAction) async => false,
       onEnterFullscreen: (_) => fullscreenController.setFullscreen(true),
       onExitFullscreen: (_) => fullscreenController.setFullscreen(false),
     );
