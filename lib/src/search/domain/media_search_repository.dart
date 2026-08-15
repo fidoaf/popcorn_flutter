@@ -18,6 +18,12 @@ abstract interface class MediaSearchRepository {
   /// (runtime for movies, seasons/episodes for TV series).
   Future<MediaDetails> details(int id, MediaType mediaType);
 
+  /// Returns the single [MediaItem] identified by [id] and [mediaType].
+  ///
+  /// Used to rebuild a page from a deep link, where only the id and type are
+  /// known and the full [MediaItem] must be fetched.
+  Future<MediaItem> mediaItem(int id, MediaType mediaType);
+
   /// Returns the trending entries of [mediaType] for the current week.
   Future<List<MediaItem>> trending(MediaType mediaType);
 

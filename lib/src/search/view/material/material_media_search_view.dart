@@ -19,6 +19,8 @@ class MaterialMediaSearchView extends StatefulWidget {
     this.onMediaPlay,
     this.favoritesController,
     this.enableDpadFocus = false,
+    this.initialQuery,
+    this.initialMediaType,
   });
 
   final MediaSearchController controller;
@@ -31,6 +33,12 @@ class MaterialMediaSearchView extends StatefulWidget {
 
   /// Called when a result's play button is tapped (goes straight to the player).
   final ValueChanged<MediaItem>? onMediaPlay;
+
+  /// Query to prefill and run on first show, for opening search via a deep link.
+  final String? initialQuery;
+
+  /// Catalogue to select before running [initialQuery].
+  final MediaType? initialMediaType;
 
   /// When `true`, results autofocus the first tile and draw a prominent focus
   /// highlight for D-pad/remote navigation (Fire TV). Defaults to `false` so
@@ -50,6 +58,12 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> with 
 
   @override
   ValueChanged<MediaItem>? get onMediaPlay => widget.onMediaPlay;
+
+  @override
+  String? get initialQuery => widget.initialQuery;
+
+  @override
+  MediaType? get initialMediaType => widget.initialMediaType;
 
   @override
   void initState() {
@@ -185,7 +199,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
       onFocusChange: widget.dpadFocus ? (hasFocus) => setState(() => _focused = hasFocus) : null,
       leading: _Poster(url: item.posterUrl, large: widget.dpadFocus),
       title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(year == null ? item.overview : '$year · ${item.overview}', maxLines: 2, overflow: TextOverflow.ellipsis),
+      subtitle: Text('${year ?? SearchTranslations.tba.trOf(context)} · ${item.overview}', maxLines: 2, overflow: TextOverflow.ellipsis),
       trailing: _buildTrailing(context),
       onTap: widget.onTap == null ? null : () => widget.onTap!(item),
     );
@@ -215,7 +229,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
           iconSize: widget.dpadFocus ? 28 : 22,
         ),
       ],
-      if (showPlay && widget.onPlay != null) ...[
+      if (showPlay && widget.onPlay != null && widget.item.isReleased) ...[
         const SizedBox(width: 4),
         IconButton(
           icon: const Icon(Icons.play_circle_fill),

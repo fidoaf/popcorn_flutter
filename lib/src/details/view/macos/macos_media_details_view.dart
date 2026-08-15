@@ -82,7 +82,13 @@ class MacosMediaDetailsView extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      if (year != null) ...[Text('$year', style: typography.headline), const SizedBox(width: 12)],
+                      if (year != null) ...[
+                        Text('$year', style: typography.headline),
+                        const SizedBox(width: 12),
+                      ] else ...[
+                        Text(DetailsTranslations.tba.trOf(context), style: typography.headline),
+                        const SizedBox(width: 12),
+                      ],
                       if (rating != null) ...[
                         const MacosIcon(CupertinoIcons.star_fill, size: 16, color: MacosColors.systemYellowColor),
                         const SizedBox(width: 4),
@@ -115,10 +121,10 @@ class MacosMediaDetailsView extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 16),
-                  if (onPlay != null || (favoritesController != null && mediaType != null))
+                  if ((onPlay != null && item.isReleased) || (favoritesController != null && mediaType != null))
                     Row(
                       children: [
-                        if (onPlay != null)
+                        if (onPlay != null && item.isReleased)
                           PushButton(
                             controlSize: ControlSize.large,
                             onPressed: () => onPlay!(item),

@@ -14,7 +14,15 @@ import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 ///
 /// Uses `macos_ui` widgets for a proper desktop macOS look.
 class MacosMediaSearchView extends StatefulWidget {
-  const MacosMediaSearchView({super.key, required this.controller, this.onMediaSelected, this.onMediaPlay, this.favoritesController});
+  const MacosMediaSearchView({
+    super.key,
+    required this.controller,
+    this.onMediaSelected,
+    this.onMediaPlay,
+    this.favoritesController,
+    this.initialQuery,
+    this.initialMediaType,
+  });
 
   final MediaSearchController controller;
 
@@ -26,6 +34,12 @@ class MacosMediaSearchView extends StatefulWidget {
 
   /// Called when a result's play button is tapped (goes straight to the player).
   final ValueChanged<MediaItem>? onMediaPlay;
+
+  /// Query to prefill and run on first show, for opening search via a deep link.
+  final String? initialQuery;
+
+  /// Catalogue to select before running [initialQuery].
+  final MediaType? initialMediaType;
 
   @override
   State<MacosMediaSearchView> createState() => _MacosMediaSearchViewState();
@@ -40,6 +54,12 @@ class _MacosMediaSearchViewState extends State<MacosMediaSearchView> with MediaS
 
   @override
   ValueChanged<MediaItem>? get onMediaPlay => widget.onMediaPlay;
+
+  @override
+  String? get initialQuery => widget.initialQuery;
+
+  @override
+  MediaType? get initialMediaType => widget.initialMediaType;
 
   @override
   EdgeInsets? get resultListPadding => const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
@@ -84,8 +104,13 @@ class _MacosMediaSearchViewState extends State<MacosMediaSearchView> with MediaS
       Center(child: Text(SearchTranslations.emptyResults.trOf(context), style: MacosTheme.of(context).typography.body));
 
   @override
-  Widget buildResultItem(BuildContext context, MediaItem item, int index) =>
-      _MediaResultTile(item: item, onTap: onMediaSelected, onPlay: onMediaPlay, favoritesController: widget.favoritesController, mediaType: widget.controller.mediaType);
+  Widget buildResultItem(BuildContext context, MediaItem item, int index) => _MediaResultTile(
+    item: item,
+    onTap: onMediaSelected,
+    onPlay: onMediaPlay,
+    favoritesController: widget.favoritesController,
+    mediaType: widget.controller.mediaType,
+  );
 
   @override
   Widget buildTrendingHeader(BuildContext context) => Padding(
@@ -177,7 +202,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
   Widget build(BuildContext context) {
     final item = widget.item;
     final year = item.releaseDate?.year;
-    final subtitle = year == null ? item.overview : '$year \u00b7 ${item.overview}';
+    final subtitle = '${year ?? SearchTranslations.tba.trOf(context)} \u00b7 ${item.overview}';
     final rating = item.voteAverage;
     final typography = MacosTheme.of(context).typography;
 
@@ -213,9 +238,12 @@ class _MediaResultTileState extends State<_MediaResultTile> {
               ],
               if (widget.favoritesController != null) ...[
                 const SizedBox(width: 8),
-                MacosFavoriteButton(controller: widget.favoritesController!, favorite: FavoriteMedia(item: item, type: widget.mediaType)),
+                MacosFavoriteButton(
+                  controller: widget.favoritesController!,
+                  favorite: FavoriteMedia(item: item, type: widget.mediaType),
+                ),
               ],
-              if (_hovering && widget.onPlay != null) ...[
+              if (_hovering && widget.onPlay != null && item.isReleased) ...[
                 const SizedBox(width: 8),
                 MacosIconButton(icon: const MacosIcon(CupertinoIcons.play_circle_fill, size: 24), onPressed: () => widget.onPlay!(item)),
               ],

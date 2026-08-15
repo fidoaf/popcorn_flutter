@@ -81,7 +81,13 @@ class CupertinoMediaDetailsView extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      if (year != null) ...[Text('$year', style: textTheme.navTitleTextStyle), const SizedBox(width: 12)],
+                      if (year != null) ...[
+                        Text('$year', style: textTheme.navTitleTextStyle),
+                        const SizedBox(width: 12),
+                      ] else ...[
+                        Text(DetailsTranslations.tba.trOf(context), style: textTheme.navTitleTextStyle),
+                        const SizedBox(width: 12),
+                      ],
                       if (rating != null) ...[
                         const Icon(CupertinoIcons.star_fill, size: 16, color: CupertinoColors.systemYellow),
                         const SizedBox(width: 4),
@@ -119,10 +125,10 @@ class CupertinoMediaDetailsView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        if (onPlay != null || (favoritesController != null && mediaType != null))
+        if ((onPlay != null && item.isReleased) || (favoritesController != null && mediaType != null))
           Row(
             children: [
-              if (onPlay != null)
+              if (onPlay != null && item.isReleased)
                 CupertinoButton.filled(
                   onPressed: () => onPlay!(item),
                   child: Row(

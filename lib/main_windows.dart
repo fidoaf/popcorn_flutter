@@ -5,6 +5,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/fluent/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
@@ -41,7 +42,7 @@ void main(List<String> args) async {
     await windowManager.focus();
   });
   windowManager.addListener(_WindowStatePersistence(prefs));
-  runApp(const _PopcornWindowsApp(home: _WindowsHomeView()));
+  runApp(const _PopcornWindowsApp());
 }
 
 /// Persists the window position, size and maximized state across launches.
@@ -97,9 +98,21 @@ class _WindowStatePersistence extends WindowListener {
   void onWindowClose() => _saveState();
 }
 
-class _PopcornWindowsApp extends StatelessWidget {
-  final Widget home;
-  const _PopcornWindowsApp({required this.home});
+class _PopcornWindowsApp extends StatefulWidget {
+  const _PopcornWindowsApp();
+
+  @override
+  State<_PopcornWindowsApp> createState() => _PopcornWindowsAppState();
+}
+
+class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
+  final AppServices _services = AppServices.create();
+
+  @override
+  void dispose() {
+    _services.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,146 +124,163 @@ class _PopcornWindowsApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       theme: FluentThemeData.light(),
       darkTheme: FluentThemeData.dark(),
-      home: home,
+      initialRoute: AppRoutes.home,
+      onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
+      onGenerateInitialRoutes: _initialRoutes,
     );
   }
+
+  List<Route<dynamic>> _initialRoutes(String initialRoute) {
+    final home = _buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute());
+    final request = AppRoutes.parse(initialRoute);
+    if (request is HomeRoute || request is UnknownRoute || request is TrailerRoute) {
+      return <Route<dynamic>>[home];
+    }
+    if (request is SearchRoute) {
+      return <Route<dynamic>>[_buildRoute(RouteSettings(name: initialRoute), request)];
+    }
+    return <Route<dynamic>>[home, _buildRoute(RouteSettings(name: initialRoute), request)];
+  }
+
+  Route<dynamic> _buildRoute(RouteSettings settings, AppRouteRequest request) =>
+      FluentPageRoute<void>(settings: settings, builder: (context) => _pageFor(context, request, settings.arguments));
+
+  Widget _pageFor(BuildContext context, AppRouteRequest request, Object? arguments) {
+    switch (request) {
+      case HomeRoute():
+      case UnknownRoute():
+        return _WindowsHomeView(services: _services);
+      case SearchRoute(:final query, :final type):
+        return _WindowsHomeView(services: _services, initialQuery: query, initialMediaType: type);
+      case FavoritesRoute():
+        return _favoritesPage(context);
+      case HistoryRoute():
+        return _historyPage(context);
+      case DetailsRoute(:final type, :final id):
+        return _detailsPage(type, id, arguments is MediaItem ? arguments : null);
+      case WatchRoute(:final type, :final id, :final season, :final episode):
+        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null);
+      case TrailerRoute():
+        final video = arguments is MediaVideo ? arguments : null;
+        return video == null ? _WindowsHomeView(services: _services) : _trailerPage(video);
+    }
+  }
+
+  Widget _playerPage(BuildContext context, Widget player) => _PopOnEscape(
+    child: PopcornFluentSplashScreen(
+      child: Stack(
+        children: [
+          player,
+          Positioned(
+            top: 8,
+            left: 8,
+            child: IconButton(icon: const Icon(FluentIcons.chrome_close), onPressed: () => Navigator.of(context).pop()),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _favoritesPage(BuildContext context) => _PopOnEscape(
+    child: PopcornFluentSplashScreen(
+      child: FluentFavoritesView(
+        controller: _services.favoritesController,
+        onMediaSelected: (favorite) => Navigator.of(context).pushNamed(AppRoutes.details(favorite.type, favorite.item.id), arguments: favorite.item),
+      ),
+    ),
+  );
+
+  Widget _historyPage(BuildContext context) => _PopOnEscape(
+    child: PopcornFluentSplashScreen(
+      child: FluentContinueWatchingView(
+        controller: _services.historyController,
+        onMediaSelected: (entry) => Navigator.of(context).pushNamed(AppRoutes.details(entry.type, entry.item.id), arguments: entry.item),
+        onMediaPlay: (entry) => Navigator.of(context).pushNamed(
+          AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+          arguments: entry.item,
+        ),
+      ),
+    ),
+  );
+
+  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item) => MediaPlaybackScaffold(
+    id: id,
+    type: type,
+    season: season,
+    episode: episode,
+    item: item,
+    services: _services,
+    loadingBuilder: (context) => _playerPage(context, const Center(child: ProgressRing())),
+    builder: (context, source, resolved) => _playerPage(context, VideoPlayerFactory.create(source: source)),
+  );
+
+  Widget _trailerPage(MediaVideo video) => Builder(
+    builder: (context) => _playerPage(
+      context,
+      VideoPlayerFactory.create(
+        source: MediaSource(url: video.embedUrl!, data: video.embedHtml),
+      ),
+    ),
+  );
+
+  Widget _detailsPage(MediaType type, int id, MediaItem? item) => MediaDetailsScaffold(
+    id: id,
+    type: type,
+    item: item,
+    repository: _services.repository,
+    loadingBuilder: (context) => const _PopOnEscape(
+      child: PopcornFluentSplashScreen(child: Center(child: ProgressRing())),
+    ),
+    errorBuilder: (context, error) => _PopOnEscape(
+      child: PopcornFluentSplashScreen(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('$error', textAlign: TextAlign.center),
+          ),
+        ),
+      ),
+    ),
+    builder: (context, bundle) => _PopOnEscape(
+      child: PopcornFluentSplashScreen(
+        child: FluentMediaDetailsView(
+          item: bundle.item,
+          details: bundle.details,
+          videos: bundle.videos,
+          favoritesController: _services.favoritesController,
+          mediaType: bundle.type,
+          onPlay: (playItem) => Navigator.of(context).pushNamed(AppRoutes.watch(bundle.type, playItem.id), arguments: playItem),
+          onVideoPlay: (video) => Navigator.of(context).pushNamed(AppRoutes.trailer, arguments: video),
+          episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
+          onPlayEpisode: (season, episode) => Navigator.of(context).pushNamed(
+            AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
+            arguments: bundle.item,
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
-class _WindowsHomeView extends StatefulWidget {
-  const _WindowsHomeView();
+class _WindowsHomeView extends StatelessWidget {
+  const _WindowsHomeView({required this.services, this.initialQuery, this.initialMediaType});
 
-  @override
-  State<_WindowsHomeView> createState() => _WindowsHomeViewState();
-}
-
-class _WindowsHomeViewState extends State<_WindowsHomeView> {
-  final MediaSearchRepository _repository = MediaSearchRepositoryFactory.create();
-  late final MediaSearchController _searchController = MediaSearchController(repository: _repository);
-  final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
-  final FavoritesController _favoritesController = FavoritesController(repository: FavoritesRepositoryFactory.create());
-  final WatchHistoryController _historyController = WatchHistoryController(repository: WatchHistoryRepositoryFactory.create());
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _favoritesController.dispose();
-    _historyController.dispose();
-    super.dispose();
-  }
-
-  void _openMedia(MediaItem media) => _openMediaFor(media, _searchController.mediaType);
-
-  void _openMediaFor(MediaItem media, MediaType type, {int? season, int? episode}) {
-    final resolvedSeason = type == MediaType.tv ? (season ?? 1) : null;
-    final resolvedEpisode = type == MediaType.tv ? (episode ?? 1) : null;
-    _historyController.record(media, type, season: resolvedSeason, episode: resolvedEpisode);
-    final source = _mediaSourceProvider.resolve(media, type, season: resolvedSeason, episode: resolvedEpisode);
-    Navigator.of(context).push(
-      FluentPageRoute<void>(
-        builder: (_) => _PopOnEscape(
-          child: PopcornFluentSplashScreen(
-            child: Stack(
-              children: [
-                VideoPlayerFactory.create(source: source),
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: IconButton(icon: const Icon(FluentIcons.chrome_close), onPressed: () => Navigator.of(context).pop()),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _playVideo(MediaVideo video) {
-    final source = MediaSource(url: video.embedUrl!, data: video.embedHtml);
-    Navigator.of(context).push(
-      FluentPageRoute<void>(
-        builder: (_) => _PopOnEscape(
-          child: PopcornFluentSplashScreen(
-            child: Stack(
-              children: [
-                VideoPlayerFactory.create(source: source),
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: IconButton(icon: const Icon(FluentIcons.chrome_close), onPressed: () => Navigator.of(context).pop()),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openDetails(MediaItem media) => _openDetailsFor(media, _searchController.mediaType);
-
-  void _openDetailsFor(MediaItem media, MediaType type) {
-    final details = _repository.details(media.id, type);
-    final videos = _repository.videos(media.id, type);
-    Navigator.of(context).push(
-      FluentPageRoute<void>(
-        builder: (_) => _PopOnEscape(
-          child: PopcornFluentSplashScreen(
-            child: FluentMediaDetailsView(
-              item: media,
-              details: details,
-              videos: videos,
-              favoritesController: _favoritesController,
-              mediaType: type,
-              onPlay: (item) => _openMediaFor(item, type),
-              onVideoPlay: _playVideo,
-              episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
-              onPlayEpisode: (season, episode) => _openMediaFor(media, type, season: season.seasonNumber, episode: episode.episodeNumber),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openFavorites() {
-    Navigator.of(context).push(
-      FluentPageRoute<void>(
-        builder: (_) => _PopOnEscape(
-          child: PopcornFluentSplashScreen(
-            child: FluentFavoritesView(controller: _favoritesController, onMediaSelected: (favorite) => _openDetailsFor(favorite.item, favorite.type)),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openContinueWatching() {
-    Navigator.of(context).push(
-      FluentPageRoute<void>(
-        builder: (_) => _PopOnEscape(
-          child: PopcornFluentSplashScreen(
-            child: FluentContinueWatchingView(
-              controller: _historyController,
-              onMediaSelected: (entry) => _openDetailsFor(entry.item, entry.type),
-              onMediaPlay: (entry) => _openMediaFor(entry.item, entry.type, season: entry.season, episode: entry.episode),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  final AppServices services;
+  final String? initialQuery;
+  final MediaType? initialMediaType;
 
   @override
   Widget build(BuildContext context) {
     return PopcornFluentSplashScreen(
       child: FluentMediaSearchView(
-        controller: _searchController,
-        favoritesController: _favoritesController,
-        onMediaSelected: _openDetails,
-        onMediaPlay: _openMedia,
-        onOpenFavorites: _openFavorites,
-        onOpenContinueWatching: _openContinueWatching,
+        controller: services.searchController,
+        favoritesController: services.favoritesController,
+        initialQuery: initialQuery,
+        initialMediaType: initialMediaType,
+        onMediaSelected: (media) => Navigator.of(context).pushNamed(AppRoutes.details(services.searchController.mediaType, media.id), arguments: media),
+        onMediaPlay: (media) => Navigator.of(context).pushNamed(AppRoutes.watch(services.searchController.mediaType, media.id), arguments: media),
+        onOpenFavorites: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+        onOpenContinueWatching: () => Navigator.of(context).pushNamed(AppRoutes.history),
       ),
     );
   }

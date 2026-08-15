@@ -244,7 +244,7 @@ class _EpisodeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final overview = episode.overview.trim();
-    final subtitle = _subtitle();
+    final subtitle = _subtitle(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -260,7 +260,8 @@ class _EpisodeTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               ),
-              if (subtitle != null) ...[const SizedBox(height: 2), Text(subtitle, style: TextStyle(fontSize: 11, color: subtitleColor))],
+              const SizedBox(height: 2),
+              Text(subtitle, style: TextStyle(fontSize: 11, color: subtitleColor)),
               if (overview.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(overview, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
@@ -268,7 +269,7 @@ class _EpisodeTile extends StatelessWidget {
             ],
           ),
         ),
-        if (onPlay != null) ...[const SizedBox(width: 8), _PlayButton(onTap: onPlay!)],
+        if (onPlay != null && episode.isReleased) ...[const SizedBox(width: 8), _PlayButton(onTap: onPlay!)],
       ],
     );
   }
@@ -290,19 +291,25 @@ class _EpisodeTile extends StatelessWidget {
     );
   }
 
-  String? _subtitle() {
+  String _subtitle(BuildContext context) {
     final parts = <String>[];
     final runtime = episode.runtime;
     if (runtime != null && runtime > Duration.zero) {
       parts.add('${runtime.inMinutes}m');
     }
-    final year = episode.airDate?.year;
-    if (year != null) parts.add('$year');
+    final airDate = episode.airDate;
+    parts.add(airDate != null ? _formatDate(airDate) : DetailsTranslations.tba.trOf(context));
     final rating = episode.voteAverage;
     if (rating != null && rating > 0) {
       parts.add('\u2605 ${rating.toStringAsFixed(1)}');
     }
-    return parts.isEmpty ? null : parts.join(' \u00b7 ');
+    return parts.join(' \u00b7 ');
+  }
+
+  static String _formatDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
   }
 }
 

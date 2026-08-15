@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_controller.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_state.dart';
 
@@ -19,6 +20,13 @@ mixin MediaSearchViewMixin<T extends StatefulWidget> on State<T> {
 
   /// Called when a result's play button is tapped.
   ValueChanged<MediaItem>? get onMediaPlay;
+
+  /// Optional query to prefill and run when the view is first shown, used to
+  /// open the search page from a deep link. `null`/empty means no initial search.
+  String? get initialQuery => null;
+
+  /// Optional catalogue to select before running [initialQuery].
+  MediaType? get initialMediaType => null;
 
   // ── Template methods (platform-specific) ──────────────────────────────────
 
@@ -46,7 +54,19 @@ mixin MediaSearchViewMixin<T extends StatefulWidget> on State<T> {
   // ── Shared lifecycle ──────────────────────────────────────────────────────
 
   void initSearchView() {
+    final query = initialQuery;
+    if (query != null && query.isNotEmpty) queryController.text = query;
     queryController.addListener(_onQueryChanged);
+    final type = initialMediaType;
+    if (type != null || (query != null && query.isNotEmpty)) {
+      // Defer controller mutations until after the first frame so listeners are
+      // not notified mid-build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (type != null) searchController.setMediaType(type);
+        if (query != null && query.isNotEmpty) searchController.search(query);
+      });
+    }
   }
 
   void disposeSearchView() {

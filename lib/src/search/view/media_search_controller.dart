@@ -28,6 +28,9 @@ class MediaSearchController extends ChangeNotifier {
   // Remembers the last query so a media type change can re-run it.
   String _lastQuery = '';
 
+  /// The most recently submitted search query (empty when idle/cleared).
+  String get query => _lastQuery;
+
   // Guards against out-of-order responses when searches are issued rapidly.
   int _latestRequest = 0;
 

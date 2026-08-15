@@ -22,6 +22,8 @@ class FluentMediaSearchView extends StatefulWidget {
     this.favoritesController,
     this.onOpenFavorites,
     this.onOpenContinueWatching,
+    this.initialQuery,
+    this.initialMediaType,
   });
 
   final MediaSearchController controller;
@@ -43,6 +45,12 @@ class FluentMediaSearchView extends StatefulWidget {
   /// Called when a result's play button is tapped (goes straight to the player).
   final ValueChanged<MediaItem>? onMediaPlay;
 
+  /// Query to prefill and run on first show, for opening search via a deep link.
+  final String? initialQuery;
+
+  /// Catalogue to select before running [initialQuery].
+  final MediaType? initialMediaType;
+
   @override
   State<FluentMediaSearchView> createState() => _FluentMediaSearchViewState();
 }
@@ -56,6 +64,12 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
 
   @override
   ValueChanged<MediaItem>? get onMediaPlay => widget.onMediaPlay;
+
+  @override
+  String? get initialQuery => widget.initialQuery;
+
+  @override
+  MediaType? get initialMediaType => widget.initialMediaType;
 
   @override
   EdgeInsets? get resultListPadding => const EdgeInsets.symmetric(horizontal: 8, vertical: 8);
@@ -199,7 +213,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
   Widget build(BuildContext context) {
     final item = widget.item;
     final year = item.releaseDate?.year;
-    final subtitle = year == null ? item.overview : '$year \u00b7 ${item.overview}';
+    final subtitle = '${year ?? SearchTranslations.tba.trOf(context)} \u00b7 ${item.overview}';
 
     final tile = ListTile.selectable(
       leading: _Poster(url: item.posterUrl),
@@ -232,7 +246,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
           favorite: FavoriteMedia(item: widget.item, type: widget.mediaType),
         ),
       ],
-      if (showPlay && widget.onPlay != null) ...[
+      if (showPlay && widget.onPlay != null && widget.item.isReleased) ...[
         const SizedBox(width: 8),
         IconButton(icon: const Icon(FluentIcons.play_solid), onPressed: () => widget.onPlay!(widget.item)),
       ],

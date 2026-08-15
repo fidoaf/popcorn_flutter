@@ -5,4 +5,5 @@ export 'material/material.dart';
 export 'splash_assets.dart';
 export 'splash_gate.dart';
 export 'splash_layout.dart';
+export 'system_bars_background.dart';
 export 'web/web.dart';

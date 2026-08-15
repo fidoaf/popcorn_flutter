@@ -7,6 +7,8 @@ class DetailsTranslations {
 
   static const play = Translation({AppLanguage.en: 'Play', AppLanguage.es: 'Reproducir', AppLanguage.ca: 'Reprodueix'});
 
+  static const tba = Translation({AppLanguage.en: 'TBA', AppLanguage.es: 'Por anunciar', AppLanguage.ca: 'Per anunciar'});
+
   static const overview = Translation({AppLanguage.en: 'Overview', AppLanguage.es: 'Sinopsis', AppLanguage.ca: 'Sinopsi'});
 
   static const noOverview = Translation({

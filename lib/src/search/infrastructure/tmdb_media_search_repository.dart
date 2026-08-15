@@ -81,6 +81,29 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   }
 
   @override
+  Future<MediaItem> mediaItem(int id, MediaType mediaType) async {
+    final uri = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id');
+
+    final http.Response response;
+    try {
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw const MediaSearchException('TMDB details request timeout'));
+    } on SocketException catch (e) {
+      throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
+    } catch (error) {
+      throw MediaSearchException('Unable to reach TMDB: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw MediaSearchException('TMDB details failed with status ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return _toMediaItem(decoded);
+  }
+
+  @override
   Future<List<MediaItem>> trending(MediaType mediaType) async {
     final uri = Uri.parse('$_baseUrl/trending/${_pathSegment(mediaType)}/week');
 

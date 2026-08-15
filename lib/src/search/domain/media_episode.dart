@@ -23,4 +23,8 @@ final class MediaEpisode {
 
   /// Average user rating for the episode.
   final double? voteAverage;
+
+  /// Whether the episode has aired. Episodes without a known air date are
+  /// treated as unreleased so the play button stays hidden.
+  bool get isReleased => airDate != null && !airDate!.isAfter(DateTime.now());
 }

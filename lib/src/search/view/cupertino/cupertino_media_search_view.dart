@@ -83,8 +83,13 @@ class _CupertinoMediaSearchViewState extends State<CupertinoMediaSearchView> wit
       Center(child: Text(SearchTranslations.emptyResults.trOf(context), style: CupertinoTheme.of(context).textTheme.textStyle));
 
   @override
-  Widget buildResultItem(BuildContext context, MediaItem item, int index) =>
-      _MediaResultTile(item: item, onTap: onMediaSelected, onPlay: onMediaPlay, favoritesController: widget.favoritesController, mediaType: widget.controller.mediaType);
+  Widget buildResultItem(BuildContext context, MediaItem item, int index) => _MediaResultTile(
+    item: item,
+    onTap: onMediaSelected,
+    onPlay: onMediaPlay,
+    favoritesController: widget.favoritesController,
+    mediaType: widget.controller.mediaType,
+  );
 
   @override
   Widget buildTrendingHeader(BuildContext context) => Padding(
@@ -159,7 +164,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
   Widget build(BuildContext context) {
     final item = widget.item;
     final year = item.releaseDate?.year;
-    final subtitle = year == null ? item.overview : '$year \u00b7 ${item.overview}';
+    final subtitle = '${year ?? SearchTranslations.tba.trOf(context)} \u00b7 ${item.overview}';
     final rating = item.voteAverage;
     final showPlay = isTouchPrimaryPlatform || _hovering;
 
@@ -200,7 +205,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
                   iconSize: 22,
                 ),
               ),
-            if (showPlay && widget.onPlay != null)
+            if (showPlay && widget.onPlay != null && item.isReleased)
               CupertinoButton(
                 padding: const EdgeInsets.only(left: 8),
                 minimumSize: Size.zero,

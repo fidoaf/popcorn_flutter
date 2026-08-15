@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
+import 'package:popcorn_flutter/src/app/view/system_bars_background.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
@@ -31,23 +33,11 @@ void main(List<String> args) async {
   runApp(const _PopcornTvApp());
 }
 
-class _PopcornTvApp extends StatelessWidget {
+class _PopcornTvApp extends StatefulWidget {
   const _PopcornTvApp();
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
-      locale: PlatformDispatcher.instance.locale,
-      supportedLocales: AppLanguage.values.map((lang) => lang.locale),
-      localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
-      themeMode: ThemeMode.dark,
-      theme: _tvTheme(Brightness.light),
-      darkTheme: _tvTheme(Brightness.dark),
-      builder: (context, child) => _TvNavigationScope(child: child!),
-      home: const _TvHomeView(),
-    );
-  }
+  State<_PopcornTvApp> createState() => _PopcornTvAppState();
 
   static ThemeData _tvTheme(Brightness brightness) {
     final scheme = ColorScheme.fromSeed(seedColor: Colors.deepOrange, brightness: brightness);
@@ -75,6 +65,172 @@ class _PopcornTvApp extends StatelessWidget {
   }
 }
 
+class _PopcornTvAppState extends State<_PopcornTvApp> {
+  final AppServices _services = AppServices.create();
+
+  @override
+  void dispose() {
+    _services.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
+      locale: PlatformDispatcher.instance.locale,
+      supportedLocales: AppLanguage.values.map((lang) => lang.locale),
+      localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+      themeMode: ThemeMode.dark,
+      theme: _PopcornTvApp._tvTheme(Brightness.light),
+      darkTheme: _PopcornTvApp._tvTheme(Brightness.dark),
+      builder: (context, child) => _TvNavigationScope(child: SystemBarsBackground(child: child!)),
+      initialRoute: AppRoutes.home,
+      onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
+      onGenerateInitialRoutes: _initialRoutes,
+    );
+  }
+
+  List<Route<dynamic>> _initialRoutes(String initialRoute) {
+    final home = _buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute());
+    final request = AppRoutes.parse(initialRoute);
+    if (request is HomeRoute || request is UnknownRoute || request is TrailerRoute) {
+      return <Route<dynamic>>[home];
+    }
+    if (request is SearchRoute) {
+      return <Route<dynamic>>[_buildRoute(RouteSettings(name: initialRoute), request)];
+    }
+    return <Route<dynamic>>[home, _buildRoute(RouteSettings(name: initialRoute), request)];
+  }
+
+  Route<dynamic> _buildRoute(RouteSettings settings, AppRouteRequest request) =>
+      MaterialPageRoute<void>(settings: settings, builder: (context) => _pageFor(context, request, settings.arguments));
+
+  Widget _pageFor(BuildContext context, AppRouteRequest request, Object? arguments) {
+    switch (request) {
+      case HomeRoute():
+      case UnknownRoute():
+        return _TvHomeView(services: _services);
+      case SearchRoute(:final query, :final type):
+        return _TvHomeView(services: _services, initialQuery: query, initialMediaType: type);
+      case FavoritesRoute():
+        return _favoritesPage(context);
+      case HistoryRoute():
+        return _historyPage(context);
+      case DetailsRoute(:final type, :final id):
+        return _detailsPage(type, id, arguments is MediaItem ? arguments : null);
+      case WatchRoute(:final type, :final id, :final season, :final episode):
+        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null);
+      case TrailerRoute():
+        final video = arguments is MediaVideo ? arguments : null;
+        return video == null ? _TvHomeView(services: _services) : _trailerPage(video);
+    }
+  }
+
+  Widget _playerPage(BuildContext context, Widget player) => _PopOnBack(
+    child: PopcornMaterialSplashScreen(
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
+        ),
+        body: SafeArea(child: player),
+      ),
+    ),
+  );
+
+  Widget _favoritesPage(BuildContext context) => PopcornMaterialSplashScreen(
+    child: Scaffold(
+      appBar: AppBar(title: Text(FavoritesTranslations.pageTitle.trOf(context))),
+      body: SafeArea(
+        child: MaterialFavoritesView(
+          controller: _services.favoritesController,
+          onMediaSelected: (favorite) => Navigator.of(context).pushNamed(AppRoutes.details(favorite.type, favorite.item.id), arguments: favorite.item),
+        ),
+      ),
+    ),
+  );
+
+  Widget _historyPage(BuildContext context) => PopcornMaterialSplashScreen(
+    child: Scaffold(
+      appBar: AppBar(title: Text(WatchHistoryTranslations.pageTitle.trOf(context))),
+      body: SafeArea(
+        child: MaterialContinueWatchingView(
+          controller: _services.historyController,
+          onMediaSelected: (entry) => Navigator.of(context).pushNamed(AppRoutes.details(entry.type, entry.item.id), arguments: entry.item),
+          onMediaPlay: (entry) => Navigator.of(context).pushNamed(
+            AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+            arguments: entry.item,
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item) => MediaPlaybackScaffold(
+    id: id,
+    type: type,
+    season: season,
+    episode: episode,
+    item: item,
+    services: _services,
+    loadingBuilder: (context) => _playerPage(context, const Center(child: CircularProgressIndicator())),
+    builder: (context, source, resolved) => _playerPage(context, VideoPlayerFactory.create(source: source)),
+  );
+
+  Widget _trailerPage(MediaVideo video) => Builder(
+    builder: (context) => _playerPage(
+      context,
+      VideoPlayerFactory.create(
+        source: MediaSource(url: video.embedUrl!, data: video.embedHtml),
+      ),
+    ),
+  );
+
+  Widget _detailsPage(MediaType type, int id, MediaItem? item) => MediaDetailsScaffold(
+    id: id,
+    type: type,
+    item: item,
+    repository: _services.repository,
+    loadingBuilder: (context) => const PopcornMaterialSplashScreen(
+      child: Scaffold(body: Center(child: CircularProgressIndicator())),
+    ),
+    errorBuilder: (context, error) => Scaffold(
+      appBar: AppBar(),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('$error', textAlign: TextAlign.center),
+        ),
+      ),
+    ),
+    builder: (context, bundle) => PopcornMaterialSplashScreen(
+      child: Scaffold(
+        appBar: AppBar(title: Text(bundle.item.title)),
+        body: SafeArea(
+          child: MaterialMediaDetailsView(
+            item: bundle.item,
+            details: bundle.details,
+            videos: bundle.videos,
+            favoritesController: _services.favoritesController,
+            mediaType: bundle.type,
+            onPlay: (playItem) => Navigator.of(context).pushNamed(AppRoutes.watch(bundle.type, playItem.id), arguments: playItem),
+            onVideoPlay: (video) => Navigator.of(context).pushNamed(AppRoutes.trailer, arguments: video),
+            episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
+            onPlayEpisode: (season, episode) => Navigator.of(context).pushNamed(
+              AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
+              arguments: bundle.item,
+            ),
+            autofocusPlay: true,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 /// Forces directional (D-pad) focus traversal for the whole app so the Fire TV
 /// remote can move between focusable widgets.
 class _TvNavigationScope extends StatelessWidget {
@@ -97,138 +253,12 @@ class _TvNavigationScope extends StatelessWidget {
   }
 }
 
-class _TvHomeView extends StatefulWidget {
-  const _TvHomeView();
+class _TvHomeView extends StatelessWidget {
+  const _TvHomeView({required this.services, this.initialQuery, this.initialMediaType});
 
-  @override
-  State<_TvHomeView> createState() => _TvHomeViewState();
-}
-
-class _TvHomeViewState extends State<_TvHomeView> {
-  final MediaSearchRepository _repository = MediaSearchRepositoryFactory.create();
-  late final MediaSearchController _searchController = MediaSearchController(repository: _repository);
-  final ConfigurableMediaSourceProvider _mediaSourceProvider = MediaSourceProviderFactory.create();
-  final FavoritesController _favoritesController = FavoritesController(repository: FavoritesRepositoryFactory.create());
-  final WatchHistoryController _historyController = WatchHistoryController(repository: WatchHistoryRepositoryFactory.create());
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _favoritesController.dispose();
-    _historyController.dispose();
-    super.dispose();
-  }
-
-  void _openMedia(MediaItem media) => _openMediaFor(media, _searchController.mediaType);
-
-  void _openMediaFor(MediaItem media, MediaType type, {int? season, int? episode}) {
-    final resolvedSeason = type == MediaType.tv ? (season ?? 1) : null;
-    final resolvedEpisode = type == MediaType.tv ? (episode ?? 1) : null;
-    _historyController.record(media, type, season: resolvedSeason, episode: resolvedEpisode);
-    final source = _mediaSourceProvider.resolve(media, type, season: resolvedSeason, episode: resolvedEpisode);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _PopOnBack(
-          child: PopcornMaterialSplashScreen(
-            child: Scaffold(
-              extendBodyBehindAppBar: true,
-              appBar: AppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
-              ),
-              body: SafeArea(child: VideoPlayerFactory.create(source: source)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _playVideo(MediaVideo video) {
-    final source = MediaSource(url: video.embedUrl!, data: video.embedHtml);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _PopOnBack(
-          child: PopcornMaterialSplashScreen(
-            child: Scaffold(
-              extendBodyBehindAppBar: true,
-              appBar: AppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
-              ),
-              body: SafeArea(child: VideoPlayerFactory.create(source: source)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openDetails(MediaItem media) => _openDetailsFor(media, _searchController.mediaType);
-
-  void _openDetailsFor(MediaItem media, MediaType type) {
-    final details = _repository.details(media.id, type);
-    final videos = _repository.videos(media.id, type);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PopcornMaterialSplashScreen(
-          child: Scaffold(
-            appBar: AppBar(title: Text(media.title)),
-            body: SafeArea(
-              child: MaterialMediaDetailsView(
-                item: media,
-                details: details,
-                videos: videos,
-                favoritesController: _favoritesController,
-                mediaType: type,
-                onPlay: (item) => _openMediaFor(item, type),
-                onVideoPlay: _playVideo,
-                episodesLoader: (season) => _repository.episodes(media.id, season.seasonNumber),
-                onPlayEpisode: (season, episode) => _openMediaFor(media, type, season: season.seasonNumber, episode: episode.episodeNumber),
-                autofocusPlay: true,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openFavorites() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PopcornMaterialSplashScreen(
-          child: Scaffold(
-            appBar: AppBar(title: Text(FavoritesTranslations.pageTitle.trOf(context))),
-            body: SafeArea(
-              child: MaterialFavoritesView(controller: _favoritesController, onMediaSelected: (favorite) => _openDetailsFor(favorite.item, favorite.type)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openContinueWatching() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PopcornMaterialSplashScreen(
-          child: Scaffold(
-            appBar: AppBar(title: Text(WatchHistoryTranslations.pageTitle.trOf(context))),
-            body: SafeArea(
-              child: MaterialContinueWatchingView(
-                controller: _historyController,
-                onMediaSelected: (entry) => _openDetailsFor(entry.item, entry.type),
-                onMediaPlay: (entry) => _openMediaFor(entry.item, entry.type, season: entry.season, episode: entry.episode),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  final AppServices services;
+  final String? initialQuery;
+  final MediaType? initialMediaType;
 
   @override
   Widget build(BuildContext context) {
@@ -237,15 +267,25 @@ class _TvHomeViewState extends State<_TvHomeView> {
         appBar: AppBar(
           title: Text(SearchTranslations.pageTitle.trOf(context)),
           actions: [
-            IconButton(icon: const Icon(Icons.history), tooltip: WatchHistoryTranslations.pageTitle.trOf(context), onPressed: _openContinueWatching),
-            IconButton(icon: const Icon(Icons.favorite), tooltip: FavoritesTranslations.pageTitle.trOf(context), onPressed: _openFavorites),
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: WatchHistoryTranslations.pageTitle.trOf(context),
+              onPressed: () => Navigator.of(context).pushNamed(AppRoutes.history),
+            ),
+            IconButton(
+              icon: const Icon(Icons.favorite),
+              tooltip: FavoritesTranslations.pageTitle.trOf(context),
+              onPressed: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+            ),
           ],
         ),
         body: MaterialMediaSearchView(
-          controller: _searchController,
-          favoritesController: _favoritesController,
-          onMediaSelected: _openDetails,
-          onMediaPlay: _openMedia,
+          controller: services.searchController,
+          favoritesController: services.favoritesController,
+          initialQuery: initialQuery,
+          initialMediaType: initialMediaType,
+          onMediaSelected: (media) => Navigator.of(context).pushNamed(AppRoutes.details(services.searchController.mediaType, media.id), arguments: media),
+          onMediaPlay: (media) => Navigator.of(context).pushNamed(AppRoutes.watch(services.searchController.mediaType, media.id), arguments: media),
           enableDpadFocus: true,
         ),
       ),

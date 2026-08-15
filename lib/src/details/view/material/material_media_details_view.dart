@@ -84,7 +84,13 @@ class MaterialMediaDetailsView extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      if (year != null) ...[Text('$year', style: theme.textTheme.titleMedium), const SizedBox(width: 12)],
+                      if (year != null) ...[
+                        Text('$year', style: theme.textTheme.titleMedium),
+                        const SizedBox(width: 12),
+                      ] else ...[
+                        Text(DetailsTranslations.tba.trOf(context), style: theme.textTheme.titleMedium),
+                        const SizedBox(width: 12),
+                      ],
                       if (rating != null) ...[
                         const Icon(Icons.star, size: 18),
                         const SizedBox(width: 4),
@@ -119,10 +125,10 @@ class MaterialMediaDetailsView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        if (onPlay != null || (favoritesController != null && mediaType != null))
+        if ((onPlay != null && item.isReleased) || (favoritesController != null && mediaType != null))
           Row(
             children: [
-              if (onPlay != null)
+              if (onPlay != null && item.isReleased)
                 FilledButton.icon(
                   autofocus: autofocusPlay,
                   onPressed: () => onPlay!(item),
