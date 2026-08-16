@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
+import 'package:popcorn_flutter/src/app/view/landing_view.dart';
 import 'package:popcorn_flutter/src/app/view/system_bars_background.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
@@ -19,7 +20,7 @@ import 'package:popcorn_flutter/src/locale/view/translation_context_extension.da
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
-import 'src/app/view/web/splash_screen.dart';
+import 'src/app/view/web/web.dart';
 
 void main(List<String> args) async {
   if (!kIsWeb) {
@@ -85,15 +86,18 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
           child: child!,
         ),
       ),
-      initialRoute: AppRoutes.home,
+      initialRoute: AppRoutes.landing,
       onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
       onGenerateInitialRoutes: _initialRoutes,
     );
   }
 
   List<Route<dynamic>> _initialRoutes(String initialRoute) {
-    final home = _buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute());
     final request = AppRoutes.parse(initialRoute);
+    if (request is LandingRoute) {
+      return <Route<dynamic>>[_buildRoute(const RouteSettings(name: AppRoutes.landing), const LandingRoute())];
+    }
+    final home = _buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute());
     if (request is HomeRoute || request is UnknownRoute || request is TrailerRoute) {
       return <Route<dynamic>>[home];
     }
@@ -109,6 +113,8 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
 
   Widget _pageFor(BuildContext context, AppRouteRequest request, Object? arguments) {
     switch (request) {
+      case LandingRoute():
+        return _landingPage(context);
       case HomeRoute():
       case UnknownRoute():
         return _WebHomeView(services: _services);
@@ -152,6 +158,14 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
 
   Widget _legalPage(BuildContext context, LegalDocument document) =>
       _scaffoldPage(context, document.title.trOf(context), LegalDocumentView(document: document));
+
+  Widget _landingPage(BuildContext context) => PopcornWebSplashScreen(
+    child: PopcornLandingView(
+      onEnter: () => _navigatorKey.currentState?.pushNamed(AppRoutes.home),
+      onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
+      onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
+    ),
+  );
 
   Widget _favoritesPage(BuildContext context) => _scaffoldPage(
     context,

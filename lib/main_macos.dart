@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
+import 'package:popcorn_flutter/src/app/view/landing_view.dart';
 import 'package:popcorn_flutter/src/app/view/macos/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
@@ -73,15 +74,18 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         ),
         child: child!,
       ),
-      initialRoute: AppRoutes.home,
+      initialRoute: AppRoutes.landing,
       onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
       onGenerateInitialRoutes: _initialRoutes,
     );
   }
 
   List<Route<dynamic>> _initialRoutes(String initialRoute) {
-    final home = _buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute());
     final request = AppRoutes.parse(initialRoute);
+    if (request is LandingRoute) {
+      return <Route<dynamic>>[_buildRoute(const RouteSettings(name: AppRoutes.landing), const LandingRoute())];
+    }
+    final home = _buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute());
     if (request is HomeRoute || request is UnknownRoute || request is TrailerRoute) {
       return <Route<dynamic>>[home];
     }
@@ -96,6 +100,8 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
 
   Widget _pageFor(BuildContext context, AppRouteRequest request, Object? arguments) {
     switch (request) {
+      case LandingRoute():
+        return _landingPage(context);
       case HomeRoute():
       case UnknownRoute():
         return _MacosHomeView(services: _services);
@@ -126,6 +132,14 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
       ),
       children: [ContentArea(builder: (context, _) => LegalDocumentView(document: document))],
+    ),
+  );
+
+  Widget _landingPage(BuildContext context) => PopcornMacosSplashScreen(
+    child: PopcornLandingView(
+      onEnter: () => _navigatorKey.currentState?.pushNamed(AppRoutes.home),
+      onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
+      onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
     ),
   );
 

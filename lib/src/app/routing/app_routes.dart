@@ -8,7 +8,8 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 abstract final class AppRoutes {
   const AppRoutes._();
 
-  static const String home = '/';
+  static const String landing = '/';
+  static const String home = '/home';
   static const String favorites = '/favorites';
   static const String history = '/history';
   static const String trailer = '/trailer';
@@ -31,10 +32,12 @@ abstract final class AppRoutes {
 
   /// Parses a route [name] into a structured [AppRouteRequest].
   static AppRouteRequest parse(String? name) {
-    final uri = Uri.parse(name ?? home);
+    final uri = Uri.parse(name ?? landing);
     final segments = uri.pathSegments;
-    if (segments.isEmpty) return const HomeRoute();
+    if (segments.isEmpty) return const LandingRoute();
     switch (segments.first) {
+      case 'home':
+        return const HomeRoute();
       case 'favorites':
         return const FavoritesRoute();
       case 'history':
@@ -84,13 +87,18 @@ abstract final class AppRoutes {
   /// Whether [name] resolves to a page that is reachable without signing in.
   static bool isPublic(String? name) {
     final request = parse(name);
-    return request is PrivacyRoute || request is TermsRoute;
+    return request is LandingRoute || request is PrivacyRoute || request is TermsRoute;
   }
 }
 
 /// A parsed route target produced by [AppRoutes.parse].
 sealed class AppRouteRequest {
   const AppRouteRequest();
+}
+
+/// Public landing page shown at `/`; describes the app without requiring sign-in.
+class LandingRoute extends AppRouteRequest {
+  const LandingRoute();
 }
 
 class HomeRoute extends AppRouteRequest {
