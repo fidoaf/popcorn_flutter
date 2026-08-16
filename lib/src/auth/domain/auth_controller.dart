@@ -41,9 +41,16 @@ class AuthController extends ChangeNotifier {
   Future<bool> signInWithGoogle() {
     return _client.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: kIsWeb ? Uri.base.origin : _nativeRedirect,
+      redirectTo: kIsWeb ? _webRedirect() : _nativeRedirect,
       authScreenLaunchMode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
     );
+  }
+
+  // Current page URL without query/fragment so OAuth returns to the same origin
+  // AND subpath (e.g. GitHub Pages project pages served under /popcorn_flutter/).
+  static String _webRedirect() {
+    final base = Uri.base;
+    return '${base.origin}${base.path}';
   }
 
   /// Signs the current user out.
