@@ -13,6 +13,7 @@ import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
+import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -109,6 +110,8 @@ class _PopcornWindowsApp extends StatefulWidget {
 
 class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
   final AppServices _services = AppServices.create();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final CurrentRouteObserver _routeObserver = CurrentRouteObserver(PlatformDispatcher.instance.defaultRouteName);
 
   @override
   void dispose() {
@@ -120,6 +123,8 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
   Widget build(BuildContext context) {
     return FluentApp(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
+      navigatorKey: _navigatorKey,
+      navigatorObservers: [_routeObserver],
       locale: PlatformDispatcher.instance.locale,
       supportedLocales: AppLanguage.values.map((lang) => lang.locale),
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
@@ -128,7 +133,13 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
       darkTheme: FluentThemeData.dark(),
       builder: (context, child) => AuthGate(
         controller: _services.authController,
-        loginBuilder: (context) => FluentLoginView(controller: _services.authController),
+        currentRoute: _routeObserver.routeName,
+        isPublicRoute: AppRoutes.isPublic,
+        loginBuilder: (context) => FluentLoginView(
+          controller: _services.authController,
+          onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
+          onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
+        ),
         child: child!,
       ),
       initialRoute: AppRoutes.home,
@@ -170,8 +181,24 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
         return video == null ? _WindowsHomeView(services: _services) : _trailerPage(video);
+      case PrivacyRoute():
+        return _legalPage(context, LegalTranslations.privacyPolicy);
+      case TermsRoute():
+        return _legalPage(context, LegalTranslations.termsOfService);
     }
   }
+
+  Widget _legalPage(BuildContext context, LegalDocument document) => _PopOnEscape(
+    child: PopcornFluentSplashScreen(
+      child: ScaffoldPage(
+        header: PageHeader(
+          leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+          title: Text(document.title.trOf(context)),
+        ),
+        content: LegalDocumentView(document: document),
+      ),
+    ),
+  );
 
   Widget _playerPage(BuildContext context, Widget player) => _PopOnEscape(
     child: PopcornFluentSplashScreen(

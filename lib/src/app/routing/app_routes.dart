@@ -12,6 +12,8 @@ abstract final class AppRoutes {
   static const String favorites = '/favorites';
   static const String history = '/history';
   static const String trailer = '/trailer';
+  static const String privacy = '/privacy';
+  static const String terms = '/terms';
 
   /// `/search/{movie|tv}?q={query}`.
   static String search(String query, {MediaType type = MediaType.movie}) => '/search/${type.name}?q=${Uri.encodeQueryComponent(query)}';
@@ -39,6 +41,10 @@ abstract final class AppRoutes {
         return const HistoryRoute();
       case 'trailer':
         return const TrailerRoute();
+      case 'privacy':
+        return const PrivacyRoute();
+      case 'terms':
+        return const TermsRoute();
       case 'search':
         return SearchRoute(query: uri.queryParameters['q'] ?? '', type: _parseType(segments.length > 1 ? segments[1] : null));
       case 'details':
@@ -74,6 +80,12 @@ abstract final class AppRoutes {
     }
     return MediaType.movie;
   }
+
+  /// Whether [name] resolves to a page that is reachable without signing in.
+  static bool isPublic(String? name) {
+    final request = parse(name);
+    return request is PrivacyRoute || request is TermsRoute;
+  }
 }
 
 /// A parsed route target produced by [AppRoutes.parse].
@@ -95,6 +107,14 @@ class HistoryRoute extends AppRouteRequest {
 
 class TrailerRoute extends AppRouteRequest {
   const TrailerRoute();
+}
+
+class PrivacyRoute extends AppRouteRequest {
+  const PrivacyRoute();
+}
+
+class TermsRoute extends AppRouteRequest {
+  const TermsRoute();
 }
 
 class SearchRoute extends AppRouteRequest {

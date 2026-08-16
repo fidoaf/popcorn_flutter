@@ -13,6 +13,7 @@ import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
+import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -43,6 +44,8 @@ class _PopcornWebApp extends StatefulWidget {
 
 class _PopcornWebAppState extends State<_PopcornWebApp> {
   final AppServices _services = AppServices.create();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final CurrentRouteObserver _routeObserver = CurrentRouteObserver(PlatformDispatcher.instance.defaultRouteName);
 
   Color get _background => _PopcornWebApp._background;
   ThemeData get _theme => _PopcornWebApp._theme;
@@ -58,6 +61,8 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
     return WidgetsApp(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       color: _background,
+      navigatorKey: _navigatorKey,
+      navigatorObservers: [_routeObserver],
       locale: PlatformDispatcher.instance.locale,
       supportedLocales: AppLanguage.values.map((lang) => lang.locale),
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
@@ -67,9 +72,15 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
         backgroundColor: _background,
         child: AuthGate(
           controller: _services.authController,
+          currentRoute: _routeObserver.routeName,
+          isPublicRoute: AppRoutes.isPublic,
           loginBuilder: (context) => Theme(
             data: _theme,
-            child: MaterialLoginView(controller: _services.authController),
+            child: MaterialLoginView(
+              controller: _services.authController,
+              onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
+              onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
+            ),
           ),
           child: child!,
         ),
@@ -114,6 +125,10 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
         return video == null ? _WebHomeView(services: _services) : _trailerPage(video);
+      case PrivacyRoute():
+        return _legalPage(context, LegalTranslations.privacyPolicy);
+      case TermsRoute():
+        return _legalPage(context, LegalTranslations.termsOfService);
     }
   }
 
@@ -134,6 +149,9 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
       child: Material(color: _background, child: player),
     ),
   );
+
+  Widget _legalPage(BuildContext context, LegalDocument document) =>
+      _scaffoldPage(context, document.title.trOf(context), LegalDocumentView(document: document));
 
   Widget _favoritesPage(BuildContext context) => _scaffoldPage(
     context,

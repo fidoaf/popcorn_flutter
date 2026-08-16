@@ -3,13 +3,16 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
+import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 
 /// macOS sign-in screen offering Google as the only sign-in method.
 class MacosLoginView extends StatefulWidget {
-  const MacosLoginView({super.key, required this.controller});
+  const MacosLoginView({super.key, required this.controller, this.onOpenPrivacy, this.onOpenTerms});
 
   final AuthController controller;
+  final VoidCallback? onOpenPrivacy;
+  final VoidCallback? onOpenTerms;
 
   @override
   State<MacosLoginView> createState() => _MacosLoginViewState();
@@ -66,6 +69,20 @@ class _MacosLoginViewState extends State<MacosLoginView> {
                         style: theme.typography.body.copyWith(color: MacosColors.systemRedColor),
                       ),
                     ],
+                    if (widget.onOpenPrivacy != null || widget.onOpenTerms != null) ...[
+                      const SizedBox(height: 32),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        children: [
+                          if (widget.onOpenPrivacy != null)
+                            _MacosLinkButton(label: LegalTranslations.privacyLink.trOf(context), onPressed: widget.onOpenPrivacy!),
+                          if (widget.onOpenPrivacy != null && widget.onOpenTerms != null) Text('·', style: theme.typography.body),
+                          if (widget.onOpenTerms != null) _MacosLinkButton(label: LegalTranslations.termsLink.trOf(context), onPressed: widget.onOpenTerms!),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -73,6 +90,28 @@ class _MacosLoginViewState extends State<MacosLoginView> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MacosLinkButton extends StatelessWidget {
+  const _MacosLinkButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = MacosTheme.of(context);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Text(label, style: theme.typography.body.copyWith(color: theme.primaryColor)),
+        ),
+      ),
     );
   }
 }

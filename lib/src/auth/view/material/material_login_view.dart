@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
+import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 
 /// Material sign-in screen offering Google as the only sign-in method.
 /// Shared by the Android, TV and web entry points.
 class MaterialLoginView extends StatefulWidget {
-  const MaterialLoginView({super.key, required this.controller});
+  const MaterialLoginView({super.key, required this.controller, this.onOpenPrivacy, this.onOpenTerms});
 
   final AuthController controller;
+  final VoidCallback? onOpenPrivacy;
+  final VoidCallback? onOpenTerms;
 
   @override
   State<MaterialLoginView> createState() => _MaterialLoginViewState();
@@ -62,6 +65,18 @@ class _MaterialLoginViewState extends State<MaterialLoginView> {
                     _error!,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                ],
+                if (widget.onOpenPrivacy != null || widget.onOpenTerms != null) ...[
+                  const SizedBox(height: 32),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (widget.onOpenPrivacy != null) TextButton(onPressed: widget.onOpenPrivacy, child: Text(LegalTranslations.privacyLink.trOf(context))),
+                      if (widget.onOpenPrivacy != null && widget.onOpenTerms != null) Text('·', style: theme.textTheme.bodySmall),
+                      if (widget.onOpenTerms != null) TextButton(onPressed: widget.onOpenTerms, child: Text(LegalTranslations.termsLink.trOf(context))),
+                    ],
                   ),
                 ],
               ],

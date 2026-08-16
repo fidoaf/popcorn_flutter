@@ -15,6 +15,7 @@ import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/details/view/macos/macos_media_details_view.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
+import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -40,6 +41,8 @@ class _PopcornMacosApp extends StatefulWidget {
 
 class _PopcornMacosAppState extends State<_PopcornMacosApp> {
   final AppServices _services = AppServices.create();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final CurrentRouteObserver _routeObserver = CurrentRouteObserver(PlatformDispatcher.instance.defaultRouteName);
 
   @override
   void dispose() {
@@ -51,6 +54,8 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
   Widget build(BuildContext context) {
     return MacosApp(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
+      navigatorKey: _navigatorKey,
+      navigatorObservers: [_routeObserver],
       locale: PlatformDispatcher.instance.locale,
       supportedLocales: AppLanguage.values.map((lang) => lang.locale),
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
@@ -59,7 +64,13 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
       darkTheme: MacosThemeData.dark(),
       builder: (context, child) => AuthGate(
         controller: _services.authController,
-        loginBuilder: (context) => MacosLoginView(controller: _services.authController),
+        currentRoute: _routeObserver.routeName,
+        isPublicRoute: AppRoutes.isPublic,
+        loginBuilder: (context) => MacosLoginView(
+          controller: _services.authController,
+          onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
+          onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
+        ),
         child: child!,
       ),
       initialRoute: AppRoutes.home,
@@ -101,8 +112,22 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
         return video == null ? _MacosHomeView(services: _services) : _trailerPage(video);
+      case PrivacyRoute():
+        return _legalPage(context, LegalTranslations.privacyPolicy);
+      case TermsRoute():
+        return _legalPage(context, LegalTranslations.termsOfService);
     }
   }
+
+  Widget _legalPage(BuildContext context, LegalDocument document) => PopcornMacosSplashScreen(
+    child: MacosScaffold(
+      toolBar: ToolBar(
+        title: Text(document.title.trOf(context)),
+        leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+      ),
+      children: [ContentArea(builder: (context, _) => LegalDocumentView(document: document))],
+    ),
+  );
 
   Widget _playerPage(BuildContext context, String title, Widget player) => PopcornMacosSplashScreen(
     child: MacosScaffold(

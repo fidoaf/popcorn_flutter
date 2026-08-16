@@ -2,13 +2,16 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
+import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 
 /// Fluent (Windows) sign-in screen offering Google as the only sign-in method.
 class FluentLoginView extends StatefulWidget {
-  const FluentLoginView({super.key, required this.controller});
+  const FluentLoginView({super.key, required this.controller, this.onOpenPrivacy, this.onOpenTerms});
 
   final AuthController controller;
+  final VoidCallback? onOpenPrivacy;
+  final VoidCallback? onOpenTerms;
 
   @override
   State<FluentLoginView> createState() => _FluentLoginViewState();
@@ -67,6 +70,20 @@ class _FluentLoginViewState extends State<FluentLoginView> {
                     _error!,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.red),
+                  ),
+                ],
+                if (widget.onOpenPrivacy != null || widget.onOpenTerms != null) ...[
+                  const SizedBox(height: 32),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 4,
+                    children: [
+                      if (widget.onOpenPrivacy != null)
+                        HyperlinkButton(onPressed: widget.onOpenPrivacy, child: Text(LegalTranslations.privacyLink.trOf(context))),
+                      if (widget.onOpenPrivacy != null && widget.onOpenTerms != null) Text('·', style: theme.typography.body),
+                      if (widget.onOpenTerms != null) HyperlinkButton(onPressed: widget.onOpenTerms, child: Text(LegalTranslations.termsLink.trOf(context))),
+                    ],
                   ),
                 ],
               ],

@@ -13,6 +13,7 @@ import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
+import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -51,6 +52,8 @@ class _PopcornAndroidApp extends StatefulWidget {
 
 class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
   final AppServices _services = AppServices.create();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final CurrentRouteObserver _routeObserver = CurrentRouteObserver(PlatformDispatcher.instance.defaultRouteName);
 
   @override
   void dispose() {
@@ -62,6 +65,8 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
+      navigatorKey: _navigatorKey,
+      navigatorObservers: [_routeObserver],
       locale: PlatformDispatcher.instance.locale,
       supportedLocales: AppLanguage.values.map((lang) => lang.locale),
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
@@ -71,7 +76,13 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
       builder: (context, child) => SystemBarsBackground(
         child: AuthGate(
           controller: _services.authController,
-          loginBuilder: (context) => MaterialLoginView(controller: _services.authController),
+          currentRoute: _routeObserver.routeName,
+          isPublicRoute: AppRoutes.isPublic,
+          loginBuilder: (context) => MaterialLoginView(
+            controller: _services.authController,
+            onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
+            onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
+          ),
           child: child!,
         ),
       ),
@@ -114,8 +125,19 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
         return video == null ? _AndroidHomeView(services: _services) : _trailerPage(video);
+      case PrivacyRoute():
+        return _legalPage(context, LegalTranslations.privacyPolicy);
+      case TermsRoute():
+        return _legalPage(context, LegalTranslations.termsOfService);
     }
   }
+
+  Widget _legalPage(BuildContext context, LegalDocument document) => PopcornMaterialSplashScreen(
+    child: Scaffold(
+      appBar: AppBar(title: Text(document.title.trOf(context))),
+      body: SafeArea(child: LegalDocumentView(document: document)),
+    ),
+  );
 
   Widget _playerPage(Widget player) => PopcornMaterialSplashScreen(
     child: Scaffold(
