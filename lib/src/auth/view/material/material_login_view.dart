@@ -1,0 +1,74 @@
+import 'package:flutter/material.dart';
+import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
+import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
+import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
+import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+
+/// Material sign-in screen offering Google as the only sign-in method.
+/// Shared by the Android, TV and web entry points.
+class MaterialLoginView extends StatefulWidget {
+  const MaterialLoginView({super.key, required this.controller});
+
+  final AuthController controller;
+
+  @override
+  State<MaterialLoginView> createState() => _MaterialLoginViewState();
+}
+
+class _MaterialLoginViewState extends State<MaterialLoginView> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _signIn() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await widget.controller.signInWithGoogle();
+    } catch (_) {
+      if (mounted) setState(() => _error = AuthTranslations.signInError.trOf(context));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.local_movies, size: 72, color: theme.colorScheme.primary),
+                const SizedBox(height: 16),
+                Text(AppTranslations.appTitle.trOf(context), style: theme.textTheme.headlineMedium),
+                const SizedBox(height: 8),
+                Text(AuthTranslations.signInSubtitle.trOf(context), textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  onPressed: _busy ? null : _signIn,
+                  icon: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login),
+                  label: Text(AuthTranslations.signInWithGoogle.trOf(context)),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

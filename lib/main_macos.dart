@@ -10,6 +10,7 @@ import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/macos/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
+import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/details/view/macos/macos_media_details_view.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
@@ -26,6 +27,7 @@ void main(List<String> args) async {
     return;
   }
   await dotenv.load(fileName: 'assets/config/app.env');
+  await AuthController.ensureInitialized();
   runApp(const _PopcornMacosApp());
 }
 
@@ -55,6 +57,11 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
       themeMode: ThemeMode.system,
       theme: MacosThemeData.light(),
       darkTheme: MacosThemeData.dark(),
+      builder: (context, child) => AuthGate(
+        controller: _services.authController,
+        loginBuilder: (context) => MacosLoginView(controller: _services.authController),
+        child: child!,
+      ),
       initialRoute: AppRoutes.home,
       onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
       onGenerateInitialRoutes: _initialRoutes,

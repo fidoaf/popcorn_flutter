@@ -1,3 +1,4 @@
+import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
@@ -12,6 +13,7 @@ final class AppServices {
     required this.mediaSourceProvider,
     required this.favoritesController,
     required this.historyController,
+    required this.authController,
   });
 
   factory AppServices.create() {
@@ -22,6 +24,7 @@ final class AppServices {
       mediaSourceProvider: MediaSourceProviderFactory.create(),
       favoritesController: FavoritesController(repository: FavoritesRepositoryFactory.create()),
       historyController: WatchHistoryController(repository: WatchHistoryRepositoryFactory.create()),
+      authController: AuthController(),
     );
   }
 
@@ -30,10 +33,12 @@ final class AppServices {
   final ConfigurableMediaSourceProvider mediaSourceProvider;
   final FavoritesController favoritesController;
   final WatchHistoryController historyController;
+  final AuthController authController;
 
   void dispose() {
     searchController.dispose();
     favoritesController.dispose();
     historyController.dispose();
+    authController.dispose();
   }
 }

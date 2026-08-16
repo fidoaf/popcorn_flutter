@@ -1,3 +1,5 @@
+flutter run -d chrome --web-port=3000 -t lib/main_web.dart
+
 Web build (entry point required; --pwa-strategy=none avoids stale service-worker cache on GitHub Pages):
 flutter build web -t lib/main_web.dart --base-href /popcorn_flutter/ --output docs --pwa-strategy=none
 
