@@ -32036,7 +32036,7 @@ if(s&&q>0)return""+r+"h "+q+"m"
 if(s)return""+r+"h"
 return""+q+"m"}p=A.b([],t.s)
 o=b.b
-if(o!=null&&o>0){s=o===1?B.ajb:B.aj_
+if(o!=null&&o>0){s=o===1?B.ajc:B.aj0
 n=a.ab(t.l).r.f
 n.toString
 p.push(A.e(o)+" "+s.bA(A.bt(n)))}m=b.c
@@ -98601,7 +98601,7 @@ q.d=r
 A.aVx(!0,p,A.co(r,0,p))},
 P(a){var s,r=null,q=this.a.c,p=$.LL(),o=t.l,n=a.ab(o).r.f
 n.toString
-n=A.b3(B.aiO.bA(A.bt(n)),r,r,r,r,r,r)
+n=A.b3(B.aiP.bA(A.bt(n)),r,r,r,r,r,r)
 s=a.ab(o).r.f
 s.toString
 s=A.ob(r,B.SH,r,r,new A.aKc(a),r,B.IS.bA(A.bt(s)))
@@ -98741,25 +98741,25 @@ r=s.c
 f=A.b3(f,j,j,j,r==null?j:r.are(B.cW),B.c9,j)
 r=a.ab(g).r.f
 r.toString
-r=B.aiP.bA(A.bt(r))
+r=B.aiQ.bA(A.bt(r))
 q=s.w
 r=A.b3(r,j,j,j,q==null?j:q.cO(i.ax.b),B.c9,j)
 p=a.ab(g).r.f
 p.toString
-p=A.b3(B.ajm.bA(A.bt(p)),j,j,j,s.y,B.c9,j)
+p=A.b3(B.aij.bA(A.bt(p)),j,j,j,s.y,B.c9,j)
 o=a.ab(g).r.f
 o.toString
 o=B.aii.bA(A.bt(o))
 n=a.ab(g).r.f
 n.toString
-n=B.aiQ.bA(A.bt(n))
+n=B.aiR.bA(A.bt(n))
 m=a.ab(g).r.f
 m.toString
-m=B.aj0.bA(A.bt(m))
+m=B.aj1.bA(A.bt(m))
 l=a.ab(g).r.f
 l.toString
 k=t.p
-q=A.b([h,B.dS,f,B.Ih,r,B.acE,p,B.kc,new A.yr(B.r_,o,j),new A.yr(B.r1,n,j),new A.yr(B.qZ,m,j),B.acF,A.aO5(!1,B.SF,A.b3(B.aiC.bA(A.bt(l)),j,j,j,j,j,j),this.c,A.b57(j,j,B.Rg,j,q))],k)
+q=A.b([h,B.dS,f,B.Ih,r,B.acE,p,B.kc,new A.yr(B.r_,o,j),new A.yr(B.r1,n,j),new A.yr(B.qZ,m,j),B.acF,A.aO5(!1,B.SF,A.b3(B.aiD.bA(A.bt(l)),j,j,j,j,j,j),this.c,A.b57(j,j,B.Rg,j,q))],k)
 h=A.b([],k)
 f=a.ab(g).r.f
 f.toString
@@ -98814,7 +98814,7 @@ q.toString
 q=A.b3(B.hq.bA(A.bt(q)),s,s,s,B.agC,s,s)
 r=a.ab(r).r.f
 r.toString
-return new A.FI(A.i3(s,new A.Xk("assets/gifs/popcorn_splash.gif",q,A.b3(B.ain.bA(A.bt(r)),s,s,s,B.agr,s,s),s),B.F,B.c0,s,s,s,s,s,s,s,s,s),this.c,B.ia,s)}}
+return new A.FI(A.i3(s,new A.Xk("assets/gifs/popcorn_splash.gif",q,A.b3(B.aio.bA(A.bt(r)),s,s,s,B.agr,s,s),s),B.F,B.c0,s,s,s,s,s,s,s,s,s),this.c,B.ia,s)}}
 A.A9.prototype={
 a8S(a){var s=this,r=s.a.gjY().ay
 r=new A.ji(r,r.$ti.i("ji<1>")).kk(new A.aaP(s))
@@ -98873,14 +98873,14 @@ s=k.ok
 g=A.b3(B.hq.bA(A.bt(g)),l,l,l,s.e,l,l)
 r=a.ab(h).r.f
 r.toString
-r=A.b3(B.ajg.bA(A.bt(r)),l,l,l,s.z,B.c9,l)
+r=A.b3(B.ajh.bA(A.bt(r)),l,l,l,s.z,B.c9,l)
 q=m.d
 p=q?l:m.gan3()
 q=q?B.acD:B.SK
 o=a.ab(h).r.f
 o.toString
 n=t.p
-p=A.b([i,B.kb,g,B.co,r,B.kc,A.aO5(!1,q,A.b3(B.aiB.bA(A.bt(o)),l,l,l,l,l,l),p,l)],n)
+p=A.b([i,B.kb,g,B.co,r,B.kc,A.aO5(!1,q,A.b3(B.aiC.bA(A.bt(o)),l,l,l,l,l,l),p,l)],n)
 i=m.e
 if(i!=null)B.b.H(p,A.b([B.kb,A.b3(i,l,l,l,A.fS(l,l,j.fy,l,l,l,l,l,l,l,l,l,l,l,l,l,l,!0,l,l,l,l,l,l,l,l),B.c9,l)],n))
 m.a.toString
@@ -98905,7 +98905,7 @@ $S:0}
 A.aEJ.prototype={
 $0(){var s=this.a,r=s.c.ab(t.l).r.f
 r.toString
-return s.e=B.aiy.bA(A.bt(r))},
+return s.e=B.aiz.bA(A.bt(r))},
 $S:0}
 A.aEK.prototype={
 $0(){return this.a.d=!1},
@@ -98934,11 +98934,11 @@ q.push(B.dS)
 j=t.l
 s=a.ab(j).r.f
 s.toString
-q.push(A.b3(B.aiF.bA(A.bt(s)),l,l,l,p,l,l))
+q.push(A.b3(B.aiG.bA(A.bt(s)),l,l,l,p,l,l))
 q.push(B.co)
 if(f.length===0){j=a.ab(j).r.f
 j.toString
-j=B.ajd.bA(A.bt(j))}else j=f
+j=B.aje.bA(A.bt(j))}else j=f
 q.push(A.b3(j,l,l,l,i.z,l,l))
 q.push(new A.ND(o,new A.ans(k),l))
 q.push(B.dS)
@@ -98984,18 +98984,18 @@ $3(a,b,c){var s,r,q=null,p=t.p,o=A.b([],p),n=b!=null
 if(n){s=a.ab(t.l).r.f
 s.toString
 r=this.a.ok
-B.b.H(o,A.b([A.b3(B.aiu.bA(A.bt(s)),q,q,q,r.w,q,q),B.co,A.b3(b,q,q,q,r.z,q,q)],p))}if(n&&c!=null)o.push(B.kb)
+B.b.H(o,A.b([A.b3(B.aiv.bA(A.bt(s)),q,q,q,r.w,q,q),B.co,A.b3(b,q,q,q,r.z,q,q)],p))}if(n&&c!=null)o.push(B.kb)
 if(c!=null){n=a.ab(t.l).r.f
 n.toString
 s=this.a.ok
-B.b.H(o,A.b([A.b3(B.aiU.bA(A.bt(n)),q,q,q,s.w,q,q),B.co,A.b3(c,q,q,q,s.z,q,q)],p))}return new A.cf(B.R0,A.hy(o,B.b5,B.aH,B.bi),q)},
+B.b.H(o,A.b([A.b3(B.aiV.bA(A.bt(n)),q,q,q,s.w,q,q),B.co,A.b3(c,q,q,q,s.z,q,q)],p))}return new A.cf(B.R0,A.hy(o,B.b5,B.aH,B.bi),q)},
 $C:"$3",
 $R:3,
 $S:634}
 A.ant.prototype={
 $1(a){var s=null,r=a.ab(t.l).r.f
 r.toString
-return A.b3(B.aj2.bA(A.bt(r)),s,s,s,this.a.ok.w,s,s)},
+return A.b3(B.aj3.bA(A.bt(r)),s,s,s,this.a.ok.w,s,s)},
 $S:635}
 A.anu.prototype={
 $2(a,b){var s=null,r=A.b3(b.c,1,B.a9,s,s,s,s),q=A.b3(b.e,s,s,s,s,s,s)
@@ -99024,7 +99024,7 @@ $S:65}
 A.WF.prototype={
 P(a){var s=null,r=A.eK(A.i3(s,s,B.F,s,s,new A.dX(B.Pd,s,s,A.eb(2),s,s,B.aS),s,4,B.QY,s,s,s,40),s,s),q=a.ab(t.l).r.f
 q.toString
-return A.xd(!0,new A.cf(B.R8,A.hy(A.b([r,A.b3(B.aiK.bA(A.bt(q)),s,s,s,this.d,s,s),B.Ih,new A.mi(1,B.fz,A.b6v(new A.att(this),this.c.length,new A.atu(),!0),s)],t.p),B.cU,B.aH,B.bt),s),B.aM,!1)}}
+return A.xd(!0,new A.cf(B.R8,A.hy(A.b([r,A.b3(B.aiL.bA(A.bt(q)),s,s,s,this.d,s,s),B.Ih,new A.mi(1,B.fz,A.b6v(new A.att(this),this.c.length,new A.atu(),!0),s)],t.p),B.cU,B.aH,B.bt),s),B.aM,!1)}}
 A.atu.prototype={
 $2(a,b){return B.kb},
 $S:639}
@@ -99078,12 +99078,12 @@ $2(a,b){var s,r,q,p,o,n,m=this,l=null
 if(b.a===B.q2)return new A.cf(B.R_,A.eK(new A.K3(m.b,l),l,l),l)
 if(b.c!=null){s=a.ab(t.l).r.f
 s.toString
-return new A.cf(B.qh,A.b3(B.aiS.bA(A.bt(s)),l,l,l,A.fS(l,l,m.b,l,l,l,l,l,l,l,l,12,l,l,l,l,l,!0,l,l,l,l,l,l,l,l),l,l),l)}r=b.b
+return new A.cf(B.qh,A.b3(B.aiT.bA(A.bt(s)),l,l,l,A.fS(l,l,m.b,l,l,l,l,l,l,l,l,12,l,l,l,l,l,!0,l,l,l,l,l,l,l,l),l,l),l)}r=b.b
 if(r==null)r=B.a_v
 s=J.bb(r)
 if(s.gad(r)){s=a.ab(t.l).r.f
 s.toString
-return new A.cf(B.qh,A.b3(B.aiY.bA(A.bt(s)),l,l,l,A.fS(l,l,m.b,l,l,l,l,l,l,l,l,12,l,l,l,l,l,!0,l,l,l,l,l,l,l,l),l,l),l)}q=A.b([],t.p)
+return new A.cf(B.qh,A.b3(B.aiZ.bA(A.bt(s)),l,l,l,A.fS(l,l,m.b,l,l,l,l,l,l,l,l,12,l,l,l,l,l,!0,l,l,l,l,l,l,l,l),l,l),l)}q=A.b([],t.p)
 for(s=s.gaa(r),p=m.a,o=m.b;s.q();){n=s.gO()
 p.a.toString
 q.push(new A.cf(B.QX,new A.a1P(n,o,new A.aIi(p,n),l),l))}return A.hy(q,B.cU,B.aH,B.bi)},
@@ -99308,7 +99308,7 @@ A.anj.prototype={
 $2(a,b){var s,r,q,p=null,o=this.a,n=o.d,m=o.c.a0s(n.b,n.a.a)
 n=A.iT(m?B.qY:B.qZ,p,p,p)
 s=m?A.ap(a).ax.b:p
-r=m?B.aj9:B.ajk
+r=m?B.aja:B.ajl
 q=a.ab(t.l).r.f
 q.toString
 return A.ob(s,n,o.e,p,new A.ani(o),p,r.bA(A.bt(q)))},
@@ -99323,7 +99323,7 @@ A.anm.prototype={
 $2(a,b){var s=null,r=this.a,q=A.rp(r.c.b,t.xH),p=q.length
 if(p===0){r=a.ab(t.l).r.f
 r.toString
-return A.eK(A.b3(B.aiH.bA(A.bt(r)),s,s,s,s,s,s),s,s)}return A.akL(new A.anl(r,q),p,s)},
+return A.eK(A.b3(B.aiI.bA(A.bt(r)),s,s,s,s,s,s),s,s)}return A.akL(new A.anl(r,q),p,s)},
 $S:56}
 A.anl.prototype={
 $2(a,b){var s,r,q,p=null,o=this.b,n=o[o.length-1-b],m=n.a
@@ -99405,7 +99405,7 @@ A.ala.prototype={
 $2(a,b){var s=null,r=this.a,q=A.rp(r.c.c,t.nN),p=q.length
 if(p===0){r=a.ab(t.l).r.f
 r.toString
-return A.eK(A.b3(B.aj3.bA(A.bt(r)),s,s,s,s,s,s),s,s)}return A.akL(new A.al9(r,q),p,s)},
+return A.eK(A.b3(B.aj4.bA(A.bt(r)),s,s,s,s,s,s),s,s)}return A.akL(new A.al9(r,q),p,s)},
 $S:56}
 A.al9.prototype={
 $2(a,b){var s,r,q,p,o,n,m=null,l=this.b[b],k=l.a,j=A.b3(k.b,1,B.a9,m,m,m,m),i=A.b([],t.s)
@@ -99421,7 +99421,7 @@ o=this.a
 p.push(A.ob(m,B.r4,m,m,new A.al6(o,l),m,m))
 n=a.ab(t.l).r.f
 n.toString
-p.push(A.ob(m,B.SE,m,m,new A.al7(o,l,k),m,B.aiV.bA(A.bt(n))))
+p.push(A.ob(m,B.SE,m,m,new A.al7(o,l,k),m,B.aiW.bA(A.bt(n))))
 p=A.k3(p,B.aK,B.bt,0)
 return A.akJ(!1,m,new A.a4t(k.d,m),m,new A.al8(o,l),s,j,p)},
 $S:187}
@@ -99508,7 +99508,7 @@ s=r.b
 q=s==null?i:s.y4(0.6)
 s=this.c
 p=t.p
-o=A.b([A.b3(s.a.bA(A.bt(h)),i,i,i,r.Zf(28,B.cW),i,i),B.co,A.b3(B.aiT.bA(A.bt(h)),i,i,i,r.wq(q,13),i,i),B.dS],p)
+o=A.b([A.b3(s.a.bA(A.bt(h)),i,i,i,r.Zf(28,B.cW),i,i),B.co,A.b3(B.aiU.bA(A.bt(h)),i,i,i,r.wq(q,13),i,i),B.dS],p)
 for(s=s.c,n=0;n<9;++n){m=s[n]
 l=m.a.a
 k=l.h(0,A.bt(h))
@@ -99974,7 +99974,7 @@ s=s.c.c
 return new A.IG(b,r,q,p,s,!1,!1,null)},
 P(a){var s,r=this,q=null,p=r.tu$,o=a.ab(t.l).r.f
 o.toString
-o=B.aix.bA(A.bt(o))
+o=B.aiy.bA(A.bt(o))
 o=A.aTs(q,B.a8s,q,q,q,q,q,q,!0,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,o,q,q,q,q,q,q,q,q,q,!0,!0,!1,q,p.a.a.length!==0?A.ob(q,B.SL,q,q,r.gaqI(),q,q):B.SJ,q,q,q,q,q,q,q,q,q,q,q,q)
 s=r.a.c
 return A.hy(A.b([new A.cf(B.R9,new A.Gi(p,o,B.adM,B.IJ,B.acI,B.acJ,new A.aEM(r),!0,q),q),new A.cf(B.R7,new A.h9(new A.aEN(r),q,s,q),q),A.afQ(new A.h9(new A.aEO(r),q,s,q))],t.p),B.cU,B.aH,B.bi)}}
@@ -99985,12 +99985,12 @@ $S:42}
 A.aEN.prototype={
 $2(a,b){var s,r,q=null,p=t.l,o=a.ab(p).r.f
 o.toString
-o=A.b3(B.aje.bA(A.bt(o)),q,q,q,q,q,q)
+o=A.b3(B.ajf.bA(A.bt(o)),q,q,q,q,q,q)
 s=t.Uj
 p=a.ab(p).r.f
 p.toString
 r=this.a
-return new A.p8(A.b([new A.lR(B.eu,B.SP,o,s),new A.lR(B.ev,B.SO,A.b3(B.aj5.bA(A.bt(p)),q,q,q,q,q,q),s)],t.cK),A.c8([r.a.c.c],t.PH),new A.aEL(r),q,t.Nh)},
+return new A.p8(A.b([new A.lR(B.eu,B.SP,o,s),new A.lR(B.ev,B.SO,A.b3(B.aj6.bA(A.bt(p)),q,q,q,q,q,q),s)],t.cK),A.c8([r.a.c.c],t.PH),new A.aEL(r),q,t.Nh)},
 $S:671}
 A.aEL.prototype={
 $1(a){return this.a.a.c.OY(a.ga6(a))},
@@ -100153,12 +100153,12 @@ q=J.zM(r)}else{r=m
 q=!1}if(q){s=this.aaz(a,r)
 break A}if(s){s=a.ab(t.l).r.f
 s.toString
-s=A.eK(A.b3(B.aiv.bA(A.bt(s)),m,m,m,m,m,m),m,m)
+s=A.eK(A.b3(B.aiw.bA(A.bt(s)),m,m,m,m,m,m),m,m)
 break A}if(l instanceof A.U1){s=B.l4
 break A}if(l instanceof A.U0){s=A.iT(B.Ss,A.ap(a).ax.fy,m,40)
 q=a.ab(t.l).r.f
 q.toString
-q=A.eK(new A.cf(B.qi,A.hy(A.b([s,B.co,A.b3(B.aiG.bA(A.bt(q)),m,m,m,A.ap(a).ok.w,m,m),B.Ij,A.b3(l.a,m,m,m,m,B.c9,m)],t.p),B.aK,B.aH,B.bt),m),m,m)
+q=A.eK(new A.cf(B.qi,A.hy(A.b([s,B.co,A.b3(B.aiH.bA(A.bt(q)),m,m,m,A.ap(a).ok.w,m,m),B.Ij,A.b3(l.a,m,m,m,m,B.c9,m)],t.p),B.aK,B.aH,B.bt),m),m,m)
 s=q
 break A}p=l instanceof A.U2
 o=m
@@ -100167,7 +100167,7 @@ n=o
 s=J.lJ(n)}else s=!1
 if(s){s=a.ab(t.l).r.f
 s.toString
-s=A.eK(A.b3(B.aj4.bA(A.bt(s)),m,m,m,m,m,m),m,m)
+s=A.eK(A.b3(B.aj5.bA(A.bt(s)),m,m,m,m,m,m),m,m)
 break A}s={}
 s.a=null
 if(p){s.a=o
@@ -100192,7 +100192,7 @@ A.anH.prototype={
 $2(a,b){var s,r=null
 if(b===0){s=a.ab(t.l).r.f
 s.toString
-return new A.cf(B.Rc,A.b3(B.aiz.bA(A.bt(s)),r,r,r,A.ap(a).ok.w,r,r),r)}s=b-1
+return new A.cf(B.Rc,A.b3(B.aiA.bA(A.bt(s)),r,r,r,A.ap(a).ok.w,r,r),r)}s=b-1
 return this.a.YA(a,J.bS(this.b,s),s)},
 $S:144}
 A.aqw.prototype={}
@@ -108933,102 +108933,102 @@ B.Tz=new A.os("NORMAL","NORMAL")
 B.TA=new A.os("TEXT_AUTOSIZING","TEXT_AUTOSIZING")
 B.q=new A.hv(1,"es")
 B.r=new A.hv(2,"ca")
-B.a5N=new A.au([B.o,"Privacy Policy",B.q,"Pol\xedtica de privacidad",B.r,"Pol\xedtica de privadesa"],t.C)
-B.kk=new A.aQ(B.a5N)
-B.a6t=new A.au([B.o,"Last updated: August 2026",B.q,"\xdaltima actualizaci\xf3n: agosto de 2026",B.r,"\xdaltima actualitzaci\xf3: agost de 2026"],t.C)
-B.aiT=new A.aQ(B.a6t)
-B.a6_=new A.au([B.o,"Overview",B.q,"Descripci\xf3n general",B.r,"Descripci\xf3 general"],t.C)
-B.ait=new A.aQ(B.a6_)
-B.a6R=new A.au([B.o,"Popcorn is a non-commercial demo application created for educational purposes. This policy explains what limited information the app handles and how it is used.",B.q,"Popcorn es una aplicaci\xf3n de demostraci\xf3n sin fines comerciales creada con fines educativos. Esta pol\xedtica explica qu\xe9 informaci\xf3n limitada gestiona la aplicaci\xf3n y c\xf3mo se utiliza.",B.r,"Popcorn \xe9s una aplicaci\xf3 de demostraci\xf3 sense finalitats comercials creada amb finalitats educatives. Aquesta pol\xedtica explica quina informaci\xf3 limitada gestiona l'aplicaci\xf3 i com s'utilitza."],t.C)
-B.ajf=new A.aQ(B.a6R)
-B.TI=new A.ei(B.ait,B.ajf)
-B.a6z=new A.au([B.o,"Information We Collect",B.q,"Informaci\xf3n que recopilamos",B.r,"Informaci\xf3 que recollim"],t.C)
-B.aiZ=new A.aQ(B.a6z)
-B.a6a=new A.au([B.o,"When you sign in with Google we receive basic profile details such as your name, email address and avatar. This is only used to authenticate you. We do not collect any other personal information.",B.q,"Cuando inicias sesi\xf3n con Google recibimos datos b\xe1sicos de tu perfil, como tu nombre, direcci\xf3n de correo electr\xf3nico y avatar. Esto solo se usa para autenticarte. No recopilamos ninguna otra informaci\xf3n personal.",B.r,"Quan inicies la sessi\xf3 amb Google rebem dades b\xe0siques del teu perfil, com ara el teu nom, l'adre\xe7a de correu electr\xf2nic i l'avatar. Aix\xf2 nom\xe9s s'utilitza per autenticar-te. No recollim cap altra informaci\xf3 personal."],t.C)
-B.aiD=new A.aQ(B.a6a)
-B.TE=new A.ei(B.aiZ,B.aiD)
-B.a6X=new A.au([B.o,"How We Use Information",B.q,"C\xf3mo usamos la informaci\xf3n",B.r,"Com fem servir la informaci\xf3"],t.C)
-B.ajl=new A.aQ(B.a6X)
-B.a5R=new A.au([B.o,"Your profile details are used solely to keep you signed in and to personalize the experience. We never sell your data and we do not share it with third parties for advertising.",B.q,"Los datos de tu perfil se utilizan \xfanicamente para mantener tu sesi\xf3n iniciada y personalizar la experiencia. Nunca vendemos tus datos ni los compartimos con terceros con fines publicitarios.",B.r,"Les dades del teu perfil s'utilitzen \xfanicament per mantenir la teva sessi\xf3 iniciada i personalitzar l'experi\xe8ncia. Mai venem les teves dades ni les compartim amb tercers amb finalitats publicit\xe0ries."],t.C)
-B.aim=new A.aQ(B.a5R)
-B.TR=new A.ei(B.ajl,B.aim)
-B.a6r=new A.au([B.o,"Local Storage",B.q,"Almacenamiento local",B.r,"Emmagatzematge local"],t.C)
-B.aiR=new A.aQ(B.a6r)
-B.a6V=new A.au([B.o,"Your favorites and watch history are stored locally on your device. They stay under your control and are not uploaded to our servers.",B.q,"Tus favoritos y tu historial de visualizaci\xf3n se almacenan localmente en tu dispositivo. Permanecen bajo tu control y no se suben a nuestros servidores.",B.r,"Els teus preferits i el teu historial de visualitzaci\xf3 es guarden localment al teu dispositiu. Es mantenen sota el teu control i no es pugen als nostres servidors."],t.C)
+B.a5O=new A.au([B.o,"Privacy Policy",B.q,"Pol\xedtica de privacidad",B.r,"Pol\xedtica de privadesa"],t.C)
+B.kk=new A.aQ(B.a5O)
+B.a6u=new A.au([B.o,"Last updated: August 2026",B.q,"\xdaltima actualizaci\xf3n: agosto de 2026",B.r,"\xdaltima actualitzaci\xf3: agost de 2026"],t.C)
+B.aiU=new A.aQ(B.a6u)
+B.a60=new A.au([B.o,"Overview",B.q,"Descripci\xf3n general",B.r,"Descripci\xf3 general"],t.C)
+B.aiu=new A.aQ(B.a60)
+B.a6S=new A.au([B.o,"Popcorn is a non-commercial demo application created for educational purposes. This policy explains what limited information the app handles and how it is used.",B.q,"Popcorn es una aplicaci\xf3n de demostraci\xf3n sin fines comerciales creada con fines educativos. Esta pol\xedtica explica qu\xe9 informaci\xf3n limitada gestiona la aplicaci\xf3n y c\xf3mo se utiliza.",B.r,"Popcorn \xe9s una aplicaci\xf3 de demostraci\xf3 sense finalitats comercials creada amb finalitats educatives. Aquesta pol\xedtica explica quina informaci\xf3 limitada gestiona l'aplicaci\xf3 i com s'utilitza."],t.C)
+B.ajg=new A.aQ(B.a6S)
+B.TI=new A.ei(B.aiu,B.ajg)
+B.a6A=new A.au([B.o,"Information We Collect",B.q,"Informaci\xf3n que recopilamos",B.r,"Informaci\xf3 que recollim"],t.C)
+B.aj_=new A.aQ(B.a6A)
+B.a6b=new A.au([B.o,"When you sign in with Google we receive basic profile details such as your name, email address and avatar. This is only used to authenticate you. We do not collect any other personal information.",B.q,"Cuando inicias sesi\xf3n con Google recibimos datos b\xe1sicos de tu perfil, como tu nombre, direcci\xf3n de correo electr\xf3nico y avatar. Esto solo se usa para autenticarte. No recopilamos ninguna otra informaci\xf3n personal.",B.r,"Quan inicies la sessi\xf3 amb Google rebem dades b\xe0siques del teu perfil, com ara el teu nom, l'adre\xe7a de correu electr\xf2nic i l'avatar. Aix\xf2 nom\xe9s s'utilitza per autenticar-te. No recollim cap altra informaci\xf3 personal."],t.C)
+B.aiE=new A.aQ(B.a6b)
+B.TE=new A.ei(B.aj_,B.aiE)
+B.a6Y=new A.au([B.o,"How We Use Information",B.q,"C\xf3mo usamos la informaci\xf3n",B.r,"Com fem servir la informaci\xf3"],t.C)
+B.ajm=new A.aQ(B.a6Y)
+B.a5S=new A.au([B.o,"Your profile details are used solely to keep you signed in and to personalize the experience. We never sell your data and we do not share it with third parties for advertising.",B.q,"Los datos de tu perfil se utilizan \xfanicamente para mantener tu sesi\xf3n iniciada y personalizar la experiencia. Nunca vendemos tus datos ni los compartimos con terceros con fines publicitarios.",B.r,"Les dades del teu perfil s'utilitzen \xfanicament per mantenir la teva sessi\xf3 iniciada i personalitzar l'experi\xe8ncia. Mai venem les teves dades ni les compartim amb tercers amb finalitats publicit\xe0ries."],t.C)
+B.ain=new A.aQ(B.a5S)
+B.TR=new A.ei(B.ajm,B.ain)
+B.a6s=new A.au([B.o,"Local Storage",B.q,"Almacenamiento local",B.r,"Emmagatzematge local"],t.C)
+B.aiS=new A.aQ(B.a6s)
+B.a6W=new A.au([B.o,"Your favorites and watch history are stored locally on your device. They stay under your control and are not uploaded to our servers.",B.q,"Tus favoritos y tu historial de visualizaci\xf3n se almacenan localmente en tu dispositivo. Permanecen bajo tu control y no se suben a nuestros servidores.",B.r,"Els teus preferits i el teu historial de visualitzaci\xf3 es guarden localment al teu dispositiu. Es mantenen sota el teu control i no es pugen als nostres servidors."],t.C)
+B.ajk=new A.aQ(B.a6W)
+B.TJ=new A.ei(B.aiS,B.ajk)
+B.a63=new A.au([B.o,"Third-Party Services",B.q,"Servicios de terceros",B.r,"Serveis de tercers"],t.C)
+B.aix=new A.aQ(B.a63)
+B.a6l=new A.au([B.o,"The app relies on The Movie Database (TMDB) for media information, on external providers for streaming links, and on Google for sign-in. These services have their own privacy policies, which we encourage you to review.",B.q,"La aplicaci\xf3n utiliza The Movie Database (TMDB) para la informaci\xf3n multimedia, proveedores externos para los enlaces de reproducci\xf3n y Google para el inicio de sesi\xf3n. Estos servicios tienen sus propias pol\xedticas de privacidad, que te recomendamos revisar.",B.r,"L'aplicaci\xf3 utilitza The Movie Database (TMDB) per a la informaci\xf3 multim\xe8dia, prove\xefdors externs per als enlla\xe7os de reproducci\xf3 i Google per a l'inici de sessi\xf3. Aquests serveis tenen les seves pr\xf2pies pol\xedtiques de privadesa, que et recomanem revisar."],t.C)
+B.aiM=new A.aQ(B.a6l)
+B.TM=new A.ei(B.aix,B.aiM)
+B.a68=new A.au([B.o,"Data Retention and Deletion",B.q,"Conservaci\xf3n y eliminaci\xf3n de datos",B.r,"Conservaci\xf3 i eliminaci\xf3 de dades"],t.C)
+B.aiB=new A.aQ(B.a68)
+B.a6V=new A.au([B.o,"Signing out clears your session. You can remove locally stored data at any time by clearing the app data in your browser or device settings.",B.q,"Al cerrar sesi\xf3n se borra tu sesi\xf3n. Puedes eliminar los datos almacenados localmente en cualquier momento borrando los datos de la aplicaci\xf3n en la configuraci\xf3n de tu navegador o dispositivo.",B.r,"En tancar la sessi\xf3 s'esborra la teva sessi\xf3. Pots eliminar les dades emmagatzemades localment en qualsevol moment esborrant les dades de l'aplicaci\xf3 a la configuraci\xf3 del teu navegador o dispositiu."],t.C)
 B.ajj=new A.aQ(B.a6V)
-B.TJ=new A.ei(B.aiR,B.ajj)
-B.a62=new A.au([B.o,"Third-Party Services",B.q,"Servicios de terceros",B.r,"Serveis de tercers"],t.C)
-B.aiw=new A.aQ(B.a62)
-B.a6k=new A.au([B.o,"The app relies on The Movie Database (TMDB) for media information, on external providers for streaming links, and on Google for sign-in. These services have their own privacy policies, which we encourage you to review.",B.q,"La aplicaci\xf3n utiliza The Movie Database (TMDB) para la informaci\xf3n multimedia, proveedores externos para los enlaces de reproducci\xf3n y Google para el inicio de sesi\xf3n. Estos servicios tienen sus propias pol\xedticas de privacidad, que te recomendamos revisar.",B.r,"L'aplicaci\xf3 utilitza The Movie Database (TMDB) per a la informaci\xf3 multim\xe8dia, prove\xefdors externs per als enlla\xe7os de reproducci\xf3 i Google per a l'inici de sessi\xf3. Aquests serveis tenen les seves pr\xf2pies pol\xedtiques de privadesa, que et recomanem revisar."],t.C)
-B.aiL=new A.aQ(B.a6k)
-B.TM=new A.ei(B.aiw,B.aiL)
-B.a67=new A.au([B.o,"Data Retention and Deletion",B.q,"Conservaci\xf3n y eliminaci\xf3n de datos",B.r,"Conservaci\xf3 i eliminaci\xf3 de dades"],t.C)
-B.aiA=new A.aQ(B.a67)
-B.a6U=new A.au([B.o,"Signing out clears your session. You can remove locally stored data at any time by clearing the app data in your browser or device settings.",B.q,"Al cerrar sesi\xf3n se borra tu sesi\xf3n. Puedes eliminar los datos almacenados localmente en cualquier momento borrando los datos de la aplicaci\xf3n en la configuraci\xf3n de tu navegador o dispositivo.",B.r,"En tancar la sessi\xf3 s'esborra la teva sessi\xf3. Pots eliminar les dades emmagatzemades localment en qualsevol moment esborrant les dades de l'aplicaci\xf3 a la configuraci\xf3 del teu navegador o dispositiu."],t.C)
-B.aji=new A.aQ(B.a6U)
-B.TP=new A.ei(B.aiA,B.aji)
-B.a5L=new A.au([B.o,"Children's Privacy",B.q,"Privacidad de los menores",B.r,"Privadesa dels menors"],t.C)
-B.aij=new A.aQ(B.a5L)
-B.a6H=new A.au([B.o,"This app is not directed to children under 13 and we do not knowingly collect information from them.",B.q,"Esta aplicaci\xf3n no est\xe1 dirigida a menores de 13 a\xf1os y no recopilamos informaci\xf3n de ellos de forma intencionada.",B.r,"Aquesta aplicaci\xf3 no est\xe0 dirigida a menors de 13 anys i no recollim informaci\xf3 seva de manera intencionada."],t.C)
-B.aj6=new A.aQ(B.a6H)
-B.TN=new A.ei(B.aij,B.aj6)
-B.a5Y=new A.au([B.o,"Changes to This Policy",B.q,"Cambios en esta pol\xedtica",B.r,"Canvis en aquesta pol\xedtica"],t.C)
-B.air=new A.aQ(B.a5Y)
-B.a6x=new A.au([B.o,"We may update this policy from time to time. Any changes will be reflected on this page.",B.q,"Podemos actualizar esta pol\xedtica peri\xf3dicamente. Cualquier cambio se reflejar\xe1 en esta p\xe1gina.",B.r,"Podem actualitzar aquesta pol\xedtica peri\xf2dicament. Qualsevol canvi es reflectir\xe0 en aquesta p\xe0gina."],t.C)
-B.aiX=new A.aQ(B.a6x)
-B.TU=new A.ei(B.air,B.aiX)
-B.a5U=new A.au([B.o,"Contact",B.q,"Contacto",B.r,"Contacte"],t.C)
-B.IT=new A.aQ(B.a5U)
-B.a5P=new A.au([B.o,"For questions about this policy, please open an issue in the project repository.",B.q,"Para preguntas sobre esta pol\xedtica, abre una incidencia en el repositorio del proyecto.",B.r,"Per a preguntes sobre aquesta pol\xedtica, obre una incid\xe8ncia al repositori del projecte."],t.C)
-B.aik=new A.aQ(B.a5P)
-B.TK=new A.ei(B.IT,B.aik)
+B.TP=new A.ei(B.aiB,B.ajj)
+B.a5M=new A.au([B.o,"Children's Privacy",B.q,"Privacidad de los menores",B.r,"Privadesa dels menors"],t.C)
+B.aik=new A.aQ(B.a5M)
+B.a6I=new A.au([B.o,"This app is not directed to children under 13 and we do not knowingly collect information from them.",B.q,"Esta aplicaci\xf3n no est\xe1 dirigida a menores de 13 a\xf1os y no recopilamos informaci\xf3n de ellos de forma intencionada.",B.r,"Aquesta aplicaci\xf3 no est\xe0 dirigida a menors de 13 anys i no recollim informaci\xf3 seva de manera intencionada."],t.C)
+B.aj7=new A.aQ(B.a6I)
+B.TN=new A.ei(B.aik,B.aj7)
+B.a5Z=new A.au([B.o,"Changes to This Policy",B.q,"Cambios en esta pol\xedtica",B.r,"Canvis en aquesta pol\xedtica"],t.C)
+B.ais=new A.aQ(B.a5Z)
+B.a6y=new A.au([B.o,"We may update this policy from time to time. Any changes will be reflected on this page.",B.q,"Podemos actualizar esta pol\xedtica peri\xf3dicamente. Cualquier cambio se reflejar\xe1 en esta p\xe1gina.",B.r,"Podem actualitzar aquesta pol\xedtica peri\xf2dicament. Qualsevol canvi es reflectir\xe0 en aquesta p\xe0gina."],t.C)
+B.aiY=new A.aQ(B.a6y)
+B.TU=new A.ei(B.ais,B.aiY)
+B.a5V=new A.au([B.o,"Contact",B.q,"Contacto",B.r,"Contacte"],t.C)
+B.IT=new A.aQ(B.a5V)
+B.a5Q=new A.au([B.o,"For questions about this policy, please open an issue in the project repository.",B.q,"Para preguntas sobre esta pol\xedtica, abre una incidencia en el repositorio del proyecto.",B.r,"Per a preguntes sobre aquesta pol\xedtica, obre una incid\xe8ncia al repositori del projecte."],t.C)
+B.ail=new A.aQ(B.a5Q)
+B.TK=new A.ei(B.IT,B.ail)
 B.XX=s([B.TI,B.TE,B.TR,B.TJ,B.TM,B.TP,B.TN,B.TU,B.TK],t.J8)
 B.TB=new A.RS(B.kk,B.XX)
-B.a6p=new A.au([B.o,"Terms of Service",B.q,"T\xe9rminos del servicio",B.r,"Termes del servei"],t.C)
-B.kl=new A.aQ(B.a6p)
-B.a6O=new A.au([B.o,"Acceptance of Terms",B.q,"Aceptaci\xf3n de los t\xe9rminos",B.r,"Acceptaci\xf3 dels termes"],t.C)
-B.ajc=new A.aQ(B.a6O)
-B.a6w=new A.au([B.o,"By using Popcorn you agree to these terms. If you do not agree, please do not use the app.",B.q,"Al usar Popcorn aceptas estos t\xe9rminos. Si no est\xe1s de acuerdo, no utilices la aplicaci\xf3n.",B.r,"En utilitzar Popcorn acceptes aquests termes. Si no hi est\xe0s d'acord, no utilitzis l'aplicaci\xf3."],t.C)
-B.aiW=new A.aQ(B.a6w)
-B.TO=new A.ei(B.ajc,B.aiW)
-B.a6I=new A.au([B.o,"Educational, Non-Commercial Use",B.q,"Uso educativo y no comercial",B.r,"\xdas educatiu i no comercial"],t.C)
-B.aj7=new A.aQ(B.a6I)
-B.a6M=new A.au([B.o,"Popcorn is a demonstration project built to showcase Flutter development. It is provided free of charge and is not intended for commercial use.",B.q,"Popcorn es un proyecto de demostraci\xf3n creado para mostrar el desarrollo con Flutter. Se ofrece de forma gratuita y no est\xe1 destinado a un uso comercial.",B.r,"Popcorn \xe9s un projecte de demostraci\xf3 creat per mostrar el desenvolupament amb Flutter. Es proporciona de manera gratu\xefta i no est\xe0 destinat a un \xfas comercial."],t.C)
-B.aja=new A.aQ(B.a6M)
-B.TD=new A.ei(B.aj7,B.aja)
-B.a5T=new A.au([B.o,"Content and Third-Party Sources",B.q,"Contenido y fuentes de terceros",B.r,"Contingut i fonts de tercers"],t.C)
-B.aio=new A.aQ(B.a5T)
-B.a6K=new A.au([B.o,"Media information is provided by The Movie Database (TMDB) and is not endorsed or certified by them. Streaming links are supplied by third-party providers; the app does not host, upload or store any media content itself.",B.q,"La informaci\xf3n multimedia la proporciona The Movie Database (TMDB) y no est\xe1 respaldada ni certificada por ellos. Los enlaces de reproducci\xf3n los proporcionan proveedores externos; la aplicaci\xf3n no aloja, sube ni almacena ning\xfan contenido multimedia.",B.r,"La informaci\xf3 multim\xe8dia la proporciona The Movie Database (TMDB) i no est\xe0 avalada ni certificada per ells. Els enlla\xe7os de reproducci\xf3 els proporcionen prove\xefdors externs; l'aplicaci\xf3 no allotja, puja ni emmagatzema cap contingut multim\xe8dia."],t.C)
-B.aj8=new A.aQ(B.a6K)
-B.TS=new A.ei(B.aio,B.aj8)
-B.a6m=new A.au([B.o,"User Responsibilities",B.q,"Responsabilidades del usuario",B.r,"Responsabilitats de l'usuari"],t.C)
+B.a6q=new A.au([B.o,"Terms of Service",B.q,"T\xe9rminos del servicio",B.r,"Termes del servei"],t.C)
+B.kl=new A.aQ(B.a6q)
+B.a6P=new A.au([B.o,"Acceptance of Terms",B.q,"Aceptaci\xf3n de los t\xe9rminos",B.r,"Acceptaci\xf3 dels termes"],t.C)
+B.ajd=new A.aQ(B.a6P)
+B.a6x=new A.au([B.o,"By using Popcorn you agree to these terms. If you do not agree, please do not use the app.",B.q,"Al usar Popcorn aceptas estos t\xe9rminos. Si no est\xe1s de acuerdo, no utilices la aplicaci\xf3n.",B.r,"En utilitzar Popcorn acceptes aquests termes. Si no hi est\xe0s d'acord, no utilitzis l'aplicaci\xf3."],t.C)
+B.aiX=new A.aQ(B.a6x)
+B.TO=new A.ei(B.ajd,B.aiX)
+B.a6J=new A.au([B.o,"Educational, Non-Commercial Use",B.q,"Uso educativo y no comercial",B.r,"\xdas educatiu i no comercial"],t.C)
+B.aj8=new A.aQ(B.a6J)
+B.a6N=new A.au([B.o,"Popcorn is a demonstration project built to showcase Flutter development. It is provided free of charge and is not intended for commercial use.",B.q,"Popcorn es un proyecto de demostraci\xf3n creado para mostrar el desarrollo con Flutter. Se ofrece de forma gratuita y no est\xe1 destinado a un uso comercial.",B.r,"Popcorn \xe9s un projecte de demostraci\xf3 creat per mostrar el desenvolupament amb Flutter. Es proporciona de manera gratu\xefta i no est\xe0 destinat a un \xfas comercial."],t.C)
+B.ajb=new A.aQ(B.a6N)
+B.TD=new A.ei(B.aj8,B.ajb)
+B.a5U=new A.au([B.o,"Content and Third-Party Sources",B.q,"Contenido y fuentes de terceros",B.r,"Contingut i fonts de tercers"],t.C)
+B.aip=new A.aQ(B.a5U)
+B.a6L=new A.au([B.o,"Media information is provided by The Movie Database (TMDB) and is not endorsed or certified by them. Streaming links are supplied by third-party providers; the app does not host, upload or store any media content itself.",B.q,"La informaci\xf3n multimedia la proporciona The Movie Database (TMDB) y no est\xe1 respaldada ni certificada por ellos. Los enlaces de reproducci\xf3n los proporcionan proveedores externos; la aplicaci\xf3n no aloja, sube ni almacena ning\xfan contenido multimedia.",B.r,"La informaci\xf3 multim\xe8dia la proporciona The Movie Database (TMDB) i no est\xe0 avalada ni certificada per ells. Els enlla\xe7os de reproducci\xf3 els proporcionen prove\xefdors externs; l'aplicaci\xf3 no allotja, puja ni emmagatzema cap contingut multim\xe8dia."],t.C)
+B.aj9=new A.aQ(B.a6L)
+B.TS=new A.ei(B.aip,B.aj9)
+B.a6n=new A.au([B.o,"User Responsibilities",B.q,"Responsabilidades del usuario",B.r,"Responsabilitats de l'usuari"],t.C)
+B.aiO=new A.aQ(B.a6n)
+B.a6D=new A.au([B.o,"You agree to use the app in accordance with applicable laws and not to misuse it or attempt to disrupt its operation.",B.q,"Aceptas usar la aplicaci\xf3n de acuerdo con las leyes aplicables y no hacer un uso indebido de ella ni intentar interrumpir su funcionamiento.",B.r,"Acceptes utilitzar l'aplicaci\xf3 d'acord amb les lleis aplicables i no fer-ne un \xfas indegut ni intentar interrompre'n el funcionament."],t.C)
+B.aj2=new A.aQ(B.a6D)
+B.TQ=new A.ei(B.aiO,B.aj2)
+B.a5R=new A.au([B.o,"Intellectual Property",B.q,"Propiedad intelectual",B.r,"Propietat intel\xb7lectual"],t.C)
+B.aim=new A.aQ(B.a5R)
+B.a6j=new A.au([B.o,"All trademarks, logos and media artwork belong to their respective owners.",B.q,"Todas las marcas comerciales, logotipos y material gr\xe1fico pertenecen a sus respectivos propietarios.",B.r,"Totes les marques comercials, logotips i material gr\xe0fic pertanyen als seus respectius propietaris."],t.C)
+B.aiK=new A.aQ(B.a6j)
+B.TF=new A.ei(B.aim,B.aiK)
+B.a6U=new A.au([B.o,"Disclaimer of Warranties",B.q,"Renuncia de garant\xedas",B.r,"Ren\xfancia de garanties"],t.C)
+B.aji=new A.aQ(B.a6U)
+B.a5Y=new A.au([B.o,'The app is provided "as is" and "as available" without warranties of any kind, either express or implied.',B.q,'La aplicaci\xf3n se proporciona "tal cual" y "seg\xfan disponibilidad", sin garant\xedas de ning\xfan tipo, ya sean expresas o impl\xedcitas.',B.r,'L\'aplicaci\xf3 es proporciona "tal qual" i "segons disponibilitat", sense garanties de cap tipus, ja siguin expresses o impl\xedcites.'],t.C)
+B.air=new A.aQ(B.a5Y)
+B.TT=new A.ei(B.aji,B.air)
+B.a6h=new A.au([B.o,"Limitation of Liability",B.q,"Limitaci\xf3n de responsabilidad",B.r,"Limitaci\xf3 de responsabilitat"],t.C)
+B.aiJ=new A.aQ(B.a6h)
+B.a6m=new A.au([B.o,"To the fullest extent permitted by law, the authors are not liable for any damages arising from the use of this demo app.",B.q,"En la m\xe1xima medida permitida por la ley, los autores no se hacen responsables de los da\xf1os derivados del uso de esta aplicaci\xf3n de demostraci\xf3n.",B.r,"En la m\xe0xima mesura permesa per la llei, els autors no es fan responsables dels danys derivats de l'\xfas d'aquesta aplicaci\xf3 de demostraci\xf3."],t.C)
 B.aiN=new A.aQ(B.a6m)
-B.a6C=new A.au([B.o,"You agree to use the app in accordance with applicable laws and not to misuse it or attempt to disrupt its operation.",B.q,"Aceptas usar la aplicaci\xf3n de acuerdo con las leyes aplicables y no hacer un uso indebido de ella ni intentar interrumpir su funcionamiento.",B.r,"Acceptes utilitzar l'aplicaci\xf3 d'acord amb les lleis aplicables i no fer-ne un \xfas indegut ni intentar interrompre'n el funcionament."],t.C)
-B.aj1=new A.aQ(B.a6C)
-B.TQ=new A.ei(B.aiN,B.aj1)
-B.a5Q=new A.au([B.o,"Intellectual Property",B.q,"Propiedad intelectual",B.r,"Propietat intel\xb7lectual"],t.C)
-B.ail=new A.aQ(B.a5Q)
-B.a6i=new A.au([B.o,"All trademarks, logos and media artwork belong to their respective owners.",B.q,"Todas las marcas comerciales, logotipos y material gr\xe1fico pertenecen a sus respectivos propietarios.",B.r,"Totes les marques comercials, logotips i material gr\xe0fic pertanyen als seus respectius propietaris."],t.C)
-B.aiJ=new A.aQ(B.a6i)
-B.TF=new A.ei(B.ail,B.aiJ)
-B.a6T=new A.au([B.o,"Disclaimer of Warranties",B.q,"Renuncia de garant\xedas",B.r,"Ren\xfancia de garanties"],t.C)
-B.ajh=new A.aQ(B.a6T)
-B.a5X=new A.au([B.o,'The app is provided "as is" and "as available" without warranties of any kind, either express or implied.',B.q,'La aplicaci\xf3n se proporciona "tal cual" y "seg\xfan disponibilidad", sin garant\xedas de ning\xfan tipo, ya sean expresas o impl\xedcitas.',B.r,'L\'aplicaci\xf3 es proporciona "tal qual" i "segons disponibilitat", sense garanties de cap tipus, ja siguin expresses o impl\xedcites.'],t.C)
-B.aiq=new A.aQ(B.a5X)
-B.TT=new A.ei(B.ajh,B.aiq)
-B.a6g=new A.au([B.o,"Limitation of Liability",B.q,"Limitaci\xf3n de responsabilidad",B.r,"Limitaci\xf3 de responsabilitat"],t.C)
-B.aiI=new A.aQ(B.a6g)
-B.a6l=new A.au([B.o,"To the fullest extent permitted by law, the authors are not liable for any damages arising from the use of this demo app.",B.q,"En la m\xe1xima medida permitida por la ley, los autores no se hacen responsables de los da\xf1os derivados del uso de esta aplicaci\xf3n de demostraci\xf3n.",B.r,"En la m\xe0xima mesura permesa per la llei, els autors no es fan responsables dels danys derivats de l'\xfas d'aquesta aplicaci\xf3 de demostraci\xf3."],t.C)
-B.aiM=new A.aQ(B.a6l)
-B.TG=new A.ei(B.aiI,B.aiM)
-B.a5V=new A.au([B.o,"Changes to These Terms",B.q,"Cambios en estos t\xe9rminos",B.r,"Canvis en aquests termes"],t.C)
-B.aip=new A.aQ(B.a5V)
-B.a5Z=new A.au([B.o,"We may revise these terms at any time. Continued use of the app after changes means you accept the updated terms.",B.q,"Podemos revisar estos t\xe9rminos en cualquier momento. El uso continuado de la aplicaci\xf3n tras los cambios implica que aceptas los t\xe9rminos actualizados.",B.r,"Podem revisar aquests termes en qualsevol moment. L'\xfas continuat de l'aplicaci\xf3 despr\xe9s dels canvis implica que acceptes els termes actualitzats."],t.C)
-B.ais=new A.aQ(B.a5Z)
-B.TH=new A.ei(B.aip,B.ais)
-B.a6b=new A.au([B.o,"For questions about these terms, please open an issue in the project repository.",B.q,"Para preguntas sobre estos t\xe9rminos, abre una incidencia en el repositorio del proyecto.",B.r,"Per a preguntes sobre aquests termes, obre una incid\xe8ncia al repositori del projecte."],t.C)
-B.aiE=new A.aQ(B.a6b)
-B.TL=new A.ei(B.IT,B.aiE)
+B.TG=new A.ei(B.aiJ,B.aiN)
+B.a5W=new A.au([B.o,"Changes to These Terms",B.q,"Cambios en estos t\xe9rminos",B.r,"Canvis en aquests termes"],t.C)
+B.aiq=new A.aQ(B.a5W)
+B.a6_=new A.au([B.o,"We may revise these terms at any time. Continued use of the app after changes means you accept the updated terms.",B.q,"Podemos revisar estos t\xe9rminos en cualquier momento. El uso continuado de la aplicaci\xf3n tras los cambios implica que aceptas los t\xe9rminos actualizados.",B.r,"Podem revisar aquests termes en qualsevol moment. L'\xfas continuat de l'aplicaci\xf3 despr\xe9s dels canvis implica que acceptes els termes actualitzats."],t.C)
+B.ait=new A.aQ(B.a6_)
+B.TH=new A.ei(B.aiq,B.ait)
+B.a6c=new A.au([B.o,"For questions about these terms, please open an issue in the project repository.",B.q,"Para preguntas sobre estos t\xe9rminos, abre una incidencia en el repositorio del proyecto.",B.r,"Per a preguntes sobre aquests termes, obre una incid\xe8ncia al repositori del projecte."],t.C)
+B.aiF=new A.aQ(B.a6c)
+B.TL=new A.ei(B.IT,B.aiF)
 B.Wy=s([B.TO,B.TD,B.TS,B.TQ,B.TF,B.TT,B.TG,B.TH,B.TL],t.J8)
 B.TC=new A.RS(B.kl,B.Wy)
 B.dB=new A.jT("CONFIG",700)
@@ -112273,84 +112273,84 @@ B.IP=new A.GH(1,"transform2d")
 B.IQ=new A.GH(2,"complex")
 B.a5K=new A.au([B.o,"Browse trending movies and TV shows",B.q,"Explora pel\xedculas y series en tendencia",B.r,"Explora pel\xb7l\xedcules i s\xe8ries de tend\xe8ncia"],t.C)
 B.aii=new A.aQ(B.a5K)
-B.a5M=new A.au([B.o,"Favorites",B.q,"Favoritos",B.r,"Preferits"],t.C)
-B.IR=new A.aQ(B.a5M)
-B.a5O=new A.au([B.o,"Continue watching",B.q,"Seguir viendo",B.r,"Continua mirant"],t.C)
-B.IS=new A.aQ(B.a5O)
-B.a5S=new A.au([B.o,"Filling up your bucket...",B.q,"Preparando las palomitas...",B.r,"Preparant les mongetes..."],t.C)
-B.ain=new A.aQ(B.a5S)
-B.a5W=new A.au([B.o,"TBA",B.q,"Por anunciar",B.r,"Per anunciar"],t.C)
-B.nZ=new A.aQ(B.a5W)
-B.a60=new A.au([B.o,"Director",B.q,"Director",B.r,"Director"],t.C)
-B.aiu=new A.aQ(B.a60)
-B.a61=new A.au([B.o,"Type a title to find movies and TV series.",B.q,"Escribe un t\xedtulo para encontrar pel\xedculas y series.",B.r,"Escriu un t\xedtol per trobar pel\xb7l\xedcules i s\xe8ries."],t.C)
+B.a5L=new A.au([B.o,"Popcorn is a free app for discovering movies and TV shows. Browse trending titles, watch trailers, and keep track of your favorites and watch history \u2014 all in one place.",B.q,"Popcorn es una app gratuita para descubrir pel\xedculas y series. Explora t\xedtulos en tendencia, mira tr\xe1ilers y guarda tus favoritas y tu historial, todo en un solo lugar.",B.r,"Popcorn \xe9s una app gratu\xefta per descobrir pel\xb7l\xedcules i s\xe8ries. Explora t\xedtols de tend\xe8ncia, mira tr\xe0ilers i desa les teves preferides i el teu historial, tot en un sol lloc."],t.C)
+B.aij=new A.aQ(B.a5L)
+B.a5N=new A.au([B.o,"Favorites",B.q,"Favoritos",B.r,"Preferits"],t.C)
+B.IR=new A.aQ(B.a5N)
+B.a5P=new A.au([B.o,"Continue watching",B.q,"Seguir viendo",B.r,"Continua mirant"],t.C)
+B.IS=new A.aQ(B.a5P)
+B.a5T=new A.au([B.o,"Filling up your bucket...",B.q,"Preparando las palomitas...",B.r,"Preparant les mongetes..."],t.C)
+B.aio=new A.aQ(B.a5T)
+B.a5X=new A.au([B.o,"TBA",B.q,"Por anunciar",B.r,"Per anunciar"],t.C)
+B.nZ=new A.aQ(B.a5X)
+B.a61=new A.au([B.o,"Director",B.q,"Director",B.r,"Director"],t.C)
 B.aiv=new A.aQ(B.a61)
-B.a63=new A.au([B.o,"Search titles...",B.q,"Buscar t\xedtulos...",B.r,"Cerca t\xedtols..."],t.C)
-B.aix=new A.aQ(B.a63)
-B.a64=new A.au([B.o,"Popcorn",B.q,"Popcorn",B.r,"Popcorn"],t.C)
-B.hq=new A.aQ(B.a64)
-B.a65=new A.au([B.o,"Could not sign in. Please try again.",B.q,"No se pudo iniciar sesi\xf3n. Int\xe9ntalo de nuevo.",B.r,"No s\u2019ha pogut iniciar la sessi\xf3. Torna-ho a provar."],t.C)
-B.aiy=new A.aQ(B.a65)
-B.a66=new A.au([B.o,"Trending this week",B.q,"Tendencias de la semana",B.r,"Tend\xe8ncies de la setmana"],t.C)
+B.a62=new A.au([B.o,"Type a title to find movies and TV series.",B.q,"Escribe un t\xedtulo para encontrar pel\xedculas y series.",B.r,"Escriu un t\xedtol per trobar pel\xb7l\xedcules i s\xe8ries."],t.C)
+B.aiw=new A.aQ(B.a62)
+B.a64=new A.au([B.o,"Search titles...",B.q,"Buscar t\xedtulos...",B.r,"Cerca t\xedtols..."],t.C)
+B.aiy=new A.aQ(B.a64)
+B.a65=new A.au([B.o,"Popcorn",B.q,"Popcorn",B.r,"Popcorn"],t.C)
+B.hq=new A.aQ(B.a65)
+B.a66=new A.au([B.o,"Could not sign in. Please try again.",B.q,"No se pudo iniciar sesi\xf3n. Int\xe9ntalo de nuevo.",B.r,"No s\u2019ha pogut iniciar la sessi\xf3. Torna-ho a provar."],t.C)
 B.aiz=new A.aQ(B.a66)
-B.a68=new A.au([B.o,"Sign in with Google",B.q,"Iniciar sesi\xf3n con Google",B.r,"Inicia la sessi\xf3 amb Google"],t.C)
-B.aiB=new A.aQ(B.a68)
-B.a69=new A.au([B.o,"Enter Popcorn",B.q,"Entrar en Popcorn",B.r,"Entra a Popcorn"],t.C)
+B.a67=new A.au([B.o,"Trending this week",B.q,"Tendencias de la semana",B.r,"Tend\xe8ncies de la setmana"],t.C)
+B.aiA=new A.aQ(B.a67)
+B.a69=new A.au([B.o,"Sign in with Google",B.q,"Iniciar sesi\xf3n con Google",B.r,"Inicia la sessi\xf3 amb Google"],t.C)
 B.aiC=new A.aQ(B.a69)
-B.a6c=new A.au([B.o,"Overview",B.q,"Sinopsis",B.r,"Sinopsi"],t.C)
-B.aiF=new A.aQ(B.a6c)
-B.a6d=new A.au([B.o,"episodes",B.q,"episodios",B.r,"episodis"],t.C)
-B.IU=new A.aQ(B.a6d)
-B.a6e=new A.au([B.o,"Search failed",B.q,"La b\xfasqueda fall\xf3",B.r,"La cerca ha fallat"],t.C)
-B.aiG=new A.aQ(B.a6e)
-B.a6f=new A.au([B.o,"You have no favorites yet.",B.q,"A\xfan no tienes favoritos.",B.r,"Encara no tens preferits."],t.C)
+B.a6a=new A.au([B.o,"Enter Popcorn",B.q,"Entrar en Popcorn",B.r,"Entra a Popcorn"],t.C)
+B.aiD=new A.aQ(B.a6a)
+B.a6d=new A.au([B.o,"Overview",B.q,"Sinopsis",B.r,"Sinopsi"],t.C)
+B.aiG=new A.aQ(B.a6d)
+B.a6e=new A.au([B.o,"episodes",B.q,"episodios",B.r,"episodis"],t.C)
+B.IU=new A.aQ(B.a6e)
+B.a6f=new A.au([B.o,"Search failed",B.q,"La b\xfasqueda fall\xf3",B.r,"La cerca ha fallat"],t.C)
 B.aiH=new A.aQ(B.a6f)
-B.a6h=new A.au([B.o,"Play",B.q,"Reproducir",B.r,"Reprodueix"],t.C)
-B.IV=new A.aQ(B.a6h)
-B.a6j=new A.au([B.o,"Seasons",B.q,"Temporadas",B.r,"Temporades"],t.C)
-B.aiK=new A.aQ(B.a6j)
-B.a6n=new A.au([B.o,"Search",B.q,"Buscar",B.r,"Cerca"],t.C)
-B.aiO=new A.aQ(B.a6n)
-B.a6o=new A.au([B.o,"Your pocket cinema for movies and TV shows",B.q,"Tu cine de bolsillo para pel\xedculas y series",B.r,"El teu cinema de butxaca per a pel\xb7l\xedcules i s\xe8ries"],t.C)
+B.a6g=new A.au([B.o,"You have no favorites yet.",B.q,"A\xfan no tienes favoritos.",B.r,"Encara no tens preferits."],t.C)
+B.aiI=new A.aQ(B.a6g)
+B.a6i=new A.au([B.o,"Play",B.q,"Reproducir",B.r,"Reprodueix"],t.C)
+B.IV=new A.aQ(B.a6i)
+B.a6k=new A.au([B.o,"Seasons",B.q,"Temporadas",B.r,"Temporades"],t.C)
+B.aiL=new A.aQ(B.a6k)
+B.a6o=new A.au([B.o,"Search",B.q,"Buscar",B.r,"Cerca"],t.C)
 B.aiP=new A.aQ(B.a6o)
-B.a6q=new A.au([B.o,"Watch trailers and previews",B.q,"Mira tr\xe1ilers y avances",B.r,"Mira tr\xe0ilers i avan\xe7os"],t.C)
-B.aiQ=new A.aQ(B.a6q)
-B.a6s=new A.au([B.o,"Could not load episodes.",B.q,"No se pudieron cargar los episodios.",B.r,"No s'han pogut carregar els episodis."],t.C)
-B.aiS=new A.aQ(B.a6s)
-B.a6u=new A.au([B.o,"Cast",B.q,"Reparto",B.r,"Repartiment"],t.C)
-B.aiU=new A.aQ(B.a6u)
-B.a6v=new A.au([B.o,"Remove from continue watching",B.q,"Quitar de seguir viendo",B.r,"Treu de continua mirant"],t.C)
+B.a6p=new A.au([B.o,"Your pocket cinema for movies and TV shows",B.q,"Tu cine de bolsillo para pel\xedculas y series",B.r,"El teu cinema de butxaca per a pel\xb7l\xedcules i s\xe8ries"],t.C)
+B.aiQ=new A.aQ(B.a6p)
+B.a6r=new A.au([B.o,"Watch trailers and previews",B.q,"Mira tr\xe1ilers y avances",B.r,"Mira tr\xe0ilers i avan\xe7os"],t.C)
+B.aiR=new A.aQ(B.a6r)
+B.a6t=new A.au([B.o,"Could not load episodes.",B.q,"No se pudieron cargar los episodios.",B.r,"No s'han pogut carregar els episodis."],t.C)
+B.aiT=new A.aQ(B.a6t)
+B.a6v=new A.au([B.o,"Cast",B.q,"Reparto",B.r,"Repartiment"],t.C)
 B.aiV=new A.aQ(B.a6v)
-B.a6y=new A.au([B.o,"No episodes available.",B.q,"No hay episodios disponibles.",B.r,"No hi ha episodis disponibles."],t.C)
-B.aiY=new A.aQ(B.a6y)
-B.a6A=new A.au([B.o,"seasons",B.q,"temporadas",B.r,"temporades"],t.C)
-B.aj_=new A.aQ(B.a6A)
-B.a6B=new A.au([B.o,"Save favorites and track your watch history",B.q,"Guarda favoritas y sigue tu historial",B.r,"Desa preferides i segueix el teu historial"],t.C)
+B.a6w=new A.au([B.o,"Remove from continue watching",B.q,"Quitar de seguir viendo",B.r,"Treu de continua mirant"],t.C)
+B.aiW=new A.aQ(B.a6w)
+B.a6z=new A.au([B.o,"No episodes available.",B.q,"No hay episodios disponibles.",B.r,"No hi ha episodis disponibles."],t.C)
+B.aiZ=new A.aQ(B.a6z)
+B.a6B=new A.au([B.o,"seasons",B.q,"temporadas",B.r,"temporades"],t.C)
 B.aj0=new A.aQ(B.a6B)
-B.a6D=new A.au([B.o,"Videos",B.q,"V\xeddeos",B.r,"V\xeddeos"],t.C)
-B.aj2=new A.aQ(B.a6D)
-B.a6E=new A.au([B.o,"You haven't watched anything yet.",B.q,"A\xfan no has visto nada.",B.r,"Encara no has vist res."],t.C)
+B.a6C=new A.au([B.o,"Save favorites and track your watch history",B.q,"Guarda favoritas y sigue tu historial",B.r,"Desa preferides i segueix el teu historial"],t.C)
+B.aj1=new A.aQ(B.a6C)
+B.a6E=new A.au([B.o,"Videos",B.q,"V\xeddeos",B.r,"V\xeddeos"],t.C)
 B.aj3=new A.aQ(B.a6E)
-B.a6F=new A.au([B.o,"No results found.",B.q,"No se encontraron resultados.",B.r,"No s'han trobat resultats."],t.C)
+B.a6F=new A.au([B.o,"You haven't watched anything yet.",B.q,"A\xfan no has visto nada.",B.r,"Encara no has vist res."],t.C)
 B.aj4=new A.aQ(B.a6F)
-B.a6G=new A.au([B.o,"TV Series",B.q,"Series",B.r,"S\xe8ries"],t.C)
+B.a6G=new A.au([B.o,"No results found.",B.q,"No se encontraron resultados.",B.r,"No s'han trobat resultats."],t.C)
 B.aj5=new A.aQ(B.a6G)
-B.a6J=new A.au([B.o,"episode",B.q,"episodio",B.r,"episodi"],t.C)
-B.IW=new A.aQ(B.a6J)
-B.a6L=new A.au([B.o,"Remove from favorites",B.q,"Quitar de favoritos",B.r,"Treu de preferits"],t.C)
-B.aj9=new A.aQ(B.a6L)
-B.a6N=new A.au([B.o,"season",B.q,"temporada",B.r,"temporada"],t.C)
-B.ajb=new A.aQ(B.a6N)
-B.a6P=new A.au([B.o,"No overview available.",B.q,"No hay sinopsis disponible.",B.r,"No hi ha sinopsi disponible."],t.C)
-B.ajd=new A.aQ(B.a6P)
-B.a6Q=new A.au([B.o,"Movies",B.q,"Pel\xedculas",B.r,"Pel\xb7l\xedcules"],t.C)
+B.a6H=new A.au([B.o,"TV Series",B.q,"Series",B.r,"S\xe8ries"],t.C)
+B.aj6=new A.aQ(B.a6H)
+B.a6K=new A.au([B.o,"episode",B.q,"episodio",B.r,"episodi"],t.C)
+B.IW=new A.aQ(B.a6K)
+B.a6M=new A.au([B.o,"Remove from favorites",B.q,"Quitar de favoritos",B.r,"Treu de preferits"],t.C)
+B.aja=new A.aQ(B.a6M)
+B.a6O=new A.au([B.o,"season",B.q,"temporada",B.r,"temporada"],t.C)
+B.ajc=new A.aQ(B.a6O)
+B.a6Q=new A.au([B.o,"No overview available.",B.q,"No hay sinopsis disponible.",B.r,"No hi ha sinopsi disponible."],t.C)
 B.aje=new A.aQ(B.a6Q)
-B.a6S=new A.au([B.o,"Sign in to continue",B.q,"Inicia sesi\xf3n para continuar",B.r,"Inicia la sessi\xf3 per continuar"],t.C)
-B.ajg=new A.aQ(B.a6S)
-B.a6W=new A.au([B.o,"Add to favorites",B.q,"A\xf1adir a favoritos",B.r,"Afegeix a preferits"],t.C)
-B.ajk=new A.aQ(B.a6W)
-B.a6Y=new A.au([B.o,"Discover trending films and series, watch trailers, and keep track of your favorites \u2014 all in one place.",B.q,"Descubre pel\xedculas y series en tendencia, mira tr\xe1ilers y guarda tus favoritas, todo en un solo lugar.",B.r,"Descobreix pel\xb7l\xedcules i s\xe8ries de tend\xe8ncia, mira tr\xe0ilers i desa les teves preferides, tot en un sol lloc."],t.C)
-B.ajm=new A.aQ(B.a6Y)
+B.a6R=new A.au([B.o,"Movies",B.q,"Pel\xedculas",B.r,"Pel\xb7l\xedcules"],t.C)
+B.ajf=new A.aQ(B.a6R)
+B.a6T=new A.au([B.o,"Sign in to continue",B.q,"Inicia sesi\xf3n para continuar",B.r,"Inicia la sessi\xf3 per continuar"],t.C)
+B.ajh=new A.aQ(B.a6T)
+B.a6X=new A.au([B.o,"Add to favorites",B.q,"A\xf1adir a favoritos",B.r,"Afegeix a preferits"],t.C)
+B.ajl=new A.aQ(B.a6X)
 B.cN=new A.pt(0,"up")
 B.cO=new A.pt(1,"right")
 B.cP=new A.pt(2,"down")

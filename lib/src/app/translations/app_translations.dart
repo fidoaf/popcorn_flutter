@@ -25,9 +25,12 @@ class AppTranslations {
   });
 
   static const landingDescription = Translation({
-    AppLanguage.en: 'Discover trending films and series, watch trailers, and keep track of your favorites — all in one place.',
-    AppLanguage.es: 'Descubre películas y series en tendencia, mira tráilers y guarda tus favoritas, todo en un solo lugar.',
-    AppLanguage.ca: 'Descobreix pel·lícules i sèries de tendència, mira tràilers i desa les teves preferides, tot en un sol lloc.',
+    AppLanguage.en:
+        'Popcorn is a free app for discovering movies and TV shows. Browse trending titles, watch trailers, and keep track of your favorites and watch history — all in one place.',
+    AppLanguage.es:
+        'Popcorn es una app gratuita para descubrir películas y series. Explora títulos en tendencia, mira tráilers y guarda tus favoritas y tu historial, todo en un solo lugar.',
+    AppLanguage.ca:
+        'Popcorn és una app gratuïta per descobrir pel·lícules i sèries. Explora títols de tendència, mira tràilers i desa les teves preferides i el teu historial, tot en un sol lloc.',
   });
 
   static const landingFeatureBrowse = Translation({
