@@ -9,6 +9,7 @@ import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/system_bars_background.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
+import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
@@ -37,6 +38,7 @@ void main(List<String> args) async {
     DeviceOrientation.landscapeRight,
   ]);
   await dotenv.load(fileName: 'assets/config/app.env');
+  await AuthController.ensureInitialized();
   runApp(const _PopcornAndroidApp());
 }
 
@@ -66,7 +68,13 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
       themeMode: ThemeMode.system,
       theme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.light),
       darkTheme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.dark),
-      builder: (context, child) => SystemBarsBackground(child: child!),
+      builder: (context, child) => SystemBarsBackground(
+        child: AuthGate(
+          controller: _services.authController,
+          loginBuilder: (context) => MaterialLoginView(controller: _services.authController),
+          child: child!,
+        ),
+      ),
       initialRoute: AppRoutes.home,
       onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
       onGenerateInitialRoutes: _initialRoutes,

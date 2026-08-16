@@ -9,6 +9,7 @@ import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/fluent/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
+import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
@@ -26,6 +27,7 @@ void main(List<String> args) async {
     return;
   }
   await dotenv.load(fileName: 'assets/config/app.env');
+  await AuthController.ensureInitialized();
   await windowManager.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final savedBounds = _WindowStatePersistence.readBounds(prefs);
@@ -124,6 +126,11 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
       themeMode: ThemeMode.system,
       theme: FluentThemeData.light(),
       darkTheme: FluentThemeData.dark(),
+      builder: (context, child) => AuthGate(
+        controller: _services.authController,
+        loginBuilder: (context) => FluentLoginView(controller: _services.authController),
+        child: child!,
+      ),
       initialRoute: AppRoutes.home,
       onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
       onGenerateInitialRoutes: _initialRoutes,

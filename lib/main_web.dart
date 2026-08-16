@@ -9,6 +9,7 @@ import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/system_bars_background.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
+import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
@@ -26,6 +27,7 @@ void main(List<String> args) async {
   }
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: 'assets/config/app.env');
+  await AuthController.ensureInitialized();
   runApp(const _PopcornWebApp());
 }
 
@@ -61,7 +63,17 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
           PageRouteBuilder<T>(settings: settings, pageBuilder: (context, _, _) => builder(context)),
-      builder: (context, child) => SystemBarsBackground(backgroundColor: _background, child: child!),
+      builder: (context, child) => SystemBarsBackground(
+        backgroundColor: _background,
+        child: AuthGate(
+          controller: _services.authController,
+          loginBuilder: (context) => Theme(
+            data: _theme,
+            child: MaterialLoginView(controller: _services.authController),
+          ),
+          child: child!,
+        ),
+      ),
       initialRoute: AppRoutes.home,
       onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
       onGenerateInitialRoutes: _initialRoutes,

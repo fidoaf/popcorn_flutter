@@ -9,6 +9,7 @@ import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/system_bars_background.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
+import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
@@ -30,6 +31,7 @@ void main(List<String> args) async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   await dotenv.load(fileName: 'assets/config/app.env');
+  await AuthController.ensureInitialized();
   runApp(const _PopcornTvApp());
 }
 
@@ -84,7 +86,15 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
       themeMode: ThemeMode.dark,
       theme: _PopcornTvApp._tvTheme(Brightness.light),
       darkTheme: _PopcornTvApp._tvTheme(Brightness.dark),
-      builder: (context, child) => _TvNavigationScope(child: SystemBarsBackground(child: child!)),
+      builder: (context, child) => _TvNavigationScope(
+        child: SystemBarsBackground(
+          child: AuthGate(
+            controller: _services.authController,
+            loginBuilder: (context) => MaterialLoginView(controller: _services.authController),
+            child: child!,
+          ),
+        ),
+      ),
       initialRoute: AppRoutes.home,
       onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
       onGenerateInitialRoutes: _initialRoutes,
