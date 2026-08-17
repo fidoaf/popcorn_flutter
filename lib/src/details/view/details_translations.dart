@@ -47,6 +47,12 @@ class DetailsTranslations {
 
   static const share = Translation({AppLanguage.en: 'Share', AppLanguage.es: 'Compartir', AppLanguage.ca: 'Comparteix'});
 
+  static const linkCopied = Translation({
+    AppLanguage.en: 'Link copied to clipboard',
+    AppLanguage.es: 'Enlace copiado al portapapeles',
+    AppLanguage.ca: 'Enllaç copiat al porta-retalls',
+  });
+
   static const watchNow = Translation({AppLanguage.en: 'Watch now', AppLanguage.es: 'Ver ahora', AppLanguage.ca: 'Mira-ho ara'});
 
   static const outOn = Translation({AppLanguage.en: 'Out on', AppLanguage.es: 'Estreno el', AppLanguage.ca: 'Estrena el'});

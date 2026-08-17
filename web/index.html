@@ -106,6 +106,24 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <!-- Resilient boot: GitHub Pages sometimes returns 503 for this entry script; retry with backoff. -->
+  <script>
+    (function () {
+      var maxAttempts = 5;
+      function loadBootstrap(attempt) {
+        var s = document.createElement('script');
+        s.src = 'flutter_bootstrap.js';
+        s.async = true;
+        s.onerror = function () {
+          s.remove();
+          if (attempt < maxAttempts) {
+            setTimeout(function () { loadBootstrap(attempt + 1); }, Math.min(1000 * Math.pow(2, attempt), 8000));
+          }
+        };
+        document.body.appendChild(s);
+      }
+      loadBootstrap(1);
+    })();
+  </script>
 </body>
 </html>
