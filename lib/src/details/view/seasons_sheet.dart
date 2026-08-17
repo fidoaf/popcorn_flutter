@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
+import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_episode.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
@@ -225,7 +226,7 @@ class _SeasonTileState extends State<_SeasonTile> {
     if (year != null) parts.add('$year');
     final rating = widget.season.voteAverage;
     if (rating != null && rating > 0) {
-      parts.add('\u2605 ${rating.toStringAsFixed(1)}');
+      parts.add('\u2605 ${context.formatDecimal(rating)}');
     }
     return parts.isEmpty ? null : parts.join(' \u00b7 ');
   }
@@ -298,18 +299,12 @@ class _EpisodeTile extends StatelessWidget {
       parts.add('${runtime.inMinutes}m');
     }
     final airDate = episode.airDate;
-    parts.add(airDate != null ? _formatDate(airDate) : DetailsTranslations.tba.trOf(context));
+    parts.add(airDate != null ? context.formatDate(airDate) : DetailsTranslations.tba.trOf(context));
     final rating = episode.voteAverage;
     if (rating != null && rating > 0) {
-      parts.add('\u2605 ${rating.toStringAsFixed(1)}');
+      parts.add('\u2605 ${context.formatDecimal(rating)}');
     }
     return parts.join(' \u00b7 ');
-  }
-
-  static String _formatDate(DateTime date) {
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '${date.year}-$month-$day';
   }
 }
 

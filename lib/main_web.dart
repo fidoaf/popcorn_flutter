@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
@@ -20,7 +21,7 @@ import 'package:popcorn_flutter/src/locale/view/translation_context_extension.da
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
-import 'src/app/view/web/web.dart';
+import 'src/app/view/web/splash_screen.dart';
 
 void main(List<String> args) async {
   if (!kIsWeb) {
@@ -29,6 +30,7 @@ void main(List<String> args) async {
   }
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: 'assets/config/app.env');
+  await initializeDateFormatting();
   await AuthController.ensureInitialized();
   runApp(const _PopcornWebApp());
 }

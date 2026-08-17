@@ -61,6 +61,15 @@ class _MacosLoginViewState extends State<MacosLoginView> {
                       onPressed: _busy ? null : _signIn,
                       child: _busy ? const SizedBox(width: 16, height: 16, child: ProgressCircle()) : Text(AuthTranslations.signInWithGoogle.trOf(context)),
                     ),
+                    if (AuthController.guestAccessAllowed) ...[
+                      const SizedBox(height: 12),
+                      PushButton(
+                        controlSize: ControlSize.large,
+                        secondary: true,
+                        onPressed: _busy ? null : widget.controller.continueAsGuest,
+                        child: Text(AuthTranslations.continueAsGuest.trOf(context)),
+                      ),
+                    ],
                     if (_error != null) ...[
                       const SizedBox(height: 16),
                       Text(

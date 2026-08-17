@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/favorites/view/material/material_favorite_button.dart';
+import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -220,7 +221,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
     final iconSize = widget.dpadFocus ? 28.0 : 18.0;
 
     final children = <Widget>[
-      if (rating != null) ...[Icon(Icons.star, size: iconSize), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
+      if (rating != null) ...[Icon(Icons.star, size: iconSize), const SizedBox(width: 4), Text(context.formatDecimal(rating))],
       if (widget.favoritesController != null) ...[
         const SizedBox(width: 4),
         MaterialFavoriteButton(

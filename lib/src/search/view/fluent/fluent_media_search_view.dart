@@ -4,6 +4,7 @@ import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_translations.dart';
 import 'package:popcorn_flutter/src/favorites/view/fluent/fluent_favorite_button.dart';
 import 'package:popcorn_flutter/src/history/view/watch_history_translations.dart';
+import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -238,7 +239,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
     final showPlay = isTouchPrimaryPlatform || _hovering;
 
     final children = <Widget>[
-      if (rating != null) ...[const Icon(FluentIcons.favorite_star_fill), const SizedBox(width: 4), Text(rating.toStringAsFixed(1))],
+      if (rating != null) ...[const Icon(FluentIcons.favorite_star_fill), const SizedBox(width: 4), Text(context.formatDecimal(rating))],
       if (widget.favoritesController != null) ...[
         const SizedBox(width: 4),
         FluentFavoriteButton(

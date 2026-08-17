@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
@@ -29,6 +30,7 @@ void main(List<String> args) async {
     return;
   }
   await dotenv.load(fileName: 'assets/config/app.env');
+  await initializeDateFormatting();
   await AuthController.ensureInitialized();
   runApp(const _PopcornMacosApp());
 }

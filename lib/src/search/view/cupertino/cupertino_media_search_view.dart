@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/cupertino/cupertino_favorite_button.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
+import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -194,7 +195,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
             if (rating != null) ...[
               const Icon(CupertinoIcons.star_fill, size: 14, color: CupertinoColors.systemYellow),
               const SizedBox(width: 4),
-              Text(rating.toStringAsFixed(1), style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle),
+              Text(context.formatDecimal(rating), style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle),
             ],
             if (widget.favoritesController != null)
               Padding(

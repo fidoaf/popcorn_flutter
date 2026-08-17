@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
+import 'package:popcorn_flutter/src/details/view/material/material_share_button.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/favorites/view/material/material_favorite_button.dart';
+import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
@@ -94,7 +96,7 @@ class MaterialMediaDetailsView extends StatelessWidget {
                       if (rating != null) ...[
                         const Icon(Icons.star, size: 18),
                         const SizedBox(width: 4),
-                        Text(rating.toStringAsFixed(1), style: theme.textTheme.titleMedium),
+                        Text(context.formatDecimal(rating), style: theme.textTheme.titleMedium),
                       ],
                     ],
                   ),
@@ -125,7 +127,7 @@ class MaterialMediaDetailsView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        if ((onPlay != null && item.isReleased) || (favoritesController != null && mediaType != null))
+        if ((onPlay != null && item.isReleased) || mediaType != null)
           Row(
             children: [
               if (onPlay != null && item.isReleased)
@@ -143,6 +145,7 @@ class MaterialMediaDetailsView extends StatelessWidget {
                   iconSize: 28,
                 ),
               ],
+              if (mediaType != null) ...[const SizedBox(width: 8), MaterialShareButton(item: item, type: mediaType!, iconSize: 28)],
             ],
           ),
         const SizedBox(height: 24),

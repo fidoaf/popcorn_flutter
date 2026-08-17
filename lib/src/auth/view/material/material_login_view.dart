@@ -59,6 +59,14 @@ class _MaterialLoginViewState extends State<MaterialLoginView> {
                   icon: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login),
                   label: Text(AuthTranslations.signInWithGoogle.trOf(context)),
                 ),
+                if (AuthController.guestAccessAllowed) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : widget.controller.continueAsGuest,
+                    icon: const Icon(Icons.person_outline),
+                    label: Text(AuthTranslations.continueAsGuest.trOf(context)),
+                  ),
+                ],
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Text(

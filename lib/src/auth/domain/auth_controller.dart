@@ -19,6 +19,7 @@ class AuthController extends ChangeNotifier {
 
   final SupabaseClient _client;
   late final StreamSubscription<AuthState> _subscription;
+  bool _isGuest = false;
 
   /// Initializes Supabase from `assets/config/app.env`. Call once during
   /// start-up, after `dotenv.load` and before creating an [AuthController].
@@ -29,11 +30,25 @@ class AuthController extends ChangeNotifier {
   /// The active session, or `null` when signed out.
   Session? get session => _client.auth.currentSession;
 
-  /// Whether a user is currently signed in.
-  bool get isSignedIn => session != null;
+  /// Whether a debug-only guest session is active.
+  bool get isGuest => _isGuest;
+
+  /// Whether debug-only guest access is available (never in release builds).
+  static bool get guestAccessAllowed => kDebugMode;
+
+  /// Whether a user is currently signed in (real session or debug guest).
+  bool get isSignedIn => _isGuest || session != null;
 
   /// The signed-in user, or `null` when signed out.
   User? get user => _client.auth.currentUser;
+
+  /// Enters a local guest session that bypasses sign-in. Only takes effect in
+  /// debug builds; a no-op in release so it can never ship enabled.
+  void continueAsGuest() {
+    if (!guestAccessAllowed || _isGuest) return;
+    _isGuest = true;
+    notifyListeners();
+  }
 
   /// Starts the Google OAuth flow. On web this redirects the current tab; on
   /// native platforms it opens an external browser and returns via the
@@ -54,7 +69,11 @@ class AuthController extends ChangeNotifier {
   }
 
   /// Signs the current user out.
-  Future<void> signOut() => _client.auth.signOut();
+  Future<void> signOut() {
+    _isGuest = false;
+    notifyListeners();
+    return _client.auth.signOut();
+  }
 
   @override
   void dispose() {

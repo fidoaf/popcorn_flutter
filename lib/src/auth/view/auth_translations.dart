@@ -22,4 +22,10 @@ class AuthTranslations {
     AppLanguage.es: 'No se pudo iniciar sesión. Inténtalo de nuevo.',
     AppLanguage.ca: 'No s’ha pogut iniciar la sessió. Torna-ho a provar.',
   });
+
+  static const continueAsGuest = Translation({
+    AppLanguage.en: 'Continue as guest (debug)',
+    AppLanguage.es: 'Continuar como invitado (debug)',
+    AppLanguage.ca: 'Continua com a convidat (debug)',
+  });
 }

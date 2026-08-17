@@ -64,6 +64,16 @@ class _FluentLoginViewState extends State<FluentLoginView> {
                     ],
                   ),
                 ),
+                if (AuthController.guestAccessAllowed) ...[
+                  const SizedBox(height: 12),
+                  Button(
+                    onPressed: _busy ? null : widget.controller.continueAsGuest,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [const Icon(FluentIcons.contact), const SizedBox(width: 8), Text(AuthTranslations.continueAsGuest.trOf(context))],
+                    ),
+                  ),
+                ],
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Text(

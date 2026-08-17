@@ -44,4 +44,12 @@ class DetailsTranslations {
   static const director = Translation({AppLanguage.en: 'Director', AppLanguage.es: 'Director', AppLanguage.ca: 'Director'});
 
   static const cast = Translation({AppLanguage.en: 'Cast', AppLanguage.es: 'Reparto', AppLanguage.ca: 'Repartiment'});
+
+  static const share = Translation({AppLanguage.en: 'Share', AppLanguage.es: 'Compartir', AppLanguage.ca: 'Comparteix'});
+
+  static const watchNow = Translation({AppLanguage.en: 'Watch now', AppLanguage.es: 'Ver ahora', AppLanguage.ca: 'Mira-ho ara'});
+
+  static const outOn = Translation({AppLanguage.en: 'Out on', AppLanguage.es: 'Estreno el', AppLanguage.ca: 'Estrena el'});
+
+  static const comingSoon = Translation({AppLanguage.en: 'Coming soon', AppLanguage.es: 'Próximamente', AppLanguage.ca: 'Ben aviat'});
 }

@@ -3,6 +3,7 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/favorites/view/macos/macos_favorite_button.dart';
+import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -234,7 +235,7 @@ class _MediaResultTileState extends State<_MediaResultTile> {
               if (rating != null) ...[
                 const MacosIcon(CupertinoIcons.star_fill, size: 14, color: MacosColors.systemYellowColor),
                 const SizedBox(width: 4),
-                Text(rating.toStringAsFixed(1), style: typography.subheadline),
+                Text(context.formatDecimal(rating), style: typography.subheadline),
               ],
               if (widget.favoritesController != null) ...[
                 const SizedBox(width: 8),
