@@ -10,7 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// whenever the session changes (sign-in, sign-out, token refresh).
 class AuthController extends ChangeNotifier {
   AuthController({SupabaseClient? client}) : _client = client ?? Supabase.instance.client {
-    _subscription = _client.auth.onAuthStateChange.listen((_) => notifyListeners());
+    _subscription = _client.auth.onAuthStateChange.listen((_) => notifyListeners(), onError: _onAuthStreamError);
     _pendingOAuthError = _readRedirectError();
   }
 
@@ -78,6 +78,17 @@ class AuthController extends ChangeNotifier {
     final error = _pendingOAuthError;
     _pendingOAuthError = null;
     return error;
+  }
+
+  // Supabase reports auth failures (e.g. a failed OAuth redirect processed at
+  // start-up) as errors on the auth state stream. Absorb them here so they do
+  // not surface as unhandled zone errors, and keep the cause so the login
+  // screen can explain it.
+  void _onAuthStreamError(Object error, StackTrace stackTrace) {
+    if (error is AuthException) {
+      _pendingOAuthError = error.message;
+      notifyListeners();
+    }
   }
 
   // On web, a failed OAuth redirect returns to the app with the error in the
