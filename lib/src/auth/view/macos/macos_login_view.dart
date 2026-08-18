@@ -29,8 +29,8 @@ class _MacosLoginViewState extends State<MacosLoginView> {
     });
     try {
       await widget.controller.signInWithGoogle();
-    } catch (_) {
-      if (mounted) setState(() => _error = AuthTranslations.signInError.trOf(context));
+    } catch (error) {
+      if (mounted) setState(() => _error = AuthTranslations.signInErrorFor(context, error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -28,8 +28,8 @@ class _FluentLoginViewState extends State<FluentLoginView> {
     });
     try {
       await widget.controller.signInWithGoogle();
-    } catch (_) {
-      if (mounted) setState(() => _error = AuthTranslations.signInError.trOf(context));
+    } catch (error) {
+      if (mounted) setState(() => _error = AuthTranslations.signInErrorFor(context, error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
