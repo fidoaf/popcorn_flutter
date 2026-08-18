@@ -98,6 +98,9 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
   List<Route<dynamic>> _initialRoutes(String initialRoute) {
     final request = AppRoutes.parse(initialRoute);
     if (request is LandingRoute) {
+      if (_services.authController.isSignedIn) {
+        return <Route<dynamic>>[_buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute())];
+      }
       return <Route<dynamic>>[_buildRoute(const RouteSettings(name: AppRoutes.landing), const LandingRoute())];
     }
     final home = _buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute());
