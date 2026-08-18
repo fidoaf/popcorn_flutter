@@ -46,7 +46,7 @@ class WatchHistoryController extends ChangeNotifier {
   }
 
   Future<void> _load() async {
-    final loaded = await _repository.load();
+    final loaded = List.of(await _repository.load());
     loaded.sort((a, b) => b.watchedAt.compareTo(a.watchedAt));
     _entries = loaded.take(maxEntries).toList();
     notifyListeners();

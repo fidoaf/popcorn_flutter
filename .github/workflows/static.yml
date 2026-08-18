@@ -33,12 +33,26 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      - name: Write env file
+      - name: Write env file (production)
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
           mkdir -p docs/assets/assets/config
           printf '%s\n' "$ENV_FILE" > docs/assets/assets/config/app.env
+      # Test build lives in docs/test/ (built locally with --base-href /popcorn_flutter/test/).
+      # Falls back to the production ENV_FILE secret when TEST_ENV_FILE is not set.
+      - name: Write env file (test)
+        if: hashFiles('docs/test/**') != ''
+        env:
+          TEST_ENV_FILE: ${{ secrets.TEST_ENV_FILE }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          mkdir -p docs/test/assets/assets/config
+          if [ -n "$TEST_ENV_FILE" ]; then
+            printf '%s\n' "$TEST_ENV_FILE" > docs/test/assets/assets/config/app.env
+          else
+            printf '%s\n' "$ENV_FILE" > docs/test/assets/assets/config/app.env
+          fi
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

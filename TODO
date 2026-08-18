@@ -1,7 +1,14 @@
 flutter run -d chrome --web-port=3000 -t lib/main_web.dart
 
 Web build (entry point required; --pwa-strategy=none avoids stale service-worker cache on GitHub Pages):
-flutter build web -t lib/main_web.dart --base-href /popcorn_flutter/ --output docs --pwa-strategy=none
+# Production
+flutter build web -t lib/main_web.dart --base-href /popcorn_flutter/ \
+  --output docs --pwa-strategy=none
+
+# Test (into a subfolder so it isn't wiped)
+flutter build web -t lib/main_test.dart --base-href /popcorn_flutter/test/ \
+  --output build/web_test --pwa-strategy=none
+cp -r build/web_test docs/test
 
 Windows installer:
 Para ejecutar o instalar una aplicación de Flutter directamente en tu entorno local de Windows en modo de desarrollo, ejecuta el comando flutter run -d windows desde la terminal en la raíz de tu proyecto. [1, 2] 

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
@@ -39,7 +41,8 @@ Future<void> shareMedia(BuildContext context, MediaItem item, MediaType type) as
         mailToFallbackEnabled: false,
       ),
     );
-  } catch (_) {
+  } catch (e) {
+    log('Failed to share media: $e', name: 'shareMedia');
     await Clipboard.setData(ClipboardData(text: text));
     messenger?.showSnackBar(SnackBar(content: Text(copiedMessage)));
   }
