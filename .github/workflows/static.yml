@@ -53,6 +53,20 @@ jobs:
           else
             printf '%s\n' "$ENV_FILE" > docs/test/assets/assets/config/app.env
           fi
+      # Admin build lives in docs/admin/ (built locally with --base-href /popcorn_flutter/admin/).
+      # Falls back to the production ENV_FILE secret when ADMIN_ENV_FILE is not set.
+      - name: Write env file (admin)
+        if: hashFiles('docs/admin/**') != ''
+        env:
+          ADMIN_ENV_FILE: ${{ secrets.ADMIN_ENV_FILE }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          mkdir -p docs/admin/assets/assets/config
+          if [ -n "$ADMIN_ENV_FILE" ]; then
+            printf '%s\n' "$ADMIN_ENV_FILE" > docs/admin/assets/assets/config/app.env
+          else
+            printf '%s\n' "$ENV_FILE" > docs/admin/assets/assets/config/app.env
+          fi
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
