@@ -11,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AuthController extends ChangeNotifier {
   AuthController({SupabaseClient? client}) : _client = client ?? Supabase.instance.client {
     _subscription = _client.auth.onAuthStateChange.listen((_) => notifyListeners());
+    _pendingOAuthError = _readRedirectError();
   }
 
   // Registered in the Supabase dashboard and in each platform's deep-link
@@ -20,6 +21,7 @@ class AuthController extends ChangeNotifier {
   final SupabaseClient _client;
   late final StreamSubscription<AuthState> _subscription;
   bool _isGuest = false;
+  String? _pendingOAuthError;
 
   /// Initializes Supabase from `assets/config/app.env`. Call once during
   /// start-up, after `dotenv.load` and before creating an [AuthController].
@@ -66,6 +68,40 @@ class AuthController extends ChangeNotifier {
   static String _webRedirect() {
     final base = Uri.base;
     return '${base.origin}${base.path}';
+  }
+
+  /// Returns a human-readable description of an OAuth failure reported through
+  /// the web redirect URL (e.g. `?error=access_denied&error_description=...`),
+  /// or `null` when there is none. The value is returned only once so the
+  /// message is surfaced a single time.
+  String? consumeOAuthError() {
+    final error = _pendingOAuthError;
+    _pendingOAuthError = null;
+    return error;
+  }
+
+  // On web, a failed OAuth redirect returns to the app with the error in the
+  // query string (and occasionally the URL fragment). Prefer the human-readable
+  // description, falling back to the error code.
+  static String? _readRedirectError() {
+    if (!kIsWeb) return null;
+    final uri = Uri.base;
+    final params = <String, String>{...uri.queryParameters, ..._fragmentParams(uri)};
+    if (!params.containsKey('error') && !params.containsKey('error_description')) return null;
+    final description = params['error_description'];
+    if (description != null && description.isNotEmpty) return description;
+    return params['error'];
+  }
+
+  static Map<String, String> _fragmentParams(Uri uri) {
+    final fragment = uri.fragment;
+    if (!fragment.contains('=')) return const {};
+    final query = fragment.contains('?') ? fragment.split('?').last : fragment;
+    try {
+      return Uri.splitQueryString(query);
+    } catch (_) {
+      return const {};
+    }
   }
 
   /// Signs the current user out.

@@ -29,8 +29,17 @@ class AuthTranslations {
   /// Builds the sign-in error message, appending the underlying cause when the
   /// failure carries a human-readable explanation.
   static String signInErrorFor(BuildContext context, Object error) {
+    return _compose(context, _detailOf(error));
+  }
+
+  /// Builds the sign-in error message from an already-resolved [detail], such
+  /// as the description returned by a failed OAuth web redirect.
+  static String signInErrorWithDetail(BuildContext context, String? detail) {
+    return _compose(context, detail);
+  }
+
+  static String _compose(BuildContext context, String? detail) {
     final message = signInError.trOf(context);
-    final detail = _detailOf(error);
     return detail == null || detail.isEmpty ? message : '$message\n$detail';
   }
 

@@ -1,8 +1,9 @@
 import 'dart:developer';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
+import 'package:popcorn_flutter/src/app/view/app_toast.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
@@ -29,7 +30,6 @@ Future<void> shareMedia(BuildContext context, MediaItem item, MediaType type) as
       : _releaseStatus(context, item);
   final text = '${item.title}\n$summary$url\n\n$tail';
   final box = context.findRenderObject() as RenderBox?;
-  final messenger = ScaffoldMessenger.maybeOf(context);
   final copiedMessage = DetailsTranslations.linkCopied.trOf(context);
   try {
     await SharePlus.instance.share(
@@ -44,7 +44,7 @@ Future<void> shareMedia(BuildContext context, MediaItem item, MediaType type) as
   } catch (e) {
     log('Failed to share media: $e', name: 'shareMedia');
     await Clipboard.setData(ClipboardData(text: text));
-    messenger?.showSnackBar(SnackBar(content: Text(copiedMessage)));
+    if (context.mounted) showAppToast(context, copiedMessage);
   }
 }
 

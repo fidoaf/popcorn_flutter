@@ -20,6 +20,16 @@ class FluentLoginView extends StatefulWidget {
 class _FluentLoginViewState extends State<FluentLoginView> {
   bool _busy = false;
   String? _error;
+  bool _handledRedirectError = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_handledRedirectError) return;
+    _handledRedirectError = true;
+    final detail = widget.controller.consumeOAuthError();
+    if (detail != null) _error = AuthTranslations.signInErrorWithDetail(context, detail);
+  }
 
   Future<void> _signIn() async {
     setState(() {
