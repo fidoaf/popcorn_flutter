@@ -166,7 +166,7 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
 
   Widget _landingPage(BuildContext context) => PopcornWebSplashScreen(
     child: PopcornLandingView(
-      onEnter: () => _navigatorKey.currentState?.pushNamed(AppRoutes.home),
+      onEnter: () => _navigatorKey.currentState?.pushReplacementNamed(AppRoutes.home),
       onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
       onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
     ),
@@ -291,6 +291,7 @@ class _WebHomeViewState extends State<_WebHomeView> {
   @override
   Widget build(BuildContext context) {
     final services = widget.services;
+    final showLabels = MediaQuery.sizeOf(context).width >= 600;
     return PopcornWebSplashScreen(
       child: Theme(
         data: _PopcornWebApp._theme,
@@ -298,17 +299,41 @@ class _WebHomeViewState extends State<_WebHomeView> {
           backgroundColor: _PopcornWebApp._background,
           appBar: AppBar(
             backgroundColor: _PopcornWebApp._background,
-            title: Text(SearchTranslations.pageTitle.trOf(context)),
+            centerTitle: true,
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showLabels)
+                  TextButton.icon(
+                    icon: const Icon(Icons.history),
+                    label: Text(WatchHistoryTranslations.pageTitle.trOf(context)),
+                    onPressed: () => Navigator.of(context).pushNamed(AppRoutes.history),
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.history),
+                    tooltip: WatchHistoryTranslations.pageTitle.trOf(context),
+                    onPressed: () => Navigator.of(context).pushNamed(AppRoutes.history),
+                  ),
+                const SizedBox(width: 4),
+                if (showLabels)
+                  TextButton.icon(
+                    icon: const Icon(Icons.favorite),
+                    label: Text(FavoritesTranslations.pageTitle.trOf(context)),
+                    onPressed: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.favorite),
+                    tooltip: FavoritesTranslations.pageTitle.trOf(context),
+                    onPressed: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+                  ),
+              ],
+            ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.history),
-                tooltip: WatchHistoryTranslations.pageTitle.trOf(context),
-                onPressed: () => Navigator.of(context).pushNamed(AppRoutes.history),
-              ),
-              IconButton(
-                icon: const Icon(Icons.favorite),
-                tooltip: FavoritesTranslations.pageTitle.trOf(context),
-                onPressed: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: UserIdentityTitle(controller: services.authController, fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context))),
               ),
             ],
           ),

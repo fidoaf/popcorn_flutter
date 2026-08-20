@@ -1,4 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_translations.dart';
@@ -25,9 +26,14 @@ class FluentMediaSearchView extends StatefulWidget {
     this.onOpenContinueWatching,
     this.initialQuery,
     this.initialMediaType,
+    this.authController,
   });
 
   final MediaSearchController controller;
+
+  /// Drives the page title greeting (avatar + first name). When `null`, the
+  /// static "Search" title is shown instead.
+  final AuthController? authController;
 
   /// Drives the per-result favorite toggle. When `null`, no favorite button is shown.
   final FavoritesController? favoritesController;
@@ -121,29 +127,47 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
 
   @override
   Widget build(BuildContext context) {
+    final showLabels = MediaQuery.sizeOf(context).width >= 600;
     return ScaffoldPage(
       header: PageHeader(
         padding: 16,
-        title: Text(SearchTranslations.pageTitle.trOf(context)),
-        commandBar: widget.onOpenFavorites == null && widget.onOpenContinueWatching == null
-            ? null
-            : CommandBar(
-                mainAxisAlignment: MainAxisAlignment.end,
-                primaryItems: [
+        title: widget.onOpenFavorites == null && widget.onOpenContinueWatching == null
+            ? Text(SearchTranslations.pageTitle.trOf(context))
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                   if (widget.onOpenContinueWatching != null)
-                    CommandBarButton(
-                      icon: const Icon(FluentIcons.play),
-                      label: Text(WatchHistoryTranslations.pageTitle.trOf(context)),
-                      onPressed: widget.onOpenContinueWatching,
-                    ),
+                    showLabels
+                        ? Button(
+                            onPressed: widget.onOpenContinueWatching,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [const Icon(FluentIcons.play), const SizedBox(width: 8), Text(WatchHistoryTranslations.pageTitle.trOf(context))],
+                            ),
+                          )
+                        : Tooltip(
+                            message: WatchHistoryTranslations.pageTitle.trOf(context),
+                            child: IconButton(icon: const Icon(FluentIcons.play), onPressed: widget.onOpenContinueWatching),
+                          ),
+                  if (widget.onOpenContinueWatching != null && widget.onOpenFavorites != null) const SizedBox(width: 8),
                   if (widget.onOpenFavorites != null)
-                    CommandBarButton(
-                      icon: const Icon(FluentIcons.heart),
-                      label: Text(FavoritesTranslations.pageTitle.trOf(context)),
-                      onPressed: widget.onOpenFavorites,
-                    ),
+                    showLabels
+                        ? Button(
+                            onPressed: widget.onOpenFavorites,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [const Icon(FluentIcons.heart), const SizedBox(width: 8), Text(FavoritesTranslations.pageTitle.trOf(context))],
+                            ),
+                          )
+                        : Tooltip(
+                            message: FavoritesTranslations.pageTitle.trOf(context),
+                            child: IconButton(icon: const Icon(FluentIcons.heart), onPressed: widget.onOpenFavorites),
+                          ),
                 ],
               ),
+        commandBar: widget.authController == null
+            ? null
+            : UserIdentityTitle(controller: widget.authController!, fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context))),
       ),
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -44,6 +44,30 @@ class AuthController extends ChangeNotifier {
   /// The signed-in user, or `null` when signed out.
   User? get user => _client.auth.currentUser;
 
+  /// The signed-in user's full display name from the identity provider, or
+  /// `null` when unavailable (e.g. signed out or debug guest).
+  String? get displayName {
+    final metadata = user?.userMetadata;
+    final name = metadata?['full_name'] ?? metadata?['name'];
+    if (name is String && name.trim().isNotEmpty) return name.trim();
+    return null;
+  }
+
+  /// The signed-in user's first name, derived from [displayName], or `null`.
+  String? get firstName {
+    final name = displayName;
+    if (name == null) return null;
+    return name.split(RegExp(r'\s+')).first;
+  }
+
+  /// URL of the signed-in user's avatar image, or `null` when unavailable.
+  String? get avatarUrl {
+    final metadata = user?.userMetadata;
+    final url = metadata?['avatar_url'] ?? metadata?['picture'];
+    if (url is String && url.trim().isNotEmpty) return url.trim();
+    return null;
+  }
+
   /// Enters a local guest session that bypasses sign-in. Only takes effect in
   /// debug builds; a no-op in release so it can never ship enabled.
   void continueAsGuest() {

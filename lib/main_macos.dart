@@ -142,7 +142,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
 
   Widget _landingPage(BuildContext context) => PopcornMacosSplashScreen(
     child: PopcornLandingView(
-      onEnter: () => _navigatorKey.currentState?.pushNamed(AppRoutes.home),
+      onEnter: () => _navigatorKey.currentState?.pushReplacementNamed(AppRoutes.home),
       onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
       onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
     ),
@@ -283,23 +283,73 @@ class _MacosHomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showLabels = MediaQuery.sizeOf(context).width >= 600;
     return PopcornMacosSplashScreen(
       child: MacosWindow(
         child: MacosScaffold(
           toolBar: ToolBar(
-            title: Text(SearchTranslations.pageTitle.trOf(context)),
-            actions: [
-              ToolBarIconButton(
-                label: WatchHistoryTranslations.pageTitle.trOf(context),
-                icon: const MacosIcon(CupertinoIcons.play_rectangle),
-                onPressed: () => Navigator.of(context).pushNamed(AppRoutes.history),
-                showLabel: false,
+            centerTitle: true,
+            titleWidth: showLabels ? 380 : 120,
+            title: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (showLabels)
+                    PushButton(
+                      controlSize: ControlSize.large,
+                      secondary: true,
+                      onPressed: () => Navigator.of(context).pushNamed(AppRoutes.history),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const MacosIcon(CupertinoIcons.play_rectangle, size: 16),
+                          const SizedBox(width: 6),
+                          Text(WatchHistoryTranslations.pageTitle.trOf(context)),
+                        ],
+                      ),
+                    )
+                  else
+                    MacosTooltip(
+                      message: WatchHistoryTranslations.pageTitle.trOf(context),
+                      child: MacosIconButton(
+                        icon: const MacosIcon(CupertinoIcons.play_rectangle),
+                        onPressed: () => Navigator.of(context).pushNamed(AppRoutes.history),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  if (showLabels)
+                    PushButton(
+                      controlSize: ControlSize.large,
+                      secondary: true,
+                      onPressed: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const MacosIcon(CupertinoIcons.heart, size: 16),
+                          const SizedBox(width: 6),
+                          Text(FavoritesTranslations.pageTitle.trOf(context)),
+                        ],
+                      ),
+                    )
+                  else
+                    MacosTooltip(
+                      message: FavoritesTranslations.pageTitle.trOf(context),
+                      child: MacosIconButton(
+                        icon: const MacosIcon(CupertinoIcons.heart),
+                        onPressed: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+                      ),
+                    ),
+                ],
               ),
-              ToolBarIconButton(
-                label: FavoritesTranslations.pageTitle.trOf(context),
-                icon: const MacosIcon(CupertinoIcons.heart),
-                onPressed: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
-                showLabel: false,
+            ),
+            actions: [
+              CustomToolbarItem(
+                inToolbarBuilder: (context) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: UserIdentityTitle(controller: services.authController, fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context))),
+                ),
               ),
             ],
           ),

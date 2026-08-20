@@ -53,4 +53,6 @@ class AuthTranslations {
     AppLanguage.es: 'Continuar como invitado (debug)',
     AppLanguage.ca: 'Continua com a convidat (debug)',
   });
+
+  static const guestName = Translation({AppLanguage.en: 'Guest', AppLanguage.es: 'Invitado', AppLanguage.ca: 'Convidat'});
 }

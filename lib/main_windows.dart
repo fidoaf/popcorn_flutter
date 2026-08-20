@@ -213,7 +213,7 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
 
   Widget _landingPage(BuildContext context) => PopcornFluentSplashScreen(
     child: PopcornLandingView(
-      onEnter: () => _navigatorKey.currentState?.pushNamed(AppRoutes.home),
+      onEnter: () => _navigatorKey.currentState?.pushReplacementNamed(AppRoutes.home),
       onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
       onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
     ),
@@ -328,6 +328,7 @@ class _WindowsHomeView extends StatelessWidget {
       child: FluentMediaSearchView(
         controller: services.searchController,
         favoritesController: services.favoritesController,
+        authController: services.authController,
         initialQuery: initialQuery,
         initialMediaType: initialMediaType,
         onMediaSelected: (media) => Navigator.of(context).pushNamed(AppRoutes.details(services.searchController.mediaType, media.id), arguments: media),

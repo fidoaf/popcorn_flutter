@@ -1,0 +1,15 @@
+Classic movie posters bundled in this folder are in the PUBLIC DOMAIN and were
+sourced from Wikimedia Commons. Attribution is not legally required for public
+domain works, but is provided here for transparency.
+
+the_kid_1921.jpg            The Kid (1921)                        https://commons.wikimedia.org/wiki/File:The_Kid_(1921)_poster.jpg
+caligari_1920.jpg           Das Cabinet des Dr. Caligari (1920)   https://commons.wikimedia.org/wiki/File:1920_Erich_Ludwig_Stahl_und_Otto_Arpke_Plakat-Variante_zum_Horrorfilm_%22Das_Cabinet_des_Dr._Caligari%22,_DECLA.jpg
+his_girl_friday_1940.jpg    His Girl Friday (1940)                https://commons.wikimedia.org/wiki/File:His_Girl_Friday_(1940_poster).jpg
+charade_1963.jpg            Charade (1963)                        https://commons.wikimedia.org/wiki/File:Charade_(1963_poster).jpg
+plan9_1959.jpg              Plan 9 from Outer Space (1959)        https://commons.wikimedia.org/wiki/File:Plan_9_Alternative_poster.jpg
+phantom_opera_1925.jpg      The Phantom of the Opera (1925)       https://commons.wikimedia.org/wiki/File:The_Phantom_of_the_Opera_(1925).jpg
+frankenstein_1931.jpg       Frankenstein (1931)                   https://commons.wikimedia.org/wiki/File:Frankenstein_poster_1931.jpg
+night_living_dead_1968.jpg  Night of the Living Dead (1968)       https://commons.wikimedia.org/wiki/File:Night_Of_The_Living_Dead_(1968)_-_Poster.jpg
+gold_rush_1925.jpg          The Gold Rush (1925)                  https://commons.wikimedia.org/wiki/File:Gold_rush_poster.jpg
+
+All files listed above are tagged "Public domain" on Wikimedia Commons.
