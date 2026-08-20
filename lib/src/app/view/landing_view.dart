@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
+import 'package:popcorn_flutter/src/app/view/poster_gallery.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 
@@ -169,14 +170,14 @@ class _HeroSection extends StatelessWidget {
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Expanded(flex: 5, child: _PosterCollage()),
+                  const Expanded(flex: 5, child: PosterCollage()),
                   const SizedBox(width: 48),
                   Expanded(flex: 4, child: _HeroText(onEnter: onEnter)),
                 ],
               )
             : Column(
                 children: [
-                  const _PosterCollage(),
+                  const PosterCollage(),
                   const SizedBox(height: 40),
                   _HeroText(onEnter: onEnter),
                 ],
@@ -231,55 +232,6 @@ class _HeroText extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-/// Decorative grid of public-domain classic movie posters (bundled locally).
-class _PosterCollage extends StatelessWidget {
-  const _PosterCollage();
-
-  // Public-domain posters sourced from Wikimedia Commons (see assets/posters/CREDITS.txt).
-  static const List<String> assets = [
-    'assets/posters/the_kid_1921.jpg',
-    'assets/posters/caligari_1920.jpg',
-    'assets/posters/his_girl_friday_1940.jpg',
-    'assets/posters/charade_1963.jpg',
-    'assets/posters/plan9_1959.jpg',
-    'assets/posters/phantom_opera_1925.jpg',
-    'assets/posters/frankenstein_1931.jpg',
-    'assets/posters/night_living_dead_1968.jpg',
-    'assets/posters/gold_rush_1925.jpg',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: assets.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 2 / 3),
-      itemBuilder: (context, index) => _PosterTile(asset: assets[index]),
-    );
-  }
-}
-
-class _PosterTile extends StatelessWidget {
-  const _PosterTile({required this.asset});
-
-  final String asset;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 6))],
-        ),
-        child: Image.asset(asset, fit: BoxFit.cover),
-      ),
     );
   }
 }

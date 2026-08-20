@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
+import 'package:popcorn_flutter/src/app/view/poster_gallery.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
@@ -48,60 +49,116 @@ class _MaterialLoginViewState extends State<MaterialLoginView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.local_movies, size: 72, color: theme.colorScheme.primary),
-                const SizedBox(height: 16),
-                Text(AppTranslations.appTitle.trOf(context), style: theme.textTheme.headlineMedium),
-                const SizedBox(height: 8),
-                Text(AuthTranslations.signInSubtitle.trOf(context), textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
-                const SizedBox(height: 32),
-                FilledButton.icon(
-                  onPressed: _busy ? null : _signIn,
-                  icon: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login),
-                  label: Text(AuthTranslations.signInWithGoogle.trOf(context)),
+    final theme = ThemeData(
+      colorSchemeSeed: Colors.deepOrange,
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF0F1014),
+    );
+    return Theme(
+      data: theme,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0F1014),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            const PosterBackdrop(),
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: _LoginCard(theme: theme, child: _buildContent(context, theme)),
+                  ),
                 ),
-                if (AuthController.guestAccessAllowed) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : widget.controller.continueAsGuest,
-                    icon: const Icon(Icons.person_outline),
-                    label: Text(AuthTranslations.continueAsGuest.trOf(context)),
-                  ),
-                ],
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: theme.colorScheme.error),
-                  ),
-                ],
-                if (widget.onOpenPrivacy != null || widget.onOpenTerms != null) ...[
-                  const SizedBox(height: 32),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (widget.onOpenPrivacy != null) TextButton(onPressed: widget.onOpenPrivacy, child: Text(LegalTranslations.privacyLink.trOf(context))),
-                      if (widget.onOpenPrivacy != null && widget.onOpenTerms != null) Text('·', style: theme.textTheme.bodySmall),
-                      if (widget.onOpenTerms != null) TextButton(onPressed: widget.onOpenTerms, child: Text(LegalTranslations.termsLink.trOf(context))),
-                    ],
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, ThemeData theme) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.asset('assets/icons/app_icon.png', width: 76, height: 76)),
+        const SizedBox(height: 18),
+        Text(AppTranslations.appTitle.trOf(context), style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Text(
+          AuthTranslations.signInSubtitle.trOf(context),
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+        ),
+        const SizedBox(height: 32),
+        FilledButton.icon(
+          onPressed: _busy ? null : _signIn,
+          icon: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login),
+          label: Text(AuthTranslations.signInWithGoogle.trOf(context)),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(52),
+            textStyle: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        if (AuthController.guestAccessAllowed) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _busy ? null : widget.controller.continueAsGuest,
+            icon: const Icon(Icons.person_outline),
+            label: Text(AuthTranslations.continueAsGuest.trOf(context)),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white24),
+            ),
+          ),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 16),
+          Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: theme.colorScheme.error),
+          ),
+        ],
+        if (widget.onOpenPrivacy != null || widget.onOpenTerms != null) ...[
+          const SizedBox(height: 24),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (widget.onOpenPrivacy != null) TextButton(onPressed: widget.onOpenPrivacy, child: Text(LegalTranslations.privacyLink.trOf(context))),
+              if (widget.onOpenPrivacy != null && widget.onOpenTerms != null) Text('·', style: theme.textTheme.bodySmall),
+              if (widget.onOpenTerms != null) TextButton(onPressed: widget.onOpenTerms, child: Text(LegalTranslations.termsLink.trOf(context))),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Dark, softly-bordered card that floats over the poster backdrop.
+class _LoginCard extends StatelessWidget {
+  const _LoginCard({required this.theme, required this.child});
+
+  final ThemeData theme;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+      decoration: BoxDecoration(
+        color: const Color(0xF216181F),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white10),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 30, offset: const Offset(0, 16))],
+      ),
+      child: child,
     );
   }
 }
