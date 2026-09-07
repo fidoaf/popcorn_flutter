@@ -1,5 +1,5 @@
 {
-  "initialProvider": "nxsha",
+  "initialProvider": "vidsrcir",
   "providers": [
     {
       "name": "nxsha",
@@ -10,6 +10,17 @@
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },
       "headers": {},
       "cookies": []
+    },
+    {
+      "name": "vidsrcir",
+      "scheme": "https",
+      "host": "vidsrc.ir",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
     },
     {
       "name": "vidlux",
