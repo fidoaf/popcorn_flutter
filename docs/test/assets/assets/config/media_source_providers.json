@@ -19,8 +19,7 @@
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },
       "headers": {},
-      "cookies": [],
-      "sandbox": false
+      "cookies": []
     },
     {
       "name": "vidlux",
