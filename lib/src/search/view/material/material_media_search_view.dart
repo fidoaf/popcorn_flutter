@@ -136,6 +136,10 @@ class _MaterialMediaSearchViewState extends State<MaterialMediaSearchView> with 
               hintText: SearchTranslations.searchPlaceholder.trOf(context),
               border: const OutlineInputBorder(),
               prefixIcon: hasQuery ? IconButton(icon: const Icon(Icons.clear), onPressed: clearSearch) : const Icon(Icons.search),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.arrow_forward),
+                onPressed: hasQuery ? submitSearch : null,
+              ),
             ),
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:popcorn_flutter/src/details/view/details_play_action.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/fluent/fluent_share_button.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
@@ -6,6 +7,7 @@ import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/favorites/view/fluent/fluent_favorite_button.dart';
+import 'package:popcorn_flutter/src/history/view/watch_history_controller.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
@@ -25,10 +27,12 @@ class FluentMediaDetailsView extends StatelessWidget {
     this.details,
     this.videos,
     this.onPlay,
+    this.onResume,
     this.onVideoPlay,
     this.episodesLoader,
     this.onPlayEpisode,
     this.favoritesController,
+    this.historyController,
     this.mediaType,
   });
 
@@ -44,6 +48,9 @@ class FluentMediaDetailsView extends StatelessWidget {
   /// Called when the play button is tapped (launches the player).
   final ValueChanged<MediaItem>? onPlay;
 
+  /// Called to resume TV playback from the last-watched season/episode.
+  final ResumePlayCallback? onResume;
+
   /// Called when a video tile is tapped (plays the video in-app).
   final ValueChanged<MediaVideo>? onVideoPlay;
 
@@ -56,6 +63,9 @@ class FluentMediaDetailsView extends StatelessWidget {
   /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
   /// favorite button is shown.
   final FavoritesController? favoritesController;
+
+  /// Supplies watch history so the play button can switch to "Resume".
+  final WatchHistoryController? historyController;
 
   /// The [MediaType] of [item], needed to persist the favorite.
   final MediaType? mediaType;
@@ -124,27 +134,9 @@ class FluentMediaDetailsView extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     if ((onPlay != null && item.isReleased) || mediaType != null)
-                      Row(
-                        children: [
-                          if (onPlay != null && item.isReleased)
-                            FilledButton(
-                              onPressed: () => onPlay!(item),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [const Icon(FluentIcons.play_solid), const SizedBox(width: 8), Text(DetailsTranslations.play.trOf(context))],
-                              ),
-                            ),
-                          if (favoritesController != null && mediaType != null) ...[
-                            const SizedBox(width: 8),
-                            FluentFavoriteButton(
-                              controller: favoritesController!,
-                              favorite: FavoriteMedia(item: item, type: mediaType!),
-                              iconSize: 22,
-                            ),
-                          ],
-                          if (mediaType != null) ...[const SizedBox(width: 8), FluentShareButton(item: item, type: mediaType!, iconSize: 22)],
-                        ],
-                      ),
+                      historyController == null
+                          ? _playActions(context)
+                          : ListenableBuilder(listenable: historyController!, builder: (context, _) => _playActions(context)),
                   ],
                 ),
               ),
@@ -190,6 +182,31 @@ class FluentMediaDetailsView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _playActions(BuildContext context) {
+    final entry = resumeEntryFor(historyController, mediaType, item);
+    return Row(
+      children: [
+        if (onPlay != null && item.isReleased)
+          FilledButton(
+            onPressed: detailsPlayAction(item: item, entry: entry, onPlay: onPlay, onResume: onResume),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [const Icon(FluentIcons.play_solid), const SizedBox(width: 8), Text(detailsPlayLabel(context, entry))],
+            ),
+          ),
+        if (favoritesController != null && mediaType != null) ...[
+          const SizedBox(width: 8),
+          FluentFavoriteButton(
+            controller: favoritesController!,
+            favorite: FavoriteMedia(item: item, type: mediaType!),
+            iconSize: 22,
+          ),
+        ],
+        if (mediaType != null) ...[const SizedBox(width: 8), FluentShareButton(item: item, type: mediaType!, iconSize: 22)],
+      ],
     );
   }
 

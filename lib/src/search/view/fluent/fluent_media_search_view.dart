@@ -179,7 +179,13 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
               placeholder: SearchTranslations.searchPlaceholder.trOf(context),
               onSubmitted: (_) => submitSearch(),
               prefix: const Padding(padding: EdgeInsets.only(left: 10, right: 4), child: Icon(FluentIcons.search)),
-              suffix: hasQuery ? IconButton(icon: const Icon(FluentIcons.clear), onPressed: clearSearch) : null,
+              suffix: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasQuery) IconButton(icon: const Icon(FluentIcons.clear), onPressed: clearSearch),
+                  IconButton(icon: const Icon(FluentIcons.forward), onPressed: hasQuery ? submitSearch : null),
+                ],
+              ),
             ),
           ),
           Padding(

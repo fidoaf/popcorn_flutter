@@ -10,6 +10,7 @@ import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/fluent/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
+import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
@@ -112,18 +113,45 @@ class _PopcornWindowsApp extends StatefulWidget {
 }
 
 class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
-  final AppServices _services = AppServices.create();
+  AppServices? _servicesOrNull;
+  Object? _startupError;
+  AppServices get _services => _servicesOrNull!;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final CurrentRouteObserver _routeObserver = CurrentRouteObserver(PlatformDispatcher.instance.defaultRouteName);
 
   @override
-  void dispose() {
-    _services.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    AppServices.create()
+        .then((services) {
+          if (mounted) setState(() => _servicesOrNull = services);
+        })
+        .catchError((Object error) {
+          if (mounted) setState(() => _startupError = error);
+        });
   }
 
   @override
+  void dispose() {
+    _servicesOrNull?.dispose();
+    super.dispose();
+  }
+
+  Widget _bootstrapApp(Widget home) => FluentApp(
+    onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
+    locale: PlatformDispatcher.instance.locale,
+    supportedLocales: AppLanguage.values.map((lang) => lang.locale),
+    localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+    themeMode: ThemeMode.system,
+    theme: FluentThemeData.light(),
+    darkTheme: FluentThemeData.dark(),
+    home: home,
+  );
+
+  @override
   Widget build(BuildContext context) {
+    if (_startupError != null) return _bootstrapApp(const MaintenancePage());
+    if (_servicesOrNull == null) return _bootstrapApp(const PopcornFluentSplashScreen());
     return FluentApp(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       navigatorKey: _navigatorKey,
@@ -301,8 +329,13 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           details: bundle.details,
           videos: bundle.videos,
           favoritesController: _services.favoritesController,
+          historyController: _services.historyController,
           mediaType: bundle.type,
           onPlay: (playItem) => Navigator.of(context).pushNamed(AppRoutes.watch(bundle.type, playItem.id), arguments: playItem),
+          onResume: (playItem, {season, episode}) => Navigator.of(context).pushNamed(
+            AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode),
+            arguments: playItem,
+          ),
           onVideoPlay: (video) => Navigator.of(context).pushNamed(AppRoutes.trailer, arguments: video),
           episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
           onPlayEpisode: (season, episode) => Navigator.of(context).pushNamed(

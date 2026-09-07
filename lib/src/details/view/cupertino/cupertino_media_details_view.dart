@@ -1,11 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:popcorn_flutter/src/details/view/cupertino/cupertino_share_button.dart';
+import 'package:popcorn_flutter/src/details/view/details_play_action.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/cupertino/cupertino_favorite_button.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
+import 'package:popcorn_flutter/src/history/view/watch_history_controller.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
@@ -25,10 +27,12 @@ class CupertinoMediaDetailsView extends StatelessWidget {
     this.details,
     this.videos,
     this.onPlay,
+    this.onResume,
     this.onVideoPlay,
     this.episodesLoader,
     this.onPlayEpisode,
     this.favoritesController,
+    this.historyController,
     this.mediaType,
   });
 
@@ -44,6 +48,9 @@ class CupertinoMediaDetailsView extends StatelessWidget {
   /// Called when the play button is tapped (launches the player).
   final ValueChanged<MediaItem>? onPlay;
 
+  /// Called to resume TV playback from the last-watched season/episode.
+  final ResumePlayCallback? onResume;
+
   /// Called when a video tile is tapped (plays the video in-app).
   final ValueChanged<MediaVideo>? onVideoPlay;
 
@@ -56,6 +63,9 @@ class CupertinoMediaDetailsView extends StatelessWidget {
   /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
   /// favorite button is shown.
   final FavoritesController? favoritesController;
+
+  /// Supplies watch history so the play button can switch to "Resume".
+  final WatchHistoryController? historyController;
 
   /// The [MediaType] of [item], needed to persist the favorite.
   final MediaType? mediaType;
@@ -128,27 +138,7 @@ class CupertinoMediaDetailsView extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         if ((onPlay != null && item.isReleased) || mediaType != null)
-          Row(
-            children: [
-              if (onPlay != null && item.isReleased)
-                CupertinoButton.filled(
-                  onPressed: () => onPlay!(item),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [const Icon(CupertinoIcons.play_fill, size: 18), const SizedBox(width: 6), Text(DetailsTranslations.play.trOf(context))],
-                  ),
-                ),
-              if (favoritesController != null && mediaType != null) ...[
-                const SizedBox(width: 8),
-                CupertinoFavoriteButton(
-                  controller: favoritesController!,
-                  favorite: FavoriteMedia(item: item, type: mediaType!),
-                  iconSize: 28,
-                ),
-              ],
-              if (mediaType != null) ...[const SizedBox(width: 8), CupertinoShareButton(item: item, type: mediaType!, iconSize: 28)],
-            ],
-          ),
+          historyController == null ? _playActions(context) : ListenableBuilder(listenable: historyController!, builder: (context, _) => _playActions(context)),
         const SizedBox(height: 24),
         Text(DetailsTranslations.overview.trOf(context), style: textTheme.navTitleTextStyle),
         const SizedBox(height: 8),
@@ -201,6 +191,31 @@ class CupertinoMediaDetailsView extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _playActions(BuildContext context) {
+    final entry = resumeEntryFor(historyController, mediaType, item);
+    return Row(
+      children: [
+        if (onPlay != null && item.isReleased)
+          CupertinoButton.filled(
+            onPressed: detailsPlayAction(item: item, entry: entry, onPlay: onPlay, onResume: onResume),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [const Icon(CupertinoIcons.play_fill, size: 18), const SizedBox(width: 6), Text(detailsPlayLabel(context, entry))],
+            ),
+          ),
+        if (favoritesController != null && mediaType != null) ...[
+          const SizedBox(width: 8),
+          CupertinoFavoriteButton(
+            controller: favoritesController!,
+            favorite: FavoriteMedia(item: item, type: mediaType!),
+            iconSize: 28,
+          ),
+        ],
+        if (mediaType != null) ...[const SizedBox(width: 8), CupertinoShareButton(item: item, type: mediaType!, iconSize: 28)],
       ],
     );
   }

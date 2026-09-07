@@ -37,49 +37,9 @@ import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_sou
 abstract final class MediaSourceProviderFactory {
   const MediaSourceProviderFactory._();
 
-  /// Default asset bundling the provider definitions.
+  /// Default asset bundling the provider definitions. This is the source of
+  /// truth for the available backends; edit that file to change them.
   static const String defaultAssetPath = 'assets/config/media_source_providers.json';
-
-  /// Embedded fallback definition, kept in sync with [defaultAssetPath], so a
-  /// provider is always available synchronously (e.g. as a field initializer)
-  /// even before any asset is loaded.
-  static const String _defaultJson = '''
-{
-  "initialProvider": "nxsha",
-  "providers": [
-    {
-      "name": "nxsha",
-      "scheme": "https",
-      "host": "web.nxsha.app",
-      "path": "/embed/{type}/{id}/{season}/{episode}",
-      "method": "GET",
-      "parameters": { "lang": "{language}", "sub": "{subtitles}" }
-    },
-    {
-      "name": "vidlux",
-      "scheme": "https",
-      "host": "vidlux.xyz",
-      "path": "/embed/{type}/{id}/{season}/{episode}",
-      "method": "GET",
-      "parameters": { "lang": "{language}", "sub": "{subtitles}" }
-    },
-    {
-      "name": "vidsrcme",
-      "scheme": "https",
-      "host": "vidsrcme.ru",
-      "path": "/embed/{type}/{id}/{season}/{episode}",
-      "method": "GET",
-      "parameters": { "lang": "{language}", "sub": "{subtitles}" }
-    }
-  ]
-}
-''';
-
-  /// Builds the provider from the embedded default definition.
-  ///
-  /// An optional [preferences] instance lets callers control language and
-  /// subtitles from outside; when omitted a default instance is created.
-  static ConfigurableMediaSourceProvider create({MediaSourcePreferences? preferences}) => createFromJson(_defaultJson, preferences: preferences);
 
   /// Builds the provider from a raw JSON [source] string.
   static ConfigurableMediaSourceProvider createFromJson(String source, {MediaSourcePreferences? preferences}) =>
@@ -108,7 +68,8 @@ abstract final class MediaSourceProviderFactory {
     return ConfigurableMediaSourceProvider(providers: providers, preferences: resolvedPreferences, initialProvider: initial);
   }
 
-  /// Loads the provider definition from a bundled JSON asset.
+  /// Loads the provider definition from a bundled JSON asset. Throws if the
+  /// asset is missing or contains invalid configuration.
   static Future<ConfigurableMediaSourceProvider> createFromAsset([String assetPath = defaultAssetPath, MediaSourcePreferences? preferences]) async {
     final source = await rootBundle.loadString(assetPath);
     return createFromJson(source, preferences: preferences);

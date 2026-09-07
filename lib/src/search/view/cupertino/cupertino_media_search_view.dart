@@ -105,10 +105,21 @@ class _CupertinoMediaSearchViewState extends State<CupertinoMediaSearchView> wit
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: CupertinoSearchTextField(
-            controller: queryController,
-            placeholder: SearchTranslations.searchPlaceholder.trOf(context),
-            onSubmitted: (_) => submitSearch(),
+          child: Row(
+            children: [
+              Expanded(
+                child: CupertinoSearchTextField(
+                  controller: queryController,
+                  placeholder: SearchTranslations.searchPlaceholder.trOf(context),
+                  onSubmitted: (_) => submitSearch(),
+                ),
+              ),
+              CupertinoButton(
+                padding: const EdgeInsets.only(left: 8),
+                onPressed: hasQuery ? submitSearch : null,
+                child: const Icon(CupertinoIcons.arrow_right_circle_fill),
+              ),
+            ],
           ),
         ),
         Padding(

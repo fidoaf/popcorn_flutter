@@ -16,12 +16,12 @@ final class AppServices {
     required this.authController,
   });
 
-  factory AppServices.create() {
+  static Future<AppServices> create() async {
     final repository = MediaSearchRepositoryFactory.create();
     return AppServices._(
       repository: repository,
       searchController: MediaSearchController(repository: repository),
-      mediaSourceProvider: MediaSourceProviderFactory.create(),
+      mediaSourceProvider: await MediaSourceProviderFactory.createFromAsset(),
       favoritesController: FavoritesController(repository: FavoritesRepositoryFactory.create()),
       historyController: WatchHistoryController(repository: WatchHistoryRepositoryFactory.create()),
       authController: AuthController(),

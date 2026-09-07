@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:popcorn_flutter/src/details/view/details_play_action.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/macos/macos_share_button.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
@@ -7,6 +8,7 @@ import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/favorites/view/macos/macos_favorite_button.dart';
+import 'package:popcorn_flutter/src/history/view/watch_history_controller.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
@@ -26,10 +28,12 @@ class MacosMediaDetailsView extends StatelessWidget {
     this.details,
     this.videos,
     this.onPlay,
+    this.onResume,
     this.onVideoPlay,
     this.episodesLoader,
     this.onPlayEpisode,
     this.favoritesController,
+    this.historyController,
     this.mediaType,
   });
 
@@ -45,6 +49,9 @@ class MacosMediaDetailsView extends StatelessWidget {
   /// Called when the play button is tapped (launches the player).
   final ValueChanged<MediaItem>? onPlay;
 
+  /// Called to resume TV playback from the last-watched season/episode.
+  final ResumePlayCallback? onResume;
+
   /// Called when a video tile is tapped (plays the video in-app).
   final ValueChanged<MediaVideo>? onVideoPlay;
 
@@ -57,6 +64,9 @@ class MacosMediaDetailsView extends StatelessWidget {
   /// Drives the favorite toggle. When `null` (or [mediaType] is `null`), no
   /// favorite button is shown.
   final FavoritesController? favoritesController;
+
+  /// Supplies watch history so the play button can switch to "Resume".
+  final WatchHistoryController? historyController;
 
   /// The [MediaType] of [item], needed to persist the favorite.
   final MediaType? mediaType;
@@ -124,32 +134,9 @@ class MacosMediaDetailsView extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   if ((onPlay != null && item.isReleased) || mediaType != null)
-                    Row(
-                      children: [
-                        if (onPlay != null && item.isReleased)
-                          PushButton(
-                            controlSize: ControlSize.large,
-                            onPressed: () => onPlay!(item),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const MacosIcon(CupertinoIcons.play_fill, size: 14, color: MacosColors.white),
-                                const SizedBox(width: 6),
-                                Text(DetailsTranslations.play.trOf(context)),
-                              ],
-                            ),
-                          ),
-                        if (favoritesController != null && mediaType != null) ...[
-                          const SizedBox(width: 8),
-                          MacosFavoriteButton(
-                            controller: favoritesController!,
-                            favorite: FavoriteMedia(item: item, type: mediaType!),
-                            iconSize: 22,
-                          ),
-                        ],
-                        if (mediaType != null) ...[const SizedBox(width: 8), MacosShareButton(item: item, type: mediaType!, iconSize: 22)],
-                      ],
-                    ),
+                    historyController == null
+                        ? _playActions(context)
+                        : ListenableBuilder(listenable: historyController!, builder: (context, _) => _playActions(context)),
                 ],
               ),
             ),
@@ -187,6 +174,36 @@ class MacosMediaDetailsView extends StatelessWidget {
           headerBuilder: (context) => Text(DetailsTranslations.videos.trOf(context), style: typography.headline),
           tileBuilder: (context, video) => _VideoTile(video: video, onPlay: onVideoPlay),
         ),
+      ],
+    );
+  }
+
+  Widget _playActions(BuildContext context) {
+    final entry = resumeEntryFor(historyController, mediaType, item);
+    return Row(
+      children: [
+        if (onPlay != null && item.isReleased)
+          PushButton(
+            controlSize: ControlSize.large,
+            onPressed: detailsPlayAction(item: item, entry: entry, onPlay: onPlay, onResume: onResume),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const MacosIcon(CupertinoIcons.play_fill, size: 14, color: MacosColors.white),
+                const SizedBox(width: 6),
+                Text(detailsPlayLabel(context, entry)),
+              ],
+            ),
+          ),
+        if (favoritesController != null && mediaType != null) ...[
+          const SizedBox(width: 8),
+          MacosFavoriteButton(
+            controller: favoritesController!,
+            favorite: FavoriteMedia(item: item, type: mediaType!),
+            iconSize: 22,
+          ),
+        ],
+        if (mediaType != null) ...[const SizedBox(width: 8), MacosShareButton(item: item, type: mediaType!, iconSize: 22)],
       ],
     );
   }

@@ -9,6 +9,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
+import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
 import 'package:popcorn_flutter/src/app/view/system_bars_background.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
@@ -46,7 +47,9 @@ class _PopcornWebApp extends StatefulWidget {
 }
 
 class _PopcornWebAppState extends State<_PopcornWebApp> {
-  final AppServices _services = AppServices.create();
+  AppServices? _servicesOrNull;
+  Object? _startupError;
+  AppServices get _services => _servicesOrNull!;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final CurrentRouteObserver _routeObserver = CurrentRouteObserver(PlatformDispatcher.instance.defaultRouteName);
 
@@ -54,13 +57,38 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
   ThemeData get _theme => _PopcornWebApp._theme;
 
   @override
-  void dispose() {
-    _services.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    AppServices.create()
+        .then((services) {
+          if (mounted) setState(() => _servicesOrNull = services);
+        })
+        .catchError((Object error) {
+          if (mounted) setState(() => _startupError = error);
+        });
   }
 
   @override
+  void dispose() {
+    _servicesOrNull?.dispose();
+    super.dispose();
+  }
+
+  Widget _bootstrapApp(Widget home) => WidgetsApp(
+    onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
+    color: _background,
+    locale: PlatformDispatcher.instance.locale,
+    supportedLocales: AppLanguage.values.map((lang) => lang.locale),
+    localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+    pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
+        PageRouteBuilder<T>(settings: settings, pageBuilder: (context, _, _) => builder(context)),
+    home: home,
+  );
+
+  @override
   Widget build(BuildContext context) {
+    if (_startupError != null) return _bootstrapApp(const MaintenancePage());
+    if (_servicesOrNull == null) return _bootstrapApp(const PopcornWebSplashScreen());
     return WidgetsApp(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       color: _background,
@@ -234,8 +262,13 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
               details: bundle.details,
               videos: bundle.videos,
               favoritesController: _services.favoritesController,
+              historyController: _services.historyController,
               mediaType: bundle.type,
               onPlay: (playItem) => Navigator.of(context).pushNamed(AppRoutes.watch(bundle.type, playItem.id), arguments: playItem),
+              onResume: (playItem, {season, episode}) => Navigator.of(context).pushNamed(
+                AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode),
+                arguments: playItem,
+              ),
               onVideoPlay: (video) => Navigator.of(context).pushNamed(AppRoutes.trailer, arguments: video),
               episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
               onPlayEpisode: (season, episode) => Navigator.of(context).pushNamed(

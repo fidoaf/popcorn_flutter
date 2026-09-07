@@ -18,6 +18,14 @@ class AppTranslations {
     AppLanguage.ca: "L'aplicació no està permesa en aquest sistema operatiu",
   });
 
+  static const maintenanceTitle = Translation({AppLanguage.en: 'Under maintenance', AppLanguage.es: 'En mantenimiento', AppLanguage.ca: 'En manteniment'});
+
+  static const maintenanceMessage = Translation({
+    AppLanguage.en: "We'll be back shortly. Please try again later.",
+    AppLanguage.es: 'Volveremos enseguida. Inténtalo de nuevo más tarde.',
+    AppLanguage.ca: 'Tornarem de seguida. Torna-ho a provar més tard.',
+  });
+
   static const landingTagline = Translation({
     AppLanguage.en: 'Your pocket cinema for movies and TV shows',
     AppLanguage.es: 'Tu cine de bolsillo para películas y series',
