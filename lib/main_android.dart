@@ -332,7 +332,11 @@ class _AndroidHomeView extends StatelessWidget {
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 12),
-              child: UserIdentityTitle(controller: services.authController, fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context))),
+              child: UserIdentityTitle(
+                controller: services.authController,
+                profileController: services.profileController,
+                fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context)),
+              ),
             ),
           ],
         ),

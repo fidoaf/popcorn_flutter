@@ -44,6 +44,10 @@ class FavoritesController extends ChangeNotifier {
     await _repository.save(_favorites);
   }
 
+  /// Reloads the favorites from storage, e.g. after the signed-in profile
+  /// changes.
+  Future<void> reload() => _load();
+
   Future<void> _load() async {
     _favorites = await _repository.load();
     notifyListeners();

@@ -381,7 +381,11 @@ class _MacosHomeView extends StatelessWidget {
               CustomToolbarItem(
                 inToolbarBuilder: (context) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: UserIdentityTitle(controller: services.authController, fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context))),
+                  child: UserIdentityTitle(
+                    controller: services.authController,
+                    profileController: services.profileController,
+                    fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context)),
+                  ),
                 ),
               ),
             ],

@@ -47,6 +47,8 @@ dependencies:
   supabase_flutter: ^2.8.0
   share_plus: ^13.3.0
   intl: ^0.20.2
+  file_selector: ^1.0.3
+  crop_your_image: ^2.0.0
 
 
   # Phased-out:

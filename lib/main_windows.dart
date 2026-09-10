@@ -362,6 +362,7 @@ class _WindowsHomeView extends StatelessWidget {
         controller: services.searchController,
         favoritesController: services.favoritesController,
         authController: services.authController,
+        profileController: services.profileController,
         initialQuery: initialQuery,
         initialMediaType: initialMediaType,
         onMediaSelected: (media) => Navigator.of(context).pushNamed(AppRoutes.details(services.searchController.mediaType, media.id), arguments: media),

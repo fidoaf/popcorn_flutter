@@ -74,16 +74,22 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
     super.dispose();
   }
 
-  Widget _bootstrapApp(Widget home) => WidgetsApp(
-    onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
-    color: _background,
-    locale: PlatformDispatcher.instance.locale,
-    supportedLocales: AppLanguage.values.map((lang) => lang.locale),
-    localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
-    pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
-        PageRouteBuilder<T>(settings: settings, pageBuilder: (context, _, _) => builder(context)),
-    home: home,
-  );
+  Widget _bootstrapApp(Widget home) {
+    // Render [home] for any route: on web the URL (e.g. /home on a signed-in
+    // reload) drives the initial route, which a `home:`-only app can't resolve.
+    Route<dynamic> route(RouteSettings settings) => PageRouteBuilder<void>(settings: settings, pageBuilder: (context, _, _) => home);
+    return WidgetsApp(
+      onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
+      color: _background,
+      locale: PlatformDispatcher.instance.locale,
+      supportedLocales: AppLanguage.values.map((lang) => lang.locale),
+      localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+      pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
+          PageRouteBuilder<T>(settings: settings, pageBuilder: (context, _, _) => builder(context)),
+      onGenerateRoute: route,
+      onGenerateInitialRoutes: (_) => <Route<dynamic>>[route(const RouteSettings(name: AppRoutes.landing))],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -366,7 +372,11 @@ class _WebHomeViewState extends State<_WebHomeView> {
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: UserIdentityTitle(controller: services.authController, fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context))),
+                child: UserIdentityTitle(
+                  controller: services.authController,
+                  profileController: services.profileController,
+                  fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context)),
+                ),
               ),
             ],
           ),

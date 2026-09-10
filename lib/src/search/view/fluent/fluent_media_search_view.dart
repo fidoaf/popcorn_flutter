@@ -7,6 +7,7 @@ import 'package:popcorn_flutter/src/favorites/view/fluent/fluent_favorite_button
 import 'package:popcorn_flutter/src/history/view/watch_history_translations.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/profile/view/profile_controller.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_controller.dart';
@@ -27,6 +28,7 @@ class FluentMediaSearchView extends StatefulWidget {
     this.initialQuery,
     this.initialMediaType,
     this.authController,
+    this.profileController,
   });
 
   final MediaSearchController controller;
@@ -34,6 +36,9 @@ class FluentMediaSearchView extends StatefulWidget {
   /// Drives the page title greeting (avatar + first name). When `null`, the
   /// static "Search" title is shown instead.
   final AuthController? authController;
+
+  /// Drives the active profile shown in the title and the profile switcher.
+  final ProfileController? profileController;
 
   /// Drives the per-result favorite toggle. When `null`, no favorite button is shown.
   final FavoritesController? favoritesController;
@@ -167,7 +172,11 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
               ),
         commandBar: widget.authController == null
             ? null
-            : UserIdentityTitle(controller: widget.authController!, fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context))),
+            : UserIdentityTitle(
+                controller: widget.authController!,
+                profileController: widget.profileController,
+                fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context)),
+              ),
       ),
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

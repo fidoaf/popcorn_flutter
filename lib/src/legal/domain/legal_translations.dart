@@ -61,14 +61,14 @@ class LegalTranslations {
         }),
       ),
       LegalSection(
-        heading: Translation({AppLanguage.en: 'Local Storage', AppLanguage.es: 'Almacenamiento local', AppLanguage.ca: 'Emmagatzematge local'}),
+        heading: Translation({AppLanguage.en: 'Your Lists', AppLanguage.es: 'Tus listas', AppLanguage.ca: 'Les teves llistes'}),
         body: Translation({
           AppLanguage.en:
-              'Your favorites and watch history are stored locally on your device. They stay under your control and are not uploaded to our servers.',
+              'Your favorites and watch history are linked to your profile and stored securely on our servers so they follow you across devices. Only you can access your own lists.',
           AppLanguage.es:
-              'Tus favoritos y tu historial de visualización se almacenan localmente en tu dispositivo. Permanecen bajo tu control y no se suben a nuestros servidores.',
+              'Tus favoritos y tu historial de visualización están vinculados a tu perfil y se almacenan de forma segura en nuestros servidores para que te acompañen en todos tus dispositivos. Solo tú puedes acceder a tus propias listas.',
           AppLanguage.ca:
-              'Els teus preferits i el teu historial de visualització es guarden localment al teu dispositiu. Es mantenen sota el teu control i no es pugen als nostres servidors.',
+              'Els teus preferits i el teu historial de visualització estan vinculats al teu perfil i es guarden de manera segura als nostres servidors perquè t\'acompanyin a tots els teus dispositius. Només tu pots accedir a les teves pròpies llistes.',
         }),
       ),
       LegalSection(

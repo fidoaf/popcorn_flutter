@@ -45,6 +45,9 @@ class WatchHistoryController extends ChangeNotifier {
     await _repository.save(_entries);
   }
 
+  /// Reloads the history from storage, e.g. after the signed-in profile changes.
+  Future<void> reload() => _load();
+
   Future<void> _load() async {
     final loaded = List.of(await _repository.load());
     loaded.sort((a, b) => b.watchedAt.compareTo(a.watchedAt));
