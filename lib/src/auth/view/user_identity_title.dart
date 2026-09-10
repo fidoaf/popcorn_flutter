@@ -29,7 +29,10 @@ class UserIdentityTitle extends StatelessWidget {
         final name = profile?.displayName ?? controller.firstName ?? (controller.isGuest ? AuthTranslations.guestName.trOf(context) : null);
         if (name == null) return fallbackTitle;
 
-        final avatarUrl = _resolveAvatarUrl(profile?.avatarUrl, controller.avatarUrl);
+        // An active profile shows its OWN picture (so switching between account
+        // members never bleeds one user's avatar onto another). Only without a
+        // profile do we fall back to the signed-in identity's avatar.
+        final avatarUrl = profile != null ? _nonEmpty(profile.avatarUrl) : _nonEmpty(controller.avatarUrl);
         final content = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -52,15 +55,3 @@ class UserIdentityTitle extends StatelessWidget {
 }
 
 String? _nonEmpty(String? value) => (value == null || value.trim().isEmpty) ? null : value;
-
-// Google avatar URLs carry a rotating token that expires, so a snapshot stored
-// on the profile goes stale. Prefer the live session avatar over a stored
-// googleusercontent URL; a custom (uploaded) avatar still wins.
-String? _resolveAvatarUrl(String? profileUrl, String? liveUrl) {
-  final profileAvatar = _nonEmpty(profileUrl);
-  final liveAvatar = _nonEmpty(liveUrl);
-  if (profileAvatar != null && profileAvatar.contains('googleusercontent.com') && liveAvatar != null) {
-    return liveAvatar;
-  }
-  return profileAvatar ?? liveAvatar;
-}
