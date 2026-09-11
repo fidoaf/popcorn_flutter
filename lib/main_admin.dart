@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:popcorn_flutter/src/app/startup_error_app.dart';
 
 /// Standalone example showing how to use Supabase from this app.
 ///
@@ -35,9 +36,21 @@ void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: 'assets/config/app.env');
 
-  await Supabase.initialize(url: dotenv.env['supabase.url']!, publishableKey: dotenv.env['supabase.publishableKey']!);
+  final url = dotenv.env['supabase.url'];
+  final publishableKey = dotenv.env['supabase.publishableKey'];
+  if (url == null || publishableKey == null) {
+    runApp(const StartupErrorApp(message: 'Unable to start the admin console: missing Supabase configuration.', details: 'Add supabase.url and supabase.publishableKey to assets/config/app.env'));
+    return;
+  }
 
-  runApp(const _SupabaseExampleApp());
+  try {
+    await Supabase.initialize(url: url, publishableKey: publishableKey);
+    runApp(const _SupabaseExampleApp());
+  } catch (error, stack) {
+    runApp(StartupErrorApp(message: 'Unable to start the admin console.', details: '$error\n$stack'));
+    // ignore: avoid_print
+    print('Admin startup error: $error\n$stack');
+  }
 }
 
 /// Convenience accessor for the initialized Supabase client.

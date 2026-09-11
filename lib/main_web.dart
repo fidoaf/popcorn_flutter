@@ -23,6 +23,7 @@ import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
 import 'src/app/view/web/splash_screen.dart';
+import 'package:popcorn_flutter/src/app/startup_error_app.dart';
 
 void main(List<String> args) async {
   if (!kIsWeb) {
@@ -32,8 +33,14 @@ void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: 'assets/config/app.env');
   await initializeDateFormatting();
-  await AuthController.ensureInitialized();
-  runApp(const _PopcornWebApp());
+  try {
+    await AuthController.ensureInitialized();
+    runApp(const _PopcornWebApp());
+  } catch (error, stack) {
+    runApp(StartupErrorApp(message: 'Unable to start the app. Please check your configuration.', details: '$error\n$stack'));
+    // ignore: avoid_print
+    print('Startup error: $error\n$stack');
+  }
 }
 
 class _PopcornWebApp extends StatefulWidget {

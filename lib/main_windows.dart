@@ -23,6 +23,7 @@ import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:popcorn_flutter/src/app/startup_error_app.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,9 +33,10 @@ void main(List<String> args) async {
   }
   await dotenv.load(fileName: 'assets/config/app.env');
   await initializeDateFormatting();
-  await AuthController.ensureInitialized();
-  await windowManager.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
+  try {
+    await AuthController.ensureInitialized();
+    await windowManager.ensureInitialized();
+    final prefs = await SharedPreferences.getInstance();
   final savedBounds = _WindowStatePersistence.readBounds(prefs);
   final wasMaximized = _WindowStatePersistence.readMaximized(prefs);
   final WindowOptions windowOptions = WindowOptions(title: 'Popcorn', center: savedBounds == null, size: savedBounds?.size ?? const Size(800, 600));
@@ -48,8 +50,13 @@ void main(List<String> args) async {
     await windowManager.show();
     await windowManager.focus();
   });
-  windowManager.addListener(_WindowStatePersistence(prefs));
-  runApp(const _PopcornWindowsApp());
+    windowManager.addListener(_WindowStatePersistence(prefs));
+    runApp(const _PopcornWindowsApp());
+  } catch (error, stack) {
+    runApp(StartupErrorApp(message: 'Unable to start the app. Please check your configuration.', details: '$error\n$stack'));
+    // ignore: avoid_print
+    print('Startup error: $error\n$stack');
+  }
 }
 
 /// Persists the window position, size and maximized state across launches.

@@ -26,7 +26,12 @@ class AuthController extends ChangeNotifier {
   /// Initializes Supabase from `assets/config/app.env`. Call once during
   /// start-up, after `dotenv.load` and before creating an [AuthController].
   static Future<void> ensureInitialized() async {
-    await Supabase.initialize(url: dotenv.env['supabase.url']!, publishableKey: dotenv.env['supabase.publishableKey']!);
+    final url = dotenv.env['supabase.url'];
+    final publishableKey = dotenv.env['supabase.publishableKey'];
+    if (url == null || publishableKey == null) {
+      throw StateError('Missing Supabase configuration: ensure assets/config/app.env contains "supabase.url" and "supabase.publishableKey"');
+    }
+    await Supabase.initialize(url: url, publishableKey: publishableKey);
   }
 
   /// The active session, or `null` when signed out.

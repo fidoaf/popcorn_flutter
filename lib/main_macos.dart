@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -32,8 +32,106 @@ void main(List<String> args) async {
   }
   await dotenv.load(fileName: 'assets/config/app.env');
   await initializeDateFormatting();
-  await AuthController.ensureInitialized();
-  runApp(const _PopcornMacosApp());
+  try {
+    await AuthController.ensureInitialized();
+    runApp(const _PopcornMacosApp());
+  } catch (error, stack) {
+    // If initialization fails (missing env, invalid config), show a
+    // friendly error UI with an expandable technical details section.
+    runApp(ErrorApp(message: 'Unable to start the app. Please check your configuration.', details: '$error\n$stack'));
+    // Also print to console for logs.
+    // ignore: avoid_print
+    print('Startup error: $error\n$stack');
+  }
+}
+class ErrorApp extends StatefulWidget {
+  const ErrorApp({super.key, required this.message, required this.details});
+
+  final String message;
+  final String details;
+
+  @override
+  State<ErrorApp> createState() => _ErrorAppState();
+}
+
+class _ErrorAppState extends State<ErrorApp> with TickerProviderStateMixin {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MacosApp(
+      onGenerateTitle: (context) => 'Popcorn — Startup Error',
+      themeMode: ThemeMode.system,
+      theme: MacosThemeData.light(),
+      darkTheme: MacosThemeData.dark(),
+      home: MacosWindow(
+        child: MacosScaffold(
+          toolBar: ToolBar(
+            title: Text('Startup error'),
+          ),
+          children: [
+            ContentArea(
+              builder: (context, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Unable to start the application',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFFFFFFF), decoration: TextDecoration.none),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.message,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 14, color: Color(0xFFB0B0B0), decoration: TextDecoration.none),
+                        ),
+                        const SizedBox(height: 18),
+                        PushButton(
+                          controlSize: ControlSize.regular,
+                          secondary: true,
+                          onPressed: () => setState(() => _expanded = !_expanded),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_expanded ? CupertinoIcons.chevron_down : CupertinoIcons.chevron_right, size: 14, color: const Color(0xFFFFFFFF)),
+                              const SizedBox(width: 8),
+                              const Text('Show technical details', style: TextStyle(color: Color(0xFFFFFFFF))),
+                            ],
+                          ),
+                        ),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeInOut,
+                          child: _expanded
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Container(
+                                    width: double.infinity,
+                                    color: const Color(0xFF0F0F1A),
+                                    padding: const EdgeInsets.all(12),
+                                    child: SingleChildScrollView(
+                                      child: SelectableText(widget.details, style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFFB0B0B0))),
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _PopcornMacosApp extends StatefulWidget {

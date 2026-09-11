@@ -23,6 +23,7 @@ import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
 import 'src/app/view/material/splash_screen.dart';
+import 'package:popcorn_flutter/src/app/startup_error_app.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,8 +37,14 @@ void main(List<String> args) async {
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   await dotenv.load(fileName: 'assets/config/app.env');
   await initializeDateFormatting();
-  await AuthController.ensureInitialized();
-  runApp(const _PopcornTvApp());
+  try {
+    await AuthController.ensureInitialized();
+    runApp(const _PopcornTvApp());
+  } catch (error, stack) {
+    runApp(StartupErrorApp(message: 'Unable to start the app. Please check your configuration.', details: '$error\n$stack'));
+    // ignore: avoid_print
+    print('Startup error: $error\n$stack');
+  }
 }
 
 class _PopcornTvApp extends StatefulWidget {
