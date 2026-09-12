@@ -1,6 +1,7 @@
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
+import 'package:popcorn_flutter/src/home/home.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/profile/profile.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
@@ -11,6 +12,7 @@ final class AppServices {
   AppServices._({
     required this.repository,
     required this.searchController,
+    required this.homeFeedController,
     required this.mediaSourceProvider,
     required this.favoritesController,
     required this.historyController,
@@ -24,6 +26,7 @@ final class AppServices {
     final services = AppServices._(
       repository: repository,
       searchController: MediaSearchController(repository: repository),
+      homeFeedController: HomeFeedController(repository: repository),
       mediaSourceProvider: await MediaSourceProviderFactory.createFromAsset(),
       favoritesController: FavoritesController(repository: FavoritesRepositoryFactory.create(profileRepository: profileRepository)),
       historyController: WatchHistoryController(repository: WatchHistoryRepositoryFactory.create(profileRepository: profileRepository)),
@@ -36,6 +39,7 @@ final class AppServices {
 
   final MediaSearchRepository repository;
   final MediaSearchController searchController;
+  final HomeFeedController homeFeedController;
   final ConfigurableMediaSourceProvider mediaSourceProvider;
   final FavoritesController favoritesController;
   final WatchHistoryController historyController;
@@ -73,6 +77,7 @@ final class AppServices {
     authController.removeListener(_handleAuthChange);
     profileController.removeListener(_handleProfileChange);
     searchController.dispose();
+    homeFeedController.dispose();
     favoritesController.dispose();
     historyController.dispose();
     authController.dispose();

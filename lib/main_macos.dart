@@ -18,6 +18,7 @@ import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/details/view/macos/macos_media_details_view.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
+import 'package:popcorn_flutter/src/home/home.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
@@ -44,6 +45,7 @@ void main(List<String> args) async {
     print('Startup error: $error\n$stack');
   }
 }
+
 class ErrorApp extends StatefulWidget {
   const ErrorApp({super.key, required this.message, required this.details});
 
@@ -66,9 +68,7 @@ class _ErrorAppState extends State<ErrorApp> with TickerProviderStateMixin {
       darkTheme: MacosThemeData.dark(),
       home: MacosWindow(
         child: MacosScaffold(
-          toolBar: ToolBar(
-            title: Text('Startup error'),
-          ),
+          toolBar: ToolBar(title: Text('Startup error')),
           children: [
             ContentArea(
               builder: (context, _) => Center(
@@ -115,7 +115,10 @@ class _ErrorAppState extends State<ErrorApp> with TickerProviderStateMixin {
                                     color: const Color(0xFF0F0F1A),
                                     padding: const EdgeInsets.all(12),
                                     child: SingleChildScrollView(
-                                      child: SelectableText(widget.details, style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFFB0B0B0))),
+                                      child: SelectableText(
+                                        widget.details,
+                                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFFB0B0B0)),
+                                      ),
                                     ),
                                   ),
                                 )
@@ -235,7 +238,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         return _landingPage(context);
       case HomeRoute():
       case UnknownRoute():
-        return _MacosHomeView(services: _services);
+        return _MacosHomeView(services: _services, browse: true);
       case SearchRoute(:final query, :final type):
         return _MacosHomeView(services: _services, initialQuery: query, initialMediaType: type);
       case FavoritesRoute():
@@ -248,7 +251,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null);
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
-        return video == null ? _MacosHomeView(services: _services) : _trailerPage(video);
+        return video == null ? _MacosHomeView(services: _services, browse: true) : _trailerPage(video);
       case PrivacyRoute():
         return _legalPage(context, LegalTranslations.privacyPolicy);
       case TermsRoute():
@@ -406,11 +409,15 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
 }
 
 class _MacosHomeView extends StatelessWidget {
-  const _MacosHomeView({required this.services, this.initialQuery, this.initialMediaType});
+  const _MacosHomeView({required this.services, this.initialQuery, this.initialMediaType, this.browse = false});
 
   final AppServices services;
   final String? initialQuery;
   final MediaType? initialMediaType;
+
+  /// When `true`, shows the Prime Video-style browse home instead of the
+  /// search-first view.
+  final bool browse;
 
   @override
   Widget build(BuildContext context) {
@@ -490,14 +497,30 @@ class _MacosHomeView extends StatelessWidget {
           ),
           children: [
             ContentArea(
-              builder: (context, _) => MacosMediaSearchView(
-                controller: services.searchController,
-                favoritesController: services.favoritesController,
-                initialQuery: initialQuery,
-                initialMediaType: initialMediaType,
-                onMediaSelected: (media) => Navigator.of(context).pushNamed(AppRoutes.details(services.searchController.mediaType, media.id), arguments: media),
-                onMediaPlay: (media) => Navigator.of(context).pushNamed(AppRoutes.watch(services.searchController.mediaType, media.id), arguments: media),
-              ),
+              builder: (context, _) => browse
+                  ? PrimeHomeView(
+                      feedController: services.homeFeedController,
+                      favoritesController: services.favoritesController,
+                      historyController: services.historyController,
+                      searchController: services.searchController,
+                      onOpenDetails: (media, type) => Navigator.of(context).pushNamed(AppRoutes.details(type, media.id), arguments: media),
+                      onPlay: (media, type) => Navigator.of(context).pushNamed(AppRoutes.watch(type, media.id), arguments: media),
+                      onResume: (entry) => Navigator.of(context).pushNamed(
+                        AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+                        arguments: entry.item,
+                      ),
+                      onSeeAllFavorites: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+                      onSeeAllHistory: () => Navigator.of(context).pushNamed(AppRoutes.history),
+                    )
+                  : MacosMediaSearchView(
+                      controller: services.searchController,
+                      favoritesController: services.favoritesController,
+                      initialQuery: initialQuery,
+                      initialMediaType: initialMediaType,
+                      onMediaSelected: (media) =>
+                          Navigator.of(context).pushNamed(AppRoutes.details(services.searchController.mediaType, media.id), arguments: media),
+                      onMediaPlay: (media) => Navigator.of(context).pushNamed(AppRoutes.watch(services.searchController.mediaType, media.id), arguments: media),
+                    ),
             ),
           ],
         ),

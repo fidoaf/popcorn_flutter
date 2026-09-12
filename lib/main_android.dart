@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:popcorn_flutter/src/app/routing/routing.dart';
+import 'package:popcorn_flutter/src/app/startup_error_app.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
 import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
@@ -16,6 +17,7 @@ import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
+import 'package:popcorn_flutter/src/home/home.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
@@ -23,7 +25,6 @@ import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
 import 'src/app/view/material/splash_screen.dart';
-import 'package:popcorn_flutter/src/app/startup_error_app.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -157,7 +158,7 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
         return _landingPage(context);
       case HomeRoute():
       case UnknownRoute():
-        return _AndroidHomeView(services: _services);
+        return _AndroidHomeView(services: _services, browse: true);
       case SearchRoute(:final query, :final type):
         return _AndroidHomeView(services: _services, initialQuery: query, initialMediaType: type);
       case FavoritesRoute():
@@ -170,7 +171,7 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
         return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null);
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
-        return video == null ? _AndroidHomeView(services: _services) : _trailerPage(video);
+        return video == null ? _AndroidHomeView(services: _services, browse: true) : _trailerPage(video);
       case PrivacyRoute():
         return _legalPage(context, LegalTranslations.privacyPolicy);
       case TermsRoute():
@@ -293,11 +294,15 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
 }
 
 class _AndroidHomeView extends StatelessWidget {
-  const _AndroidHomeView({required this.services, this.initialQuery, this.initialMediaType});
+  const _AndroidHomeView({required this.services, this.initialQuery, this.initialMediaType, this.browse = false});
 
   final AppServices services;
   final String? initialQuery;
   final MediaType? initialMediaType;
+
+  /// When `true`, shows the Prime Video-style browse home instead of the
+  /// search-first view.
+  final bool browse;
 
   @override
   Widget build(BuildContext context) {
@@ -347,14 +352,29 @@ class _AndroidHomeView extends StatelessWidget {
             ),
           ],
         ),
-        body: MaterialMediaSearchView(
-          controller: services.searchController,
-          favoritesController: services.favoritesController,
-          initialQuery: initialQuery,
-          initialMediaType: initialMediaType,
-          onMediaSelected: (media) => Navigator.of(context).pushNamed(AppRoutes.details(services.searchController.mediaType, media.id), arguments: media),
-          onMediaPlay: (media) => Navigator.of(context).pushNamed(AppRoutes.watch(services.searchController.mediaType, media.id), arguments: media),
-        ),
+        body: browse
+            ? PrimeHomeView(
+                feedController: services.homeFeedController,
+                favoritesController: services.favoritesController,
+                historyController: services.historyController,
+                searchController: services.searchController,
+                onOpenDetails: (media, type) => Navigator.of(context).pushNamed(AppRoutes.details(type, media.id), arguments: media),
+                onPlay: (media, type) => Navigator.of(context).pushNamed(AppRoutes.watch(type, media.id), arguments: media),
+                onResume: (entry) => Navigator.of(context).pushNamed(
+                  AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+                  arguments: entry.item,
+                ),
+                onSeeAllFavorites: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+                onSeeAllHistory: () => Navigator.of(context).pushNamed(AppRoutes.history),
+              )
+            : MaterialMediaSearchView(
+                controller: services.searchController,
+                favoritesController: services.favoritesController,
+                initialQuery: initialQuery,
+                initialMediaType: initialMediaType,
+                onMediaSelected: (media) => Navigator.of(context).pushNamed(AppRoutes.details(services.searchController.mediaType, media.id), arguments: media),
+                onMediaPlay: (media) => Navigator.of(context).pushNamed(AppRoutes.watch(services.searchController.mediaType, media.id), arguments: media),
+              ),
       ),
     );
   }
