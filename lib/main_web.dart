@@ -6,12 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:popcorn_flutter/src/app/app.dart';
 import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/startup_error_app.dart';
-import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
+import 'package:popcorn_flutter/src/app/update/web_update_checker.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
 import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
-import 'package:popcorn_flutter/src/app/view/system_bars_background.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
@@ -23,8 +23,6 @@ import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
-
-import 'src/app/view/web/splash_screen.dart';
 
 void main(List<String> args) async {
   if (!kIsWeb) {
@@ -54,12 +52,13 @@ class _PopcornWebApp extends StatefulWidget {
   State<_PopcornWebApp> createState() => _PopcornWebAppState();
 }
 
-class _PopcornWebAppState extends State<_PopcornWebApp> {
+class _PopcornWebAppState extends State<_PopcornWebApp> with WidgetsBindingObserver {
   AppServices? _servicesOrNull;
   Object? _startupError;
   AppServices get _services => _servicesOrNull!;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final CurrentRouteObserver _routeObserver = CurrentRouteObserver(PlatformDispatcher.instance.defaultRouteName);
+  final WebUpdateChecker _updateChecker = WebUpdateChecker();
 
   Color get _background => _PopcornWebApp._background;
   ThemeData get _theme => _PopcornWebApp._theme;
@@ -67,6 +66,8 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _updateChecker.start();
     AppServices.create()
         .then((services) {
           if (mounted) setState(() => _servicesOrNull = services);
@@ -77,7 +78,14 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _updateChecker.checkNow();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _updateChecker.dispose();
     _servicesOrNull?.dispose();
     super.dispose();
   }
@@ -113,21 +121,24 @@ class _PopcornWebAppState extends State<_PopcornWebApp> {
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
           PageRouteBuilder<T>(settings: settings, pageBuilder: (context, _, _) => builder(context)),
-      builder: (context, child) => SystemBarsBackground(
-        backgroundColor: _background,
-        child: AuthGate(
-          controller: _services.authController,
-          currentRoute: _routeObserver.routeName,
-          isPublicRoute: AppRoutes.isPublic,
-          loginBuilder: (context) => Theme(
-            data: _theme,
-            child: MaterialLoginView(
-              controller: _services.authController,
-              onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
-              onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
+      builder: (context, child) => WebUpdateBanner(
+        checker: _updateChecker,
+        child: SystemBarsBackground(
+          backgroundColor: _background,
+          child: AuthGate(
+            controller: _services.authController,
+            currentRoute: _routeObserver.routeName,
+            isPublicRoute: AppRoutes.isPublic,
+            loginBuilder: (context) => Theme(
+              data: _theme,
+              child: MaterialLoginView(
+                controller: _services.authController,
+                onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
+                onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
+              ),
             ),
+            child: child!,
           ),
-          child: child!,
         ),
       ),
       initialRoute: AppRoutes.landing,

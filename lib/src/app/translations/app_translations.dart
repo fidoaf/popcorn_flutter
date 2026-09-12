@@ -12,6 +12,14 @@ class AppTranslations {
     AppLanguage.ca: 'Preparant les mongetes...',
   });
 
+  static const updateAvailableMessage = Translation({
+    AppLanguage.en: 'A new version is available.',
+    AppLanguage.es: 'Hay una nueva versión disponible.',
+    AppLanguage.ca: 'Hi ha una nova versió disponible.',
+  });
+
+  static const updateReload = Translation({AppLanguage.en: 'Reload', AppLanguage.es: 'Recargar', AppLanguage.ca: 'Recarregar'});
+
   static const unsupportedPlatform = Translation({
     AppLanguage.en: 'Application not permitted on this operating system',
     AppLanguage.es: 'La aplicación no está permitida en este sistema operativo',
