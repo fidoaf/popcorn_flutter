@@ -2,12 +2,9 @@
   "name": "popcorn-render-puppeteer",
   "version": "1.0.0",
   "private": true,
-  "description": "Puppeteer-based scraper for Render",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "postinstall": "npx puppeteer browsers install chrome"
+    "start": "node server.js"
   },
   "engines": {
     "node": ">=20"
