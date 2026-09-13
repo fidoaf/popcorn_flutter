@@ -428,11 +428,36 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/proxy-m3u8') {
       const imdbId = url.searchParams.get('id');
-      const cachedUrl = streamCache.get(imdbId);
+      let cachedUrl = streamCache.get(imdbId);
+
+      // If not cached, run extraction to detect m3u8
+      if (!cachedUrl) {
+        if (activeScrapes >= MAX_CONCURRENT_SCRAPES) {
+          res.writeHead(503, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Too many active scrapes; retry later.' }));
+          return;
+        }
+
+        activeScrapes += 1;
+        try {
+          const extraction = await extractUrlReproductor(imdbId);
+          cachedUrl = extraction.m3u8;
+          if (cachedUrl) {
+            streamCache.set(imdbId, cachedUrl);
+          }
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Extraction failed: ' + err.message }));
+          activeScrapes -= 1;
+          return;
+        } finally {
+          activeScrapes -= 1;
+        }
+      }
 
       if (!cachedUrl) {
         res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Stream not found; did you visit /player?id=' + imdbId + ' first?' }));
+        res.end(JSON.stringify({ error: 'Stream not found for ' + imdbId }));
         return;
       }
 
@@ -492,172 +517,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname === '/player') {
-      if (activeScrapes >= MAX_CONCURRENT_SCRAPES) {
-        res.writeHead(429, { 'Content-Type': 'text/html' });
-        res.end('<html><body style="color:red;font-family:sans-serif"><h1>Too Many Scrapes</h1><p>Retry later.</p></body></html>');
-        return;
-      }
-
-      activeScrapes += 1;
-      const browserInstance = await getBrowser();
-      const page = await browserInstance.newPage();
-
-      try {
-        const imdbId = url.searchParams.get('id') || 'tt1300854';
-        const urlOrigen = `https://vidsrc.ir/embed/movie/${imdbId}`;
-
-        await page.setJavaScriptEnabled(true);
-        await page.setCacheEnabled(false);
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        await page.setViewport({ width: 1280, height: 800 });
-
-        await page.setRequestInterception(true);
-        let foundM3u8 = null;
-        let resolveM3u8;
-        const m3u8Promise = new Promise((resolve) => { resolveM3u8 = resolve; });
-
-        page.on('request', async (req) => {
-          try {
-            const reqUrl = req.url();
-            const lower = reqUrl.toLowerCase();
-            const rtype = req.resourceType();
-
-            if (!foundM3u8 && lower.includes('.m3u8')) {
-              foundM3u8 = reqUrl;
-              resolveM3u8?.(reqUrl);
-            }
-
-            const suspect = (rtype === 'script') && (lower.includes('devtool') || lower.includes('anti') || lower.includes('block') || lower.includes('detect'));
-            if (suspect) {
-              return req.respond({ status: 200, contentType: 'application/javascript', body: '/* neutralized */' });
-            }
-
-            if (lower === 'about:blank' || lower.includes('about:blank')) {
-              return req.abort();
-            }
-
-            req.continue();
-          } catch (_) {
-            try { req.continue(); } catch (_) {}
-          }
-        });
-
-        page.on('response', async (res) => {
-          try {
-            const resUrl = res.url();
-            const lower = resUrl.toLowerCase();
-
-            if (!foundM3u8 && lower.includes('.m3u8')) {
-              foundM3u8 = resUrl;
-              resolveM3u8?.(resUrl);
-              return;
-            }
-
-            const headers = res.headers ? res.headers() : {};
-            const ct = (headers['content-type'] || headers['Content-Type'] || '').toLowerCase();
-
-            if (!foundM3u8 && (ct.includes('application/vnd.apple.mpegurl') || ct.includes('vnd.apple.mpegurl') || ct.includes('application/x-mpegurl') || ct.includes('mpegurl'))) {
-              foundM3u8 = resUrl;
-              resolveM3u8?.(resUrl);
-              return;
-            }
-
-            if (!foundM3u8 && ct.includes('text')) {
-              const text = await res.text().catch(() => null);
-              if (text && text.includes('.m3u8')) {
-                const match = text.match(/https?:\/\/[^\s"'<>]+?\.m3u8[^\s"'<>]*/);
-                if (match) {
-                  foundM3u8 = match[0];
-                  resolveM3u8?.(match[0]);
-                }
-              }
-            }
-          } catch (_) {}
-        });
-
-        await page.evaluateOnNewDocument(() => {
-          try {
-            const blocked = ['about:blank'];
-            const wrap = (obj, prop) => {
-              try {
-                const original = obj[prop];
-                if (typeof original === 'function') {
-                  obj[prop] = function (u) {
-                    if (blocked.some((b) => String(u).includes(b))) return;
-                    return original.call(this, u);
-                  };
-                }
-              } catch (_) {}
-            };
-            wrap(window.location, 'assign');
-            wrap(window.location, 'replace');
-            try { window.open = () => null; } catch (_) {}
-            try { Object.defineProperty(navigator, 'webdriver', { get: () => false }); } catch (_) {}
-          } catch (_) {}
-        });
-
-        page.on('dialog', async (dialog) => {
-          try { await dialog.dismiss(); } catch (_) {}
-        });
-
-        browserInstance.on('targetcreated', async (target) => {
-          try {
-            const popup = await target.page();
-            if (popup) await popup.close().catch(() => {});
-          } catch (_) {}
-        });
-
-        await page.goto(urlOrigen, { waitUntil: 'networkidle2', timeout: 30000 });
-
-        await page.evaluate(async () => {
-          try {
-            const v = document.querySelector('video');
-            if (v) { v.muted = false; await v.play().catch(() => {}); }
-
-            const buttonSelectors = ['.play', '.play-button', '.vjs-play-control', '.jw-icon-play', 'button[aria-label="Play"]', 'button[title="Play"]'];
-            for (const sel of buttonSelectors) {
-              const btn = document.querySelector(sel);
-              if (btn) { btn.click(); }
-            }
-          } catch (_) {}
-        });
-
-        const frames = page.frames();
-        for (const frame of frames) {
-          try {
-            await frame.evaluate(async () => {
-              try {
-                const v = document.querySelector('video');
-                if (v) { v.muted = false; await v.play().catch(() => {}); }
-
-                const buttonSelectors = ['.play', '.play-button', 'button[aria-label="Play"]'];
-                for (const sel of buttonSelectors) {
-                  const btn = document.querySelector(sel);
-                  if (btn) { btn.click(); }
-                }
-              } catch (_) {}
-            }).catch(() => {});
-          } catch (_) {}
-        }
-
-        let detectedM3u8 = null;
-        try {
-          detectedM3u8 = await Promise.race([m3u8Promise, new Promise((resolve) => setTimeout(() => resolve(null), 20000))]);
-        } catch (_) {
-          detectedM3u8 = foundM3u8 || null;
-        }
-
-        const m3u8Url = detectedM3u8 || foundM3u8;
-
-        if (!m3u8Url) {
-          res.writeHead(404, { 'Content-Type': 'text/html' });
-          res.end('<html><body style="color:#ff6b6b;font-family:sans-serif;padding:20px"><h1>No Stream Found</h1><p>Could not find a playable source for ' + imdbId + '.</p><p style="color:#999;font-size:12px">Source: ' + urlOrigen + '</p></body></html>');
-          return;
-        }
-
-        streamCache.set(imdbId, m3u8Url);
-
-        const html = `<!doctype html>
+      const imdbId = url.searchParams.get('id') || 'tt1300854';
+      
+      // Return player HTML immediately, extraction happens on-demand in /proxy-m3u8
+      const html = `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8">
@@ -670,6 +533,7 @@ const server = http.createServer(async (req, res) => {
       video { width: 100%; max-width: 1280px; height: auto; max-height: 720px; background: #000; border-radius: 8px; }
       .info { color: #999; margin-top: 20px; text-align: center; font-size: 11px; word-break: break-all; }
       code { background: #1a1a1a; padding: 2px 4px; border-radius: 3px; display: inline-block; }
+      .status { color: #666; font-size: 12px; margin-top: 10px; }
     </style>
   </head>
   <body>
@@ -677,6 +541,7 @@ const server = http.createServer(async (req, res) => {
       <video id="video" controls autoplay></video>
       <div class="info">
         <p>ID: <code>${imdbId}</code></p>
+        <p class="status" id="status">Loading...</p>
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js"><\/script>
@@ -684,37 +549,44 @@ const server = http.createServer(async (req, res) => {
       (function () {
         const imdbId = ${JSON.stringify(imdbId)};
         const video = document.getElementById('video');
+        const statusEl = document.getElementById('status');
         const proxiedM3u8 = '/proxy-m3u8?id=' + encodeURIComponent(imdbId);
         
         if (window.Hls && Hls.isSupported()) {
           const hls = new Hls({ debug: false });
-          hls.loadSource(proxiedM3u8);
-          hls.attachMedia(video);
-          hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          
+          hls.on(Hls.Events.MANIFEST_LOADING, () => statusEl.textContent = 'Loading manifest...');
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            statusEl.textContent = 'Ready';
             video.play().catch(() => {});
           });
           hls.on(Hls.Events.ERROR, function (event, data) {
-            if (data.fatal) console.error('[hls] Error:', data);
+            statusEl.textContent = 'Error: ' + (data.details || data.type);
+            if (data.fatal) console.error('[hls] Fatal Error:', data);
           });
+          
+          hls.loadSource(proxiedM3u8);
+          hls.attachMedia(video);
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          statusEl.textContent = 'Loading with native playback...';
           video.src = proxiedM3u8;
           video.addEventListener('loadedmetadata', function () {
+            statusEl.textContent = 'Ready';
             video.play().catch(() => {});
           });
+          video.addEventListener('error', function () {
+            statusEl.textContent = 'Playback error';
+          });
+        } else {
+          statusEl.textContent = 'HLS not supported';
         }
       })();
     <\/script>
   </body>
 </html>`;
 
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(html);
-      } finally {
-        try {
-          await page.close();
-        } catch (_) {}
-        activeScrapes -= 1;
-      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
       return;
     }
 
