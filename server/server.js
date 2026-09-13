@@ -6,18 +6,25 @@ const PORT = Number(process.env.PORT || 3000);
 
 let browser;
 
+const browserConfig = {
+  headless: 'new',
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--disable-software-rasterizer',
+  ],
+};
+
+const chromePath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN;
+if (chromePath) {
+  browserConfig.executablePath = chromePath;
+}
+
 async function getBrowser() {
   if (!browser || !browser.isConnected()) {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-software-rasterizer',
-      ],
-    });
+    browser = await puppeteer.launch(browserConfig);
   }
 
   return browser;
