@@ -1,10 +1,20 @@
 {
-  "initialProvider": "nxsha",
+  "initialProvider": "vidsrcsbs",
   "providers": [
     {
       "name": "nxsha",
       "scheme": "https",
       "host": "web.nxsha.app",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": []
+    },
+    {
+      "name": "vidsrcsbs",
+      "scheme": "https",
+      "host": "vidsrc.sbs",
       "path": "/embed/{type}/{id}/{season}/{episode}",
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },
