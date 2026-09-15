@@ -25,6 +25,9 @@ function loadConfig(env = process.env) {
       '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     scrapeTimeoutMs: 30000,
     m3u8WaitMs: 20000,
+    // Absolute ceiling for a single scrape. Must exceed navigation + m3u8 wait
+    // so a wedged browser can never permanently hold the concurrency slot.
+    scrapeHardDeadlineMs: 75000,
   });
 }
 

@@ -72,9 +72,35 @@ class StreamScraper {
     this.userAgent = config.userAgent;
     this.navigationTimeoutMs = config.scrapeTimeoutMs;
     this.m3u8WaitMs = config.m3u8WaitMs;
+    this.hardDeadlineMs = config.scrapeHardDeadlineMs;
   }
 
+  // Guarantees the returned promise settles within a bounded time. Puppeteer's
+  // per-op timeouts don't cover every call (newPage/evaluate can hang on a
+  // memory-starved host), and a hang here would never release the concurrency
+  // slot the caller holds, permanently jamming the server with 429s.
   async extract(media) {
+    let timer;
+    const deadline = new Promise((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error('Scrape exceeded hard deadline')),
+        this.hardDeadlineMs,
+      );
+    });
+    try {
+      return await Promise.race([this._extractOnce(media), deadline]);
+    } catch (err) {
+      if (err.message === 'Scrape exceeded hard deadline') {
+        // Recycle the browser: a wedged Chromium would hang every future scrape.
+        await this.browserPool.close().catch(() => {});
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async _extractOnce(media) {
     const sourceUrl = this.provider.buildSourceUrl(media);
     const browser = await this.browserPool.acquire();
     const page = await browser.newPage();
