@@ -1,9 +1,12 @@
 // Watches a page's network traffic for an HLS manifest (.m3u8). It also
 // neutralizes anti-devtools scripts and blocks `about:blank` navigations, since
 // request interception must be handled in a single place once enabled.
+const { createLogger } = require('./logger');
+
 class M3u8Detector {
-  constructor(page) {
+  constructor(page, log = createLogger('scraper:detector')) {
     this.page = page;
+    this.log = log;
     this.found = null;
     this._resolve = null;
     this.promise = new Promise((resolve) => {
@@ -14,6 +17,7 @@ class M3u8Detector {
   _record(url) {
     if (this.found) return;
     this.found = url;
+    this.log.info('m3u8 detected', { url });
     this._resolve?.(url);
   }
 
@@ -21,6 +25,7 @@ class M3u8Detector {
     await this.page.setRequestInterception(true);
     this.page.on('request', (req) => this._onRequest(req));
     this.page.on('response', (res) => this._onResponse(res));
+    this.log.debug('request interception enabled');
   }
 
   _onRequest(req) {
@@ -42,6 +47,7 @@ class M3u8Detector {
           lower.includes('devtools'));
 
       if (suspect) {
+        this.log.debug('neutralizing suspect script', { url });
         return req.respond({
           status: 200,
           contentType: 'application/javascript',
@@ -50,11 +56,13 @@ class M3u8Detector {
       }
 
       if (lower === 'about:blank' || lower.includes('about:blank')) {
+        this.log.debug('aborting about:blank navigation', { url });
         return req.abort();
       }
 
       req.continue();
-    } catch (_) {
+    } catch (err) {
+      this.log.warn('request handler error', { error: err });
       try {
         req.continue();
       } catch (_) {}
@@ -81,6 +89,7 @@ class M3u8Detector {
           contentType.includes('application/x-mpegurl') ||
           contentType.includes('mpegurl'))
       ) {
+        this.log.debug('m3u8 detected via content-type', { url, contentType });
         this._record(url);
         return;
       }
@@ -89,10 +98,15 @@ class M3u8Detector {
         const text = await res.text().catch(() => null);
         if (text && text.includes('.m3u8')) {
           const match = text.match(/https?:\/\/[^\s"']+?\.m3u8/);
-          if (match) this._record(match[0]);
+          if (match) {
+            this.log.debug('m3u8 found embedded in text response', { sourceUrl: url });
+            this._record(match[0]);
+          }
         }
       }
-    } catch (_) {}
+    } catch (err) {
+      this.log.warn('response handler error', { error: err });
+    }
   }
 
   waitFor(timeoutMs) {

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:popcorn_flutter/src/details/view/cupertino/cupertino_share_button.dart';
 import 'package:popcorn_flutter/src/details/view/details_play_action.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
+import 'package:popcorn_flutter/src/details/view/media_details_format.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
@@ -26,9 +27,11 @@ class CupertinoMediaDetailsView extends StatelessWidget {
     required this.item,
     this.details,
     this.videos,
+    this.related,
     this.onPlay,
     this.onResume,
     this.onVideoPlay,
+    this.onRelatedSelected,
     this.episodesLoader,
     this.onPlayEpisode,
     this.favoritesController,
@@ -45,6 +48,9 @@ class CupertinoMediaDetailsView extends StatelessWidget {
   /// Videos (trailers, teasers, etc.) for this item, loaded on demand.
   final Future<List<MediaVideo>>? videos;
 
+  /// Related titles (TMDB recommendations) for this item, loaded on demand.
+  final Future<List<MediaItem>>? related;
+
   /// Called when the play button is tapped (launches the player).
   final ValueChanged<MediaItem>? onPlay;
 
@@ -53,6 +59,9 @@ class CupertinoMediaDetailsView extends StatelessWidget {
 
   /// Called when a video tile is tapped (plays the video in-app).
   final ValueChanged<MediaVideo>? onVideoPlay;
+
+  /// Called when a related poster is tapped (opens its details page).
+  final ValueChanged<MediaItem>? onRelatedSelected;
 
   /// Loads the episodes for a tapped season in the seasons sheet.
   final SeasonEpisodesLoader? episodesLoader;
@@ -131,6 +140,23 @@ class CupertinoMediaDetailsView extends StatelessWidget {
                       return GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => _showSeasonsSheet(context, data.seasons), child: row);
                     },
                   ),
+                  ProductionStatusBuilder(
+                    details: details,
+                    builder: (context, label, tone) => Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(color: _statusColor(tone), shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(label, style: textTheme.textStyle.copyWith(color: _statusColor(tone))),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -191,6 +217,12 @@ class CupertinoMediaDetailsView extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 24),
+        RelatedMediaBuilder(
+          related: related,
+          onSelected: onRelatedSelected ?? (_) {},
+          headerBuilder: (context) => Text(DetailsTranslations.related.trOf(context), style: textTheme.navTitleTextStyle),
+        ),
       ],
     );
   }
@@ -238,6 +270,12 @@ class CupertinoMediaDetailsView extends StatelessWidget {
     );
   }
 }
+
+Color _statusColor(ProductionStatusTone tone) => switch (tone) {
+  ProductionStatusTone.active => CupertinoColors.systemGreen,
+  ProductionStatusTone.ended => CupertinoColors.secondaryLabel,
+  ProductionStatusTone.canceled => CupertinoColors.systemRed,
+};
 
 class _Poster extends StatelessWidget {
   const _Poster({this.url});

@@ -43,6 +43,20 @@ class DetailsTranslations {
 
   static const videos = Translation({AppLanguage.en: 'Videos', AppLanguage.es: 'Vídeos', AppLanguage.ca: 'Vídeos'});
 
+  static const related = Translation({AppLanguage.en: 'More like this', AppLanguage.es: 'Títulos relacionados', AppLanguage.ca: 'Títols relacionats'});
+
+  static const statusReturning = Translation({AppLanguage.en: 'Returning series', AppLanguage.es: 'Serie en emisión', AppLanguage.ca: 'Sèrie en emissió'});
+
+  static const statusPlanned = Translation({AppLanguage.en: 'Planned', AppLanguage.es: 'Planificada', AppLanguage.ca: 'Planificada'});
+
+  static const statusInProduction = Translation({AppLanguage.en: 'In production', AppLanguage.es: 'En producción', AppLanguage.ca: 'En producció'});
+
+  static const statusPostProduction = Translation({AppLanguage.en: 'Post-production', AppLanguage.es: 'Postproducción', AppLanguage.ca: 'Postproducció'});
+
+  static const statusEnded = Translation({AppLanguage.en: 'Ended', AppLanguage.es: 'Finalizada', AppLanguage.ca: 'Finalitzada'});
+
+  static const statusCanceled = Translation({AppLanguage.en: 'Canceled', AppLanguage.es: 'Cancelada', AppLanguage.ca: 'Cancel·lada'});
+
   static const director = Translation({AppLanguage.en: 'Director', AppLanguage.es: 'Director', AppLanguage.ca: 'Director'});
 
   static const cast = Translation({AppLanguage.en: 'Cast', AppLanguage.es: 'Reparto', AppLanguage.ca: 'Repartiment'});

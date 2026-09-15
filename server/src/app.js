@@ -8,12 +8,22 @@ const { StreamScraper } = require('./streamScraper');
 const { StreamProxy } = require('./streamProxy');
 const { Controllers } = require('./controllers');
 const { Router } = require('./router');
+const { createLogger } = require('./logger');
+
+const log = createLogger('app');
 
 // Composition root: builds and wires every component in one place. The rest of
 // the codebase depends only on abstractions passed in here (Dependency
 // Inversion), which keeps modules independently testable.
 function createApp(env = process.env) {
   const config = loadConfig(env);
+  log.info('creating app', {
+    port: config.port,
+    maxConcurrentScrapes: config.maxConcurrentScrapes,
+    authEnabled: config.apiTokens.size > 0,
+    chromePath: config.chromePath || 'bundled',
+    logLevel: env.LOG_LEVEL || 'debug',
+  });
 
   const auth = new AuthService(config);
   const browserPool = new BrowserPool({ chromePath: config.chromePath });
@@ -42,7 +52,12 @@ function createApp(env = process.env) {
     .register('/', (req, res) => controllers.landing(req, res));
 
   const server = http.createServer((req, res) => router.handle(req, res));
+  server.on('clientError', (err, socket) => {
+    log.warn('client error', { error: err });
+    if (socket.writable) socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+  });
 
+  log.info('app created');
   return { config, server, browserPool };
 }
 

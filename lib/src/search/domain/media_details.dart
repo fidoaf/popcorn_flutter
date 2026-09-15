@@ -1,3 +1,4 @@
+import 'package:popcorn_flutter/src/search/domain/media_production_status.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 
 /// Extended information about a movie or TV series, loaded on demand for the
@@ -14,6 +15,7 @@ final class MediaDetails {
     this.seasons = const <MediaSeason>[],
     this.director,
     this.cast = const <String>[],
+    this.status = MediaProductionStatus.unknown,
   });
 
   /// Total running time of a movie.
@@ -34,4 +36,7 @@ final class MediaDetails {
   /// Leading cast members (actor names), most prominent first. Empty when
   /// unknown.
   final List<String> cast;
+
+  /// Production lifecycle state (e.g. in production, ended, canceled).
+  final MediaProductionStatus status;
 }

@@ -1,10 +1,15 @@
 // Owns everything about request authentication: extracting tokens, deciding
 // whether a request is allowed, and building the token query suffix used when
 // the server links back to its own proxy endpoints.
+const { createLogger } = require('./logger');
+
+const log = createLogger('auth');
+
 class AuthService {
   constructor({ apiTokens, publicPaths }) {
     this.apiTokens = apiTokens;
     this.publicPaths = publicPaths;
+    log.debug('auth configured', { enabled: apiTokens.size > 0, tokenCount: apiTokens.size });
   }
 
   get enabled() {
@@ -19,10 +24,18 @@ class AuthService {
   }
 
   isAuthorized(req, pathname, searchParams) {
-    if (this.publicPaths.has(pathname)) return true;
-    if (!this.enabled) return true;
+    if (this.publicPaths.has(pathname)) {
+      log.debug('authorized: public path', { pathname });
+      return true;
+    }
+    if (!this.enabled) {
+      log.debug('authorized: auth disabled', { pathname });
+      return true;
+    }
     const token = this.extractToken(req, searchParams);
-    return token != null && this.apiTokens.has(token);
+    const ok = token != null && this.apiTokens.has(token);
+    log.debug('auth decision', { pathname, provided: token != null, authorized: ok });
+    return ok;
   }
 
   tokenQuery(token) {

@@ -27,6 +27,9 @@ abstract interface class MediaSearchRepository {
   /// Returns the trending entries of [mediaType] for the current week.
   Future<List<MediaItem>> trending(MediaType mediaType);
 
+  /// Returns entries related to (recommended from) the entry [id] of [mediaType].
+  Future<List<MediaItem>> related(int id, MediaType mediaType);
+
   /// Returns the videos (trailers, teasers, clips) for the entry [id] of [mediaType].
   Future<List<MediaVideo>> videos(int id, MediaType mediaType);
 

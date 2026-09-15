@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_episode.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_production_status.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_exception.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
@@ -128,6 +129,30 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   }
 
   @override
+  Future<List<MediaItem>> related(int id, MediaType mediaType) async {
+    final uri = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id/recommendations');
+
+    final http.Response response;
+    try {
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw const MediaSearchException('TMDB recommendations request timeout'));
+    } on SocketException catch (e) {
+      throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
+    } catch (error) {
+      throw MediaSearchException('Unable to reach TMDB: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw MediaSearchException('TMDB recommendations failed with status ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = (decoded['results'] as List<dynamic>?) ?? const <dynamic>[];
+    return results.cast<Map<String, dynamic>>().map(_toMediaItem).toList(growable: false);
+  }
+
+  @override
   Future<List<MediaVideo>> videos(int id, MediaType mediaType) async {
     final uri = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id/videos');
 
@@ -192,6 +217,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   static MediaDetails _toMediaDetails(Map<String, dynamic> json, MediaType mediaType) {
     final director = _director(json, mediaType);
     final cast = _cast(json);
+    final status = MediaProductionStatus.fromTmdb(json['status'] as String?);
     switch (mediaType) {
       case MediaType.movie:
         final minutes = (json['runtime'] as num?)?.toInt();
@@ -199,6 +225,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
           runtime: minutes == null || minutes <= 0 ? null : Duration(minutes: minutes),
           director: director,
           cast: cast,
+          status: status,
         );
       case MediaType.tv:
         final seasonsJson = (json['seasons'] as List<dynamic>?) ?? const <dynamic>[];
@@ -209,6 +236,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
           seasons: seasons,
           director: director,
           cast: cast,
+          status: status,
         );
     }
   }

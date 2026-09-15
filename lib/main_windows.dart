@@ -336,6 +336,7 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           item: bundle.item,
           details: bundle.details,
           videos: bundle.videos,
+          related: bundle.related,
           favoritesController: _services.favoritesController,
           historyController: _services.historyController,
           mediaType: bundle.type,
@@ -345,6 +346,7 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
             arguments: playItem,
           ),
           onVideoPlay: (video) => Navigator.of(context).pushNamed(AppRoutes.trailer, arguments: video),
+          onRelatedSelected: (related) => Navigator.of(context).pushNamed(AppRoutes.details(bundle.type, related.id), arguments: related),
           episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
           onPlayEpisode: (season, episode) => Navigator.of(context).pushNamed(
             AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),

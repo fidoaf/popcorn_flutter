@@ -3,12 +3,13 @@ import 'package:popcorn_flutter/src/search/search.dart';
 
 /// The resolved data handed to a platform detail builder.
 class MediaDetailsBundle {
-  const MediaDetailsBundle({required this.item, required this.type, required this.details, required this.videos});
+  const MediaDetailsBundle({required this.item, required this.type, required this.details, required this.videos, required this.related});
 
   final MediaItem item;
   final MediaType type;
   final Future<MediaDetails> details;
   final Future<List<MediaVideo>> videos;
+  final Future<List<MediaItem>> related;
 }
 
 /// Resolves the [MediaItem] for a details route — using [item] when navigating
@@ -46,6 +47,7 @@ class _MediaDetailsScaffoldState extends State<MediaDetailsScaffold> {
   Object? _error;
   Future<MediaDetails>? _details;
   Future<List<MediaVideo>>? _videos;
+  Future<List<MediaItem>>? _related;
 
   @override
   void initState() {
@@ -69,6 +71,7 @@ class _MediaDetailsScaffoldState extends State<MediaDetailsScaffold> {
     _item = item;
     _details = widget.repository.details(item.id, widget.type);
     _videos = widget.repository.videos(item.id, widget.type);
+    _related = widget.repository.related(item.id, widget.type);
   }
 
   @override
@@ -77,6 +80,6 @@ class _MediaDetailsScaffoldState extends State<MediaDetailsScaffold> {
     if (error != null) return widget.errorBuilder(context, error);
     final item = _item;
     if (item == null) return widget.loadingBuilder(context);
-    return widget.builder(context, MediaDetailsBundle(item: item, type: widget.type, details: _details!, videos: _videos!));
+    return widget.builder(context, MediaDetailsBundle(item: item, type: widget.type, details: _details!, videos: _videos!, related: _related!));
   }
 }

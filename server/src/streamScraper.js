@@ -1,5 +1,8 @@
 const { M3u8Detector } = require('./m3u8Detector');
 const { blockNavigationHijacks, maskAutomation } = require('./pageHardening');
+const { createLogger } = require('./logger');
+
+const moduleLog = createLogger('scraper');
 
 // Attempt to start playback in a document context and report the resolved
 // source. Serialized into the page, so it must be fully self-contained.
@@ -79,7 +82,7 @@ class StreamScraper {
   // per-op timeouts don't cover every call (newPage/evaluate can hang on a
   // memory-starved host), and a hang here would never release the concurrency
   // slot the caller holds, permanently jamming the server with 429s.
-  async extract(media) {
+  async extract(media, log = moduleLog) {
     let timer;
     const deadline = new Promise((_, reject) => {
       timer = setTimeout(
@@ -87,10 +90,15 @@ class StreamScraper {
         this.hardDeadlineMs,
       );
     });
+    log.debug('extract start', { media, hardDeadlineMs: this.hardDeadlineMs });
     try {
-      return await Promise.race([this._extractOnce(media), deadline]);
+      return await Promise.race([this._extractOnce(media, log), deadline]);
     } catch (err) {
       if (err.message === 'Scrape exceeded hard deadline') {
+        log.error('extract hit hard deadline; recycling browser', {
+          media,
+          hardDeadlineMs: this.hardDeadlineMs,
+        });
         // Recycle the browser: a wedged Chromium would hang every future scrape.
         await this.browserPool.close().catch(() => {});
       }
@@ -100,24 +108,34 @@ class StreamScraper {
     }
   }
 
-  async _extractOnce(media) {
+  async _extractOnce(media, log = moduleLog) {
     const sourceUrl = this.provider.buildSourceUrl(media);
+    log.info('acquiring browser', { sourceUrl });
     const browser = await this.browserPool.acquire();
     const page = await browser.newPage();
+    log.debug('new page created');
 
     try {
       await this._preparePage(page);
-      const detector = new M3u8Detector(page);
+      log.debug('page prepared');
+      const detector = new M3u8Detector(page, log.child('detector'));
       await detector.attach();
+      log.debug('m3u8 detector attached');
 
+      log.info('navigating to source', { sourceUrl, timeoutMs: this.navigationTimeoutMs });
       await page.goto(sourceUrl, { waitUntil: 'networkidle2', timeout: this.navigationTimeoutMs });
+      log.debug('navigation settled');
 
-      const playingSrc = await this._attemptPlayback(page);
+      const playingSrc = await this._attemptPlayback(page, log);
+      log.info('playback attempt done', { playing: Boolean(playingSrc), src: playingSrc });
+
+      log.debug('waiting for m3u8', { m3u8WaitMs: this.m3u8WaitMs });
       const m3u8 = await detector.waitFor(this.m3u8WaitMs);
       const resolvedM3u8 = m3u8 || detector.found;
+      log.info('m3u8 wait complete', { resolvedM3u8 });
 
       if (resolvedM3u8) {
-        await this._openHlsPreview(browser, resolvedM3u8);
+        await this._openHlsPreview(browser, resolvedM3u8, log);
       }
 
       return {
@@ -132,6 +150,7 @@ class StreamScraper {
       };
     } finally {
       await page.close().catch(() => {});
+      log.debug('page closed');
     }
   }
 
@@ -150,13 +169,19 @@ class StreamScraper {
     });
   }
 
-  async _attemptPlayback(page) {
+  async _attemptPlayback(page, log = moduleLog) {
     let playingSrc = await page.evaluate(playInDocument);
-    if (playingSrc) return playingSrc;
+    if (playingSrc) {
+      log.debug('playback started in main document', { src: playingSrc });
+      return playingSrc;
+    }
 
-    for (const frame of page.frames()) {
+    const frames = page.frames();
+    log.debug('main document did not yield playback; scanning frames', { frameCount: frames.length });
+    for (const frame of frames) {
       const frameSrc = await frame.evaluate(playInFrame).catch(() => null);
       if (frameSrc) {
+        log.debug('playback started in frame', { frameUrl: frame.url(), src: frameSrc });
         playingSrc = frameSrc;
         break;
       }
@@ -164,13 +189,17 @@ class StreamScraper {
     return playingSrc;
   }
 
-  async _openHlsPreview(browser, m3u8Url) {
+  async _openHlsPreview(browser, m3u8Url, log = moduleLog) {
     try {
+      log.debug('opening HLS preview page', { m3u8Url });
       const playPage = await browser.newPage();
       await playPage.setViewport({ width: 1280, height: 720 });
       await playPage.setContent(this._buildPreviewHtml(m3u8Url), { waitUntil: 'networkidle0' });
       await playPage.close().catch(() => {});
-    } catch (_) {}
+      log.debug('HLS preview page closed');
+    } catch (err) {
+      log.warn('HLS preview failed', { error: err });
+    }
   }
 
   _buildPreviewHtml(m3u8Url) {

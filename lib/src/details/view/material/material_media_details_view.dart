@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/details/view/details_play_action.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/material/material_share_button.dart';
+import 'package:popcorn_flutter/src/details/view/media_details_format.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
@@ -26,9 +27,11 @@ class MaterialMediaDetailsView extends StatelessWidget {
     required this.item,
     this.details,
     this.videos,
+    this.related,
     this.onPlay,
     this.onResume,
     this.onVideoPlay,
+    this.onRelatedSelected,
     this.episodesLoader,
     this.onPlayEpisode,
     this.favoritesController,
@@ -45,6 +48,9 @@ class MaterialMediaDetailsView extends StatelessWidget {
   /// Videos (trailers, teasers, etc.) for this item, loaded on demand.
   final Future<List<MediaVideo>>? videos;
 
+  /// Related titles (TMDB recommendations) for this item, loaded on demand.
+  final Future<List<MediaItem>>? related;
+
   /// Called when the play button is tapped (launches the player).
   final ValueChanged<MediaItem>? onPlay;
 
@@ -53,6 +59,9 @@ class MaterialMediaDetailsView extends StatelessWidget {
 
   /// Called when a video tile is tapped (plays the video in-app).
   final ValueChanged<MediaVideo>? onVideoPlay;
+
+  /// Called when a related poster is tapped (opens its details page).
+  final ValueChanged<MediaItem>? onRelatedSelected;
 
   /// Loads the episodes for a tapped season in the seasons sheet.
   final SeasonEpisodesLoader? episodesLoader;
@@ -131,6 +140,19 @@ class MaterialMediaDetailsView extends StatelessWidget {
                       return InkWell(borderRadius: BorderRadius.circular(8), onTap: () => _showSeasonsSheet(context, data.seasons), child: row);
                     },
                   ),
+                  ProductionStatusBuilder(
+                    details: details,
+                    builder: (context, label, tone) => Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        children: [
+                          Container(width: 8, height: 8, decoration: BoxDecoration(color: _statusColor(theme, tone), shape: BoxShape.circle)),
+                          const SizedBox(width: 6),
+                          Text(label, style: theme.textTheme.titleMedium?.copyWith(color: _statusColor(theme, tone))),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -175,6 +197,12 @@ class MaterialMediaDetailsView extends StatelessWidget {
             subtitle: Text(video.type),
             onTap: onVideoPlay == null ? null : () => onVideoPlay!(video),
           ),
+        ),
+        const SizedBox(height: 24),
+        RelatedMediaBuilder(
+          related: related,
+          onSelected: onRelatedSelected ?? (_) {},
+          headerBuilder: (context) => Text(DetailsTranslations.related.trOf(context), style: theme.textTheme.titleMedium),
         ),
       ],
     );
@@ -224,9 +252,14 @@ class MaterialMediaDetailsView extends StatelessWidget {
   }
 }
 
+Color _statusColor(ThemeData theme, ProductionStatusTone tone) => switch (tone) {
+  ProductionStatusTone.active => Colors.green.shade600,
+  ProductionStatusTone.ended => theme.colorScheme.onSurfaceVariant,
+  ProductionStatusTone.canceled => theme.colorScheme.error,
+};
+
 class _Poster extends StatelessWidget {
   const _Poster({this.url});
-
   final Uri? url;
 
   static const double _width = 120;

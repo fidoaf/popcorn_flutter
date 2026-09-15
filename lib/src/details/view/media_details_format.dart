@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
+import 'package:popcorn_flutter/src/search/domain/media_production_status.dart';
 
 /// Formats the extra metadata shown on the details page: the movie [runtime]
 /// (e.g. `2h 16m`) or the TV series season/episode counts
@@ -31,4 +32,33 @@ String? formatMediaDetails(BuildContext context, MediaDetails details) {
   }
 
   return parts.isEmpty ? null : parts.join(' \u00b7 ');
+}
+
+/// The visual tone of a production status, letting each platform view pick a
+/// colour: [active] for ongoing work, [ended] for a finished run and
+/// [canceled] for a discontinued one.
+enum ProductionStatusTone { active, ended, canceled }
+
+/// Formats a [MediaProductionStatus] into a localized label and a [tone] for
+/// display, or `null` when the status carries no useful signal (released,
+/// rumored or unknown).
+({String label, ProductionStatusTone tone})? formatProductionStatus(BuildContext context, MediaProductionStatus status) {
+  switch (status) {
+    case MediaProductionStatus.returningSeries:
+      return (label: DetailsTranslations.statusReturning.trOf(context), tone: ProductionStatusTone.active);
+    case MediaProductionStatus.planned:
+      return (label: DetailsTranslations.statusPlanned.trOf(context), tone: ProductionStatusTone.active);
+    case MediaProductionStatus.inProduction:
+      return (label: DetailsTranslations.statusInProduction.trOf(context), tone: ProductionStatusTone.active);
+    case MediaProductionStatus.postProduction:
+      return (label: DetailsTranslations.statusPostProduction.trOf(context), tone: ProductionStatusTone.active);
+    case MediaProductionStatus.ended:
+      return (label: DetailsTranslations.statusEnded.trOf(context), tone: ProductionStatusTone.ended);
+    case MediaProductionStatus.canceled:
+      return (label: DetailsTranslations.statusCanceled.trOf(context), tone: ProductionStatusTone.canceled);
+    case MediaProductionStatus.released:
+    case MediaProductionStatus.rumored:
+    case MediaProductionStatus.unknown:
+      return null;
+  }
 }

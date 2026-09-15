@@ -1,4 +1,7 @@
 const puppeteer = require('puppeteer');
+const { createLogger } = require('./logger');
+
+const log = createLogger('browserPool');
 
 // Lazily launches and owns a single shared Chromium instance. Everything that
 // needs a page depends on this abstraction rather than on Puppeteer's launch
@@ -32,18 +35,31 @@ class BrowserPool {
 
   async acquire() {
     if (this.browser && this.browser.connected === false) {
+      log.warn('cached browser is disconnected; discarding');
       this.browser = null;
     }
     if (!this.browser) {
+      const startedAt = Date.now();
+      log.info('launching Chromium', { executablePath: this.chromePath || 'bundled' });
       this.browser = await puppeteer.launch(this.launchOptions);
-      this.browser.on('disconnected', () => { this.browser = null; });
+      log.info('Chromium launched', {
+        durationMs: Date.now() - startedAt,
+        pid: this.browser.process() ? this.browser.process().pid : null,
+      });
+      this.browser.on('disconnected', () => {
+        log.warn('Chromium disconnected');
+        this.browser = null;
+      });
+    } else {
+      log.debug('reusing existing Chromium instance');
     }
     return this.browser;
   }
 
   async close() {
     if (this.browser) {
-      await this.browser.close().catch(() => {});
+      log.info('closing Chromium');
+      await this.browser.close().catch((err) => log.warn('error while closing Chromium', { error: err }));
       this.browser = null;
     }
   }
