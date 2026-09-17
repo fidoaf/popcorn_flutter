@@ -23,6 +23,14 @@ import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
+import 'package:web/web.dart' as web;
+
+/// Whether the app is running as an installed PWA (standalone) rather than in a
+/// normal browser tab, where the browser already provides back navigation.
+bool get _isPwa =>
+    web.window.matchMedia('(display-mode: standalone)').matches ||
+    web.window.matchMedia('(display-mode: minimal-ui)').matches ||
+    web.window.matchMedia('(display-mode: fullscreen)').matches;
 
 void main(List<String> args) async {
   if (!kIsWeb) {
@@ -271,41 +279,37 @@ class _PopcornWebAppState extends State<_PopcornWebApp> with WidgetsBindingObser
     builder: (context, bundle) => PopcornWebSplashScreen(
       child: Theme(
         data: _theme,
-        child: Material(
-          color: _background,
-          child: SafeArea(
-            child: Stack(
-              children: [
-                MaterialMediaDetailsView(
-                  item: bundle.item,
-                  details: bundle.details,
-                  videos: bundle.videos,
-                  related: bundle.related,
-                  favoritesController: _services.favoritesController,
-                  historyController: _services.historyController,
-                  mediaType: bundle.type,
-                  mediaSourceProvider: _services.mediaSourceProvider,
-                  onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id, provider: _services.mediaSourceProvider.name), extra: playItem),
-                  onResume: (playItem, {season, episode}) => context.push(
-                    AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode, provider: _services.mediaSourceProvider.name),
-                    extra: playItem,
-                  ),
-                  onVideoPlay: (video) => context.push(AppRoutes.trailer, extra: video),
-                  onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
-                  episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
-                  onPlayEpisode: (season, episode) => context.push(
-                    AppRoutes.watch(
-                      bundle.type,
-                      bundle.item.id,
-                      season: season.seasonNumber,
-                      episode: episode.episodeNumber,
-                      provider: _services.mediaSourceProvider.name,
-                    ),
-                    extra: bundle.item,
-                  ),
+        child: Scaffold(
+          backgroundColor: _background,
+          appBar: AppBar(backgroundColor: _background, automaticallyImplyLeading: _isPwa, actions: const [PopcornAppBarLogo()]),
+          body: SafeArea(
+            child: MaterialMediaDetailsView(
+              item: bundle.item,
+              details: bundle.details,
+              videos: bundle.videos,
+              related: bundle.related,
+              favoritesController: _services.favoritesController,
+              historyController: _services.historyController,
+              mediaType: bundle.type,
+              mediaSourceProvider: _services.mediaSourceProvider,
+              onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id, provider: _services.mediaSourceProvider.name), extra: playItem),
+              onResume: (playItem, {season, episode}) => context.push(
+                AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode, provider: _services.mediaSourceProvider.name),
+                extra: playItem,
+              ),
+              onVideoPlay: (video) => context.push(AppRoutes.trailer, extra: video),
+              onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
+              episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
+              onPlayEpisode: (season, episode) => context.push(
+                AppRoutes.watch(
+                  bundle.type,
+                  bundle.item.id,
+                  season: season.seasonNumber,
+                  episode: episode.episodeNumber,
+                  provider: _services.mediaSourceProvider.name,
                 ),
-                const Positioned(top: 8, right: 8, child: PopcornAppBarLogo()),
-              ],
+                extra: bundle.item,
+              ),
             ),
           ),
         ),
