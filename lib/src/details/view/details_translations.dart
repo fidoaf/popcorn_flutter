@@ -9,6 +9,8 @@ class DetailsTranslations {
 
   static const resume = Translation({AppLanguage.en: 'Resume', AppLanguage.es: 'Reanudar', AppLanguage.ca: 'Reprèn'});
 
+  static const provider = Translation({AppLanguage.en: 'Source', AppLanguage.es: 'Fuente', AppLanguage.ca: 'Font'});
+
   static const tba = Translation({AppLanguage.en: 'TBA', AppLanguage.es: 'Por anunciar', AppLanguage.ca: 'Per anunciar'});
 
   static const overview = Translation({AppLanguage.en: 'Overview', AppLanguage.es: 'Sinopsis', AppLanguage.ca: 'Sinopsi'});

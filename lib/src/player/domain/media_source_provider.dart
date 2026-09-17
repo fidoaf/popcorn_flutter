@@ -12,5 +12,8 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 /// For TV series, [season] and [episode] select the episode to play; they are
 /// ignored for movies.
 abstract interface class MediaSourceProvider {
+  /// Human-readable identifier shown when selecting the active backend.
+  String get name;
+
   MediaSource resolve(MediaItem media, MediaType mediaType, {int? season, int? episode});
 }

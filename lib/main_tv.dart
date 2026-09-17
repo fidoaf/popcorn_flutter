@@ -299,6 +299,7 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
             favoritesController: _services.favoritesController,
             historyController: _services.historyController,
             mediaType: bundle.type,
+            mediaSourceProvider: _services.mediaSourceProvider,
             onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id), extra: playItem),
             onResume: (playItem, {season, episode}) => context.push(
               AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode),

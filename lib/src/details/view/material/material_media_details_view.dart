@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/details/view/details_play_action.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
+import 'package:popcorn_flutter/src/details/view/material/material_media_source_dropdown.dart';
 import 'package:popcorn_flutter/src/details/view/material/material_share_button.dart';
 import 'package:popcorn_flutter/src/details/view/media_details_format.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
@@ -11,6 +12,7 @@ import 'package:popcorn_flutter/src/favorites/view/material/material_favorite_bu
 import 'package:popcorn_flutter/src/history/view/watch_history_controller.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/media_source/configurable_media_source_provider.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
@@ -37,6 +39,7 @@ class MaterialMediaDetailsView extends StatelessWidget {
     this.favoritesController,
     this.historyController,
     this.mediaType,
+    this.mediaSourceProvider,
     this.autofocusPlay = false,
   });
   final MediaItem item;
@@ -78,6 +81,10 @@ class MaterialMediaDetailsView extends StatelessWidget {
 
   /// The [MediaType] of [item], needed to persist the favorite.
   final MediaType? mediaType;
+
+  /// Streaming backends the viewer can pick from. When `null` (or it exposes a
+  /// single provider) no source dropdown is shown.
+  final ConfigurableMediaSourceProvider? mediaSourceProvider;
 
   /// Autofocus the play button so a D-pad/remote has an initial focus target.
   final bool autofocusPlay;
@@ -146,7 +153,11 @@ class MaterialMediaDetailsView extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 8),
                       child: Row(
                         children: [
-                          Container(width: 8, height: 8, decoration: BoxDecoration(color: _statusColor(theme, tone), shape: BoxShape.circle)),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(color: _statusColor(theme, tone), shape: BoxShape.circle),
+                          ),
                           const SizedBox(width: 6),
                           Text(label, style: theme.textTheme.titleMedium?.copyWith(color: _statusColor(theme, tone))),
                         ],
@@ -219,6 +230,10 @@ class MaterialMediaDetailsView extends StatelessWidget {
             icon: const Icon(Icons.play_arrow),
             label: Text(detailsPlayLabel(context, entry)),
           ),
+        if (mediaSourceProvider != null && onPlay != null && item.isReleased) ...[
+          const SizedBox(width: 8),
+          MaterialMediaSourceDropdown(provider: mediaSourceProvider!),
+        ],
         if (favoritesController != null && mediaType != null) ...[
           const SizedBox(width: 8),
           MaterialFavoriteButton(

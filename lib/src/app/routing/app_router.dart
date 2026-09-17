@@ -38,6 +38,9 @@ GoRouter createAppRouter({
   required bool Function() isSignedIn,
   required String initialLocation,
 }) {
+  // Navigation uses `push` (ImperativeRouteMatch); without this the browser URL
+  // stays on the base location instead of the pushed route.
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   final request = AppRoutes.parse(initialLocation);
   final seedsHome = request is DetailsRoute || request is WatchRoute || request is FavoritesRoute || request is HistoryRoute || request is TrailerRoute;
 
