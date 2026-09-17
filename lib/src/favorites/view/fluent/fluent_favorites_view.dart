@@ -1,4 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:popcorn_flutter/src/app/view/popcorn_appbar_logo.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_translations.dart';
@@ -21,6 +22,7 @@ class FluentFavoritesView extends StatelessWidget {
         padding: 16,
         leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).maybePop()),
         title: Text(FavoritesTranslations.pageTitle.trOf(context)),
+        commandBar: const PopcornAppBarLogo(),
       ),
       content: ListenableBuilder(
         listenable: controller,

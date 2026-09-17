@@ -2,6 +2,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
+import 'package:popcorn_flutter/src/auth/view/google_sign_in_button.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 
@@ -63,17 +64,7 @@ class _FluentLoginViewState extends State<FluentLoginView> {
                 const SizedBox(height: 8),
                 Text(AuthTranslations.signInSubtitle.trOf(context), textAlign: TextAlign.center, style: theme.typography.body),
                 const SizedBox(height: 32),
-                FilledButton(
-                  onPressed: _busy ? null : _signIn,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_busy) const SizedBox(width: 16, height: 16, child: ProgressRing(strokeWidth: 2)) else const Icon(FluentIcons.signin),
-                      const SizedBox(width: 8),
-                      Text(AuthTranslations.signInWithGoogle.trOf(context)),
-                    ],
-                  ),
-                ),
+                GoogleSignInButton(label: AuthTranslations.signInWithGoogle.trOf(context), busy: _busy, onPressed: _signIn),
                 if (AuthController.guestAccessAllowed) ...[
                   const SizedBox(height: 12),
                   Button(

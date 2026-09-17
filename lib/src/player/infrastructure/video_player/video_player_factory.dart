@@ -7,7 +7,7 @@ import 'package:popcorn_flutter/src/player/infrastructure/video_player/inappwebv
 abstract final class VideoPlayerFactory {
   const VideoPlayerFactory._();
 
-  static VideoPlayer create({Key? key, required MediaSource source}) {
-    return InappwebviewVideoPlayer(key: key, source: source, fullscreenController: FullscreenControllerFactory.create());
+  static VideoPlayer create({Key? key, required MediaSource source, ValueChanged<Uri>? onUrlChanged}) {
+    return InappwebviewVideoPlayer(key: key, source: source, fullscreenController: FullscreenControllerFactory.create(), onUrlChanged: onUrlChanged);
   }
 }

@@ -8,7 +8,7 @@ import 'package:popcorn_flutter/src/player/domain/media_source.dart';
 import 'package:popcorn_flutter/src/player/domain/video_player.dart';
 
 final class InappwebviewVideoPlayer extends VideoPlayer {
-  const InappwebviewVideoPlayer({super.key, required super.source, required this.fullscreenController});
+  const InappwebviewVideoPlayer({super.key, required super.source, required this.fullscreenController, super.onUrlChanged});
 
   final FullscreenController fullscreenController;
 
@@ -119,6 +119,13 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
       onCreateWindow: (controller, createWindowAction) async => false,
       onEnterFullscreen: (_) => fullscreenController.setFullscreen(true),
       onExitFullscreen: (_) => fullscreenController.setFullscreen(false),
+      // Report client-side navigations (e.g. the embedded player advancing to
+      // the next episode) so callers can update the watch history.
+      onUpdateVisitedHistory: onUrlChanged == null
+          ? null
+          : (controller, url, isReload) {
+              if (url != null) onUrlChanged!(url);
+            },
     );
   }
 

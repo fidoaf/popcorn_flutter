@@ -135,6 +135,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                     ? _SearchOverlay(
                         key: const ValueKey('search-overlay'),
                         controller: widget.searchController,
+                        favoritesController: widget.favoritesController,
                         enableDpadFocus: widget.enableDpadFocus,
                         onClose: _closeSearch,
                         onOpenDetails: (item) => widget.onOpenDetails(item, widget.searchController.mediaType),
@@ -186,6 +187,8 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                 final entry = history[index];
                 return _PosterCard(
                   item: entry.item,
+                  mediaType: entry.type,
+                  favoritesController: widget.favoritesController,
                   showResumeBadge: true,
                   onTap: () => widget.onOpenDetails(entry.item, entry.type),
                   onResume: () => widget.onResume(entry),
@@ -200,7 +203,12 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
               itemCount: favorites.length,
               cardBuilder: (context, index) {
                 final FavoriteMedia favorite = favorites[index];
-                return _PosterCard(item: favorite.item, onTap: () => widget.onOpenDetails(favorite.item, favorite.type));
+                return _PosterCard(
+                  item: favorite.item,
+                  mediaType: favorite.type,
+                  favoritesController: widget.favoritesController,
+                  onTap: () => widget.onOpenDetails(favorite.item, favorite.type),
+                );
               },
             ),
           if (feedController.trendingMovies.isNotEmpty)
@@ -209,7 +217,12 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
               itemCount: feedController.trendingMovies.length,
               cardBuilder: (context, index) {
                 final item = feedController.trendingMovies[index];
-                return _PosterCard(item: item, onTap: () => widget.onOpenDetails(item, MediaType.movie));
+                return _PosterCard(
+                  item: item,
+                  mediaType: MediaType.movie,
+                  favoritesController: widget.favoritesController,
+                  onTap: () => widget.onOpenDetails(item, MediaType.movie),
+                );
               },
             ),
           if (feedController.trendingTv.isNotEmpty)
@@ -218,7 +231,12 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
               itemCount: feedController.trendingTv.length,
               cardBuilder: (context, index) {
                 final item = feedController.trendingTv[index];
-                return _PosterCard(item: item, onTap: () => widget.onOpenDetails(item, MediaType.tv));
+                return _PosterCard(
+                  item: item,
+                  mediaType: MediaType.tv,
+                  favoritesController: widget.favoritesController,
+                  onTap: () => widget.onOpenDetails(item, MediaType.tv),
+                );
               },
             ),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -269,6 +287,7 @@ class _SearchOverlay extends StatefulWidget {
   const _SearchOverlay({
     super.key,
     required this.controller,
+    required this.favoritesController,
     required this.onClose,
     required this.onOpenDetails,
     required this.onPlay,
@@ -276,6 +295,7 @@ class _SearchOverlay extends StatefulWidget {
   });
 
   final MediaSearchController controller;
+  final FavoritesController favoritesController;
   final VoidCallback onClose;
   final ValueChanged<MediaItem> onOpenDetails;
   final ValueChanged<MediaItem> onPlay;
@@ -459,7 +479,13 @@ class _SearchOverlayState extends State<_SearchOverlay> {
             ),
             delegate: SliverChildBuilderDelegate((context, index) {
               final item = items[index];
-              return _SearchResultCard(item: item, autofocus: widget.enableDpadFocus && index == 0, onTap: () => widget.onOpenDetails(item));
+              return _SearchResultCard(
+                item: item,
+                mediaType: widget.controller.mediaType,
+                favoritesController: widget.favoritesController,
+                autofocus: widget.enableDpadFocus && index == 0,
+                onTap: () => widget.onOpenDetails(item),
+              );
             }, childCount: items.length),
           ),
         ),
@@ -514,9 +540,11 @@ class _MediaTypeToggle extends StatelessWidget {
 
 /// A poster + title cell used in the search results grid.
 class _SearchResultCard extends StatelessWidget {
-  const _SearchResultCard({required this.item, required this.onTap, this.autofocus = false});
+  const _SearchResultCard({required this.item, required this.mediaType, required this.favoritesController, required this.onTap, this.autofocus = false});
 
   final MediaItem item;
+  final MediaType mediaType;
+  final FavoritesController favoritesController;
   final VoidCallback onTap;
   final bool autofocus;
 
@@ -536,16 +564,27 @@ class _SearchResultCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2.5),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: item.posterUrl != null
-                    ? Image.network(
-                        item.posterUrl.toString(),
-                        fit: BoxFit.cover,
-                        loadingBuilder: _imageSkeletonBuilder,
-                        errorBuilder: (context, _, _) => const _PosterPlaceholder(),
-                      )
-                    : const _PosterPlaceholder(),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: item.posterUrl != null
+                          ? Image.network(
+                              item.posterUrl.toString(),
+                              fit: BoxFit.cover,
+                              loadingBuilder: _imageSkeletonBuilder,
+                              errorBuilder: (context, _, _) => const _PosterPlaceholder(),
+                            )
+                          : const _PosterPlaceholder(),
+                    ),
+                  ),
+                  Positioned(
+                    right: 4,
+                    bottom: 4,
+                    child: _PosterLikeButton(item: item, mediaType: mediaType, controller: favoritesController),
+                  ),
+                ],
               ),
             ),
           ),
@@ -558,6 +597,39 @@ class _SearchResultCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A compact heart button overlaid on a poster that toggles the item in the
+/// user's favorites.
+class _PosterLikeButton extends StatelessWidget {
+  const _PosterLikeButton({required this.item, required this.mediaType, required this.controller});
+
+  final MediaItem item;
+  final MediaType mediaType;
+  final FavoritesController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final isFavorite = controller.isFavorite(mediaType, item.id);
+        return _Pressable(
+          onTap: () => controller.toggle(FavoriteMedia(item: item, type: mediaType)),
+          borderRadius: 16,
+          builder: (focused, hovered) => Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.55),
+              shape: BoxShape.circle,
+              border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+            ),
+            child: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? _Palette.accent : _Palette.textPrimary, size: 18),
+          ),
+        );
+      },
     );
   }
 }
@@ -780,9 +852,18 @@ class _CarouselRow extends StatelessWidget {
 
 /// A single 2:3 poster tile used in every carousel row.
 class _PosterCard extends StatelessWidget {
-  const _PosterCard({required this.item, required this.onTap, this.showResumeBadge = false, this.onResume});
+  const _PosterCard({
+    required this.item,
+    required this.mediaType,
+    required this.favoritesController,
+    required this.onTap,
+    this.showResumeBadge = false,
+    this.onResume,
+  });
 
   final MediaItem item;
+  final MediaType mediaType;
+  final FavoritesController favoritesController;
   final VoidCallback onTap;
   final bool showResumeBadge;
 
@@ -851,6 +932,11 @@ class _PosterCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: _PosterLikeButton(item: item, mediaType: mediaType, controller: favoritesController),
+                ),
               ],
             ),
           ),

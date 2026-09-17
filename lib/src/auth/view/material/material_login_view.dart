@@ -3,6 +3,7 @@ import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/poster_gallery.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
+import 'package:popcorn_flutter/src/auth/view/google_sign_in_button.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 
@@ -94,15 +95,7 @@ class _MaterialLoginViewState extends State<MaterialLoginView> {
           style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
         ),
         const SizedBox(height: 32),
-        FilledButton.icon(
-          onPressed: _busy ? null : _signIn,
-          icon: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login),
-          label: Text(AuthTranslations.signInWithGoogle.trOf(context)),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(52),
-            textStyle: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
+        GoogleSignInButton(label: AuthTranslations.signInWithGoogle.trOf(context), busy: _busy, onPressed: _signIn),
         if (AuthController.guestAccessAllowed) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(

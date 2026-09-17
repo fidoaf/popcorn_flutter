@@ -12,6 +12,7 @@ import 'package:popcorn_flutter/src/app/startup_error_app.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
 import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
+import 'package:popcorn_flutter/src/app/view/popcorn_appbar_logo.dart';
 import 'package:popcorn_flutter/src/app/view/system_bars_background.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
@@ -181,8 +182,8 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
         return _historyPage(context);
       case DetailsRoute(:final type, :final id):
         return _detailsPage(type, id, arguments is MediaItem ? arguments : null);
-      case WatchRoute(:final type, :final id, :final season, :final episode):
-        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null);
+      case WatchRoute(:final type, :final id, :final season, :final episode, :final provider):
+        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null, provider);
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
         return video == null ? _TvHomeView(services: _services, browse: true) : _trailerPage(video);
@@ -195,7 +196,7 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
 
   Widget _legalPage(BuildContext context, LegalDocument document) => PopcornMaterialSplashScreen(
     child: Scaffold(
-      appBar: AppBar(title: Text(document.title.trOf(context))),
+      appBar: AppBar(title: Text(document.title.trOf(context)), actions: const [PopcornAppBarLogo()]),
       body: SafeArea(child: LegalDocumentView(document: document)),
     ),
   );
@@ -224,7 +225,7 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
 
   Widget _favoritesPage(BuildContext context) => PopcornMaterialSplashScreen(
     child: Scaffold(
-      appBar: AppBar(title: Text(FavoritesTranslations.pageTitle.trOf(context))),
+      appBar: AppBar(title: Text(FavoritesTranslations.pageTitle.trOf(context)), actions: const [PopcornAppBarLogo()]),
       body: SafeArea(
         child: MaterialFavoritesView(
           controller: _services.favoritesController,
@@ -236,13 +237,13 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
 
   Widget _historyPage(BuildContext context) => PopcornMaterialSplashScreen(
     child: Scaffold(
-      appBar: AppBar(title: Text(WatchHistoryTranslations.pageTitle.trOf(context))),
+      appBar: AppBar(title: Text(WatchHistoryTranslations.pageTitle.trOf(context)), actions: const [PopcornAppBarLogo()]),
       body: SafeArea(
         child: MaterialContinueWatchingView(
           controller: _services.historyController,
           onMediaSelected: (entry) => context.push(AppRoutes.details(entry.type, entry.item.id), extra: entry.item),
           onMediaPlay: (entry) => context.push(
-            AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+            AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode, provider: _services.mediaSourceProvider.name),
             extra: entry.item,
           ),
         ),
@@ -250,15 +251,16 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
     ),
   );
 
-  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item) => MediaPlaybackScaffold(
+  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item, [String? provider]) => MediaPlaybackScaffold(
     id: id,
     type: type,
     season: season,
     episode: episode,
     item: item,
+    provider: provider,
     services: _services,
     loadingBuilder: (context) => _playerPage(context, const Center(child: CircularProgressIndicator())),
-    builder: (context, source, resolved) => _playerPage(context, VideoPlayerFactory.create(source: source)),
+    builder: (context, source, resolved, onUrlChanged) => _playerPage(context, VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged)),
   );
 
   Widget _trailerPage(MediaVideo video) => Builder(
@@ -279,7 +281,7 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
       child: Scaffold(body: Center(child: CircularProgressIndicator())),
     ),
     errorBuilder: (context, error) => Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(actions: const [PopcornAppBarLogo()]),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -289,7 +291,7 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
     ),
     builder: (context, bundle) => PopcornMaterialSplashScreen(
       child: Scaffold(
-        appBar: AppBar(title: Text(bundle.item.title)),
+        appBar: AppBar(title: Text(bundle.item.title), actions: const [PopcornAppBarLogo()]),
         body: SafeArea(
           child: MaterialMediaDetailsView(
             item: bundle.item,
@@ -300,16 +302,22 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
             historyController: _services.historyController,
             mediaType: bundle.type,
             mediaSourceProvider: _services.mediaSourceProvider,
-            onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id), extra: playItem),
+            onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id, provider: _services.mediaSourceProvider.name), extra: playItem),
             onResume: (playItem, {season, episode}) => context.push(
-              AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode),
+              AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode, provider: _services.mediaSourceProvider.name),
               extra: playItem,
             ),
             onVideoPlay: (video) => context.push(AppRoutes.trailer, extra: video),
             onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
             episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
             onPlayEpisode: (season, episode) => context.push(
-              AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
+              AppRoutes.watch(
+                bundle.type,
+                bundle.item.id,
+                season: season.seasonNumber,
+                episode: episode.episodeNumber,
+                provider: _services.mediaSourceProvider.name,
+              ),
               extra: bundle.item,
             ),
             autofocusPlay: true,
@@ -360,6 +368,7 @@ class _TvHomeView extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           centerTitle: true,
+          leading: const PopcornAppBarLogo(),
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -409,9 +418,9 @@ class _TvHomeView extends StatelessWidget {
                 searchController: services.searchController,
                 enableDpadFocus: true,
                 onOpenDetails: (media, type) => context.push(AppRoutes.details(type, media.id), extra: media),
-                onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id), extra: media),
+                onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id, provider: services.mediaSourceProvider.name), extra: media),
                 onResume: (entry) => context.push(
-                  AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+                  AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode, provider: services.mediaSourceProvider.name),
                   extra: entry.item,
                 ),
                 onSeeAllFavorites: () => context.push(AppRoutes.favorites),
@@ -423,7 +432,8 @@ class _TvHomeView extends StatelessWidget {
                 initialQuery: initialQuery,
                 initialMediaType: initialMediaType,
                 onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
-                onMediaPlay: (media) => context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
+                onMediaPlay: (media) =>
+                    context.push(AppRoutes.watch(services.searchController.mediaType, media.id, provider: services.mediaSourceProvider.name), extra: media),
                 enableDpadFocus: true,
               ),
       ),

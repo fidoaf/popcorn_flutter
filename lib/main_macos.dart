@@ -13,6 +13,7 @@ import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
 import 'package:popcorn_flutter/src/app/view/macos/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
+import 'package:popcorn_flutter/src/app/view/popcorn_appbar_logo.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
@@ -241,8 +242,8 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         return _historyPage(context);
       case DetailsRoute(:final type, :final id):
         return _detailsPage(type, id, arguments is MediaItem ? arguments : null);
-      case WatchRoute(:final type, :final id, :final season, :final episode):
-        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null);
+      case WatchRoute(:final type, :final id, :final season, :final episode, :final provider):
+        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null, provider);
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
         return video == null ? _MacosHomeView(services: _services, browse: true) : _trailerPage(video);
@@ -258,6 +259,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
       toolBar: ToolBar(
         title: Text(document.title.trOf(context)),
         leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+        actions: [CustomToolbarItem(inToolbarBuilder: (context) => const PopcornAppBarLogo())],
       ),
       children: [ContentArea(builder: (context, _) => LegalDocumentView(document: document))],
     ),
@@ -276,6 +278,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
       toolBar: ToolBar(
         title: Text(title),
         leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+        actions: [CustomToolbarItem(inToolbarBuilder: (context) => const PopcornAppBarLogo())],
       ),
       children: [ContentArea(builder: (context, _) => player)],
     ),
@@ -286,6 +289,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
       toolBar: ToolBar(
         title: Text(FavoritesTranslations.pageTitle.trOf(context)),
         leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+        actions: [CustomToolbarItem(inToolbarBuilder: (context) => const PopcornAppBarLogo())],
       ),
       children: [
         ContentArea(
@@ -303,6 +307,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
       toolBar: ToolBar(
         title: Text(WatchHistoryTranslations.pageTitle.trOf(context)),
         leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+        actions: [CustomToolbarItem(inToolbarBuilder: (context) => const PopcornAppBarLogo())],
       ),
       children: [
         ContentArea(
@@ -310,7 +315,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
             controller: _services.historyController,
             onMediaSelected: (entry) => context.push(AppRoutes.details(entry.type, entry.item.id), extra: entry.item),
             onMediaPlay: (entry) => context.push(
-              AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+              AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode, provider: _services.mediaSourceProvider.name),
               extra: entry.item,
             ),
           ),
@@ -319,15 +324,17 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
     ),
   );
 
-  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item) => MediaPlaybackScaffold(
+  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item, [String? provider]) => MediaPlaybackScaffold(
     id: id,
     type: type,
     season: season,
     episode: episode,
     item: item,
+    provider: provider,
     services: _services,
     loadingBuilder: (context) => _playerPage(context, '', const Center(child: ProgressCircle())),
-    builder: (context, source, resolved) => _playerPage(context, resolved.title, VideoPlayerFactory.create(source: source)),
+    builder: (context, source, resolved, onUrlChanged) =>
+        _playerPage(context, resolved.title, VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged)),
   );
 
   Widget _trailerPage(MediaVideo video) => Builder(
@@ -347,13 +354,19 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
     repository: _services.repository,
     loadingBuilder: (context) => PopcornMacosSplashScreen(
       child: MacosScaffold(
-        toolBar: ToolBar(leading: MacosBackButton(onPressed: () => Navigator.of(context).pop())),
+        toolBar: ToolBar(
+          leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+          actions: [CustomToolbarItem(inToolbarBuilder: (context) => const PopcornAppBarLogo())],
+        ),
         children: const [ContentArea(builder: _macosLoadingBuilder)],
       ),
     ),
     errorBuilder: (context, error) => PopcornMacosSplashScreen(
       child: MacosScaffold(
-        toolBar: ToolBar(leading: MacosBackButton(onPressed: () => Navigator.of(context).pop())),
+        toolBar: ToolBar(
+          leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+          actions: [CustomToolbarItem(inToolbarBuilder: (context) => const PopcornAppBarLogo())],
+        ),
         children: [
           ContentArea(
             builder: (context, _) => Center(
@@ -371,6 +384,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         toolBar: ToolBar(
           title: Text(bundle.item.title),
           leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+          actions: [CustomToolbarItem(inToolbarBuilder: (context) => const PopcornAppBarLogo())],
         ),
         children: [
           ContentArea(
@@ -382,16 +396,22 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
               favoritesController: _services.favoritesController,
               historyController: _services.historyController,
               mediaType: bundle.type,
-              onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id), extra: playItem),
+              onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id, provider: _services.mediaSourceProvider.name), extra: playItem),
               onResume: (playItem, {season, episode}) => context.push(
-                AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode),
+                AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode, provider: _services.mediaSourceProvider.name),
                 extra: playItem,
               ),
               onVideoPlay: (video) => context.push(AppRoutes.trailer, extra: video),
               onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
               episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
               onPlayEpisode: (season, episode) => context.push(
-                AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
+                AppRoutes.watch(
+                  bundle.type,
+                  bundle.item.id,
+                  season: season.seasonNumber,
+                  episode: episode.episodeNumber,
+                  provider: _services.mediaSourceProvider.name,
+                ),
                 extra: bundle.item,
               ),
             ),
@@ -424,6 +444,7 @@ class _MacosHomeView extends StatelessWidget {
           toolBar: ToolBar(
             centerTitle: true,
             titleWidth: showLabels ? 380 : 120,
+            leading: const PopcornAppBarLogo(),
             title: FittedBox(
               fit: BoxFit.scaleDown,
               child: Row(
@@ -494,9 +515,9 @@ class _MacosHomeView extends StatelessWidget {
                       historyController: services.historyController,
                       searchController: services.searchController,
                       onOpenDetails: (media, type) => context.push(AppRoutes.details(type, media.id), extra: media),
-                      onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id), extra: media),
+                      onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id, provider: services.mediaSourceProvider.name), extra: media),
                       onResume: (entry) => context.push(
-                        AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+                        AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode, provider: services.mediaSourceProvider.name),
                         extra: entry.item,
                       ),
                       onSeeAllFavorites: () => context.push(AppRoutes.favorites),
@@ -508,7 +529,10 @@ class _MacosHomeView extends StatelessWidget {
                       initialQuery: initialQuery,
                       initialMediaType: initialMediaType,
                       onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
-                      onMediaPlay: (media) => context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
+                      onMediaPlay: (media) => context.push(
+                        AppRoutes.watch(services.searchController.mediaType, media.id, provider: services.mediaSourceProvider.name),
+                        extra: media,
+                      ),
                     ),
             ),
           ],

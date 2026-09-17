@@ -20,13 +20,13 @@ const _watchSiteBase = 'https://fidoaf.github.io/popcorn_flutter/';
 /// When the platform has no share sheet available (e.g. desktop browsers
 /// without the Web Share API), it falls back to copying the text to the
 /// clipboard so the action never surfaces an uncaught error.
-Future<void> shareMedia(BuildContext context, MediaItem item, MediaType type) async {
+Future<void> shareMedia(BuildContext context, MediaItem item, MediaType type, {String? provider}) async {
   final path = type == MediaType.movie ? 'movie' : 'tv';
   final url = 'https://www.themoviedb.org/$path/${item.id}';
   final overview = item.overview.trim();
   final summary = overview.isEmpty ? '' : '$overview\n';
   final tail = item.isReleased
-      ? '${DetailsTranslations.watchNow.trOf(context)}\n$_watchSiteBase#${AppRoutes.watch(type, item.id)}'
+      ? '${DetailsTranslations.watchNow.trOf(context)}\n$_watchSiteBase#${AppRoutes.watch(type, item.id, provider: provider)}'
       : _releaseStatus(context, item);
   final text = '${item.title}\n$summary$url\n\n$tail';
   final box = context.findRenderObject() as RenderBox?;

@@ -3,6 +3,7 @@ export 'cupertino/cupertino.dart';
 export 'fluent/fluent.dart';
 export 'macos/macos.dart';
 export 'material/material.dart';
+export 'popcorn_appbar_logo.dart';
 export 'splash_assets.dart';
 export 'splash_gate.dart';
 export 'splash_layout.dart';

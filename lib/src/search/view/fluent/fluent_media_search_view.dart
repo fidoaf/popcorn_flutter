@@ -1,4 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:popcorn_flutter/src/app/view/popcorn_appbar_logo.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
@@ -136,6 +137,7 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
     return ScaffoldPage(
       header: PageHeader(
         padding: 16,
+        leading: const PopcornAppBarLogo(),
         title: widget.onOpenFavorites == null && widget.onOpenContinueWatching == null
             ? Text(SearchTranslations.pageTitle.trOf(context))
             : Row(
@@ -170,13 +172,18 @@ class _FluentMediaSearchViewState extends State<FluentMediaSearchView> with Medi
                           ),
                 ],
               ),
-        commandBar: widget.authController == null
-            ? null
-            : UserIdentityTitle(
+        commandBar: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.authController != null)
+              UserIdentityTitle(
                 controller: widget.authController!,
                 profileController: widget.profileController,
                 fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context)),
               ),
+            const PopcornAppBarLogo(),
+          ],
+        ),
       ),
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -1,4 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:popcorn_flutter/src/app/view/popcorn_appbar_logo.dart';
 import 'package:popcorn_flutter/src/history/domain/watch_history_entry.dart';
 import 'package:popcorn_flutter/src/history/view/watch_history_controller.dart';
 import 'package:popcorn_flutter/src/history/view/watch_history_subtitle.dart';
@@ -24,6 +25,7 @@ class FluentContinueWatchingView extends StatelessWidget {
         padding: 16,
         leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).maybePop()),
         title: Text(WatchHistoryTranslations.pageTitle.trOf(context)),
+        commandBar: const PopcornAppBarLogo(),
       ),
       content: ListenableBuilder(
         listenable: controller,

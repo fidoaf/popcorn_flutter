@@ -22,12 +22,17 @@ abstract final class AppRoutes {
   /// `/details/{movie|tv}/{id}`.
   static String details(MediaType type, int id) => '/details/${type.name}/$id';
 
-  /// `/watch/{movie|tv}/{id}` with optional `?season=&episode=` for TV.
-  static String watch(MediaType type, int id, {int? season, int? episode}) {
+  /// `/watch/{movie|tv}/{id}` with optional `?season=&episode=` for TV and an
+  /// optional `?provider=` selecting the streaming backend by name.
+  static String watch(MediaType type, int id, {int? season, int? episode, String? provider}) {
     final path = '/watch/${type.name}/$id';
-    final query = <String, String>{if (season != null) 'season': '$season', if (episode != null) 'episode': '$episode'};
+    final query = <String, String>{
+      if (season != null) 'season': '$season',
+      if (episode != null) 'episode': '$episode',
+      if (provider != null && provider.isNotEmpty) 'provider': provider,
+    };
     if (query.isEmpty) return path;
-    return '$path?${query.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    return '$path?${query.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
   }
 
   /// Parses a route [name] into a structured [AppRouteRequest].
@@ -61,6 +66,7 @@ abstract final class AppRoutes {
           id: parsed.$2,
           season: int.tryParse(uri.queryParameters['season'] ?? ''),
           episode: int.tryParse(uri.queryParameters['episode'] ?? ''),
+          provider: uri.queryParameters['provider'],
         );
       default:
         return const UnknownRoute();
@@ -140,12 +146,16 @@ class DetailsRoute extends AppRouteRequest {
 }
 
 class WatchRoute extends AppRouteRequest {
-  const WatchRoute({required this.type, required this.id, this.season, this.episode});
+  const WatchRoute({required this.type, required this.id, this.season, this.episode, this.provider});
 
   final MediaType type;
   final int id;
   final int? season;
   final int? episode;
+
+  /// Optional name of the streaming backend to play from; falls back to the
+  /// active provider when null or unknown.
+  final String? provider;
 }
 
 class UnknownRoute extends AppRouteRequest {

@@ -8,6 +8,12 @@
     "description": "Popcorn is a free app to discover movies and TV shows. Browse trending films and series, watch trailers, and keep track of your favorites and watch history.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "scope": ".",
+    "display_override": ["standalone", "minimal-ui"],
+    "launch_handler": {
+        "client_mode": ["navigate-existing", "auto"]
+    },
+    "handle_links": "preferred",
     "icons": [
         {
             "src": "icons/Icon-192.png",

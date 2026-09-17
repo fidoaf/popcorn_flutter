@@ -1,4 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:popcorn_flutter/src/app/view/popcorn_appbar_logo.dart';
 import 'package:popcorn_flutter/src/details/view/details_play_action.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/fluent/fluent_share_button.dart';
@@ -91,6 +92,7 @@ class FluentMediaDetailsView extends StatelessWidget {
         padding: 16,
         leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).maybePop()),
         title: Text(item.title),
+        commandBar: const PopcornAppBarLogo(),
       ),
       content: ListView(
         padding: const EdgeInsets.all(16),
@@ -147,7 +149,11 @@ class FluentMediaDetailsView extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 8),
                         child: Row(
                           children: [
-                            Container(width: 8, height: 8, decoration: BoxDecoration(color: _statusColor(FluentTheme.of(context), tone), shape: BoxShape.circle)),
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(color: _statusColor(FluentTheme.of(context), tone), shape: BoxShape.circle),
+                            ),
                             const SizedBox(width: 6),
                             Text(label, style: typography.subtitle?.copyWith(color: _statusColor(FluentTheme.of(context), tone))),
                           ],
