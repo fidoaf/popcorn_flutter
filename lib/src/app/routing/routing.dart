@@ -1,3 +1,4 @@
+export 'app_router.dart';
 export 'app_routes.dart';
 export 'app_services.dart';
 export 'current_route_observer.dart';

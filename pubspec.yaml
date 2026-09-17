@@ -35,6 +35,7 @@ dependencies:
 
   collection: ^1.18.0
   flutter_inappwebview: ^6.1.5
+  go_router: 14.8.1
   http: ^1.3.0
   shared_preferences: ^2.5.1
   url_launcher: ^6.3.1

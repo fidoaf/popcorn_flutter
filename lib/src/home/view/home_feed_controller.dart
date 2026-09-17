@@ -3,7 +3,7 @@ import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 
-/// Loads the trending movie and TV catalogues that drive the Prime Video-style
+/// Loads the trending movie and TV catalogues that drive the streaming-style
 /// home screen (hero banner + browse carousels).
 ///
 /// Depends only on the [MediaSearchRepository] abstraction, so it works with any

@@ -23,6 +23,9 @@ class MetadataLineBuilder extends StatelessWidget {
     return FutureBuilder<MediaDetails>(
       future: details,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(padding: EdgeInsets.only(top: 8), child: _Skeleton(width: 140, height: 16));
+        }
         final data = snapshot.data;
         if (data == null) return const SizedBox.shrink();
         final text = formatMediaDetails(context, data);
@@ -54,6 +57,7 @@ class VideosListBuilder extends StatelessWidget {
     return FutureBuilder<List<MediaVideo>>(
       future: videos,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const _VideosSkeleton();
         final items = snapshot.data;
         if (items == null || items.isEmpty) return const SizedBox.shrink();
         final playable = items.where((v) => v.embedUrl != null).toList(growable: false);
@@ -87,6 +91,7 @@ class CreditsBuilder extends StatelessWidget {
     return FutureBuilder<MediaDetails>(
       future: details,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const _CreditsSkeleton();
         final data = snapshot.data;
         if (data == null) return const SizedBox.shrink();
         final director = data.director;
@@ -118,6 +123,12 @@ class ProductionStatusBuilder extends StatelessWidget {
     return FutureBuilder<MediaDetails>(
       future: details,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Row(children: [_Skeleton(width: 8, height: 8, radius: 4), SizedBox(width: 6), _Skeleton(width: 90, height: 14)]),
+          );
+        }
         final data = snapshot.data;
         if (data == null) return const SizedBox.shrink();
         final status = formatProductionStatus(context, data.status);
@@ -153,6 +164,9 @@ class RelatedMediaBuilder extends StatelessWidget {
     return FutureBuilder<List<MediaItem>>(
       future: related,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _RelatedSkeleton(cardWidth: _cardWidth, cardHeight: _cardHeight);
+        }
         final items = snapshot.data;
         if (items == null || items.isEmpty) return const SizedBox.shrink();
         return Column(
@@ -217,6 +231,131 @@ class _RelatedCard extends StatelessWidget {
       alignment: Alignment.center,
       padding: const EdgeInsets.all(8),
       child: Text(item.title, maxLines: 3, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
+    );
+  }
+}
+
+/// A neutral, softly pulsing placeholder box used by the details skeletons.
+///
+/// Lives in `package:flutter/widgets.dart` so it renders identically under
+/// every platform detail view.
+class _Skeleton extends StatefulWidget {
+  const _Skeleton({required this.width, required this.height, this.radius = 6});
+
+  final double width;
+  final double height;
+  final double radius;
+
+  @override
+  State<_Skeleton> createState() => _SkeletonState();
+}
+
+class _SkeletonState extends State<_Skeleton> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: Color.fromRGBO(128, 128, 128, 0.12 + _controller.value * 0.18),
+          borderRadius: BorderRadius.circular(widget.radius),
+        ),
+      ),
+    );
+  }
+}
+
+/// Loading placeholder for the director/cast block.
+class _CreditsSkeleton extends StatelessWidget {
+  const _CreditsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(top: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Skeleton(width: 90, height: 16),
+          SizedBox(height: 8),
+          _Skeleton(width: 160, height: 14),
+          SizedBox(height: 16),
+          _Skeleton(width: 70, height: 16),
+          SizedBox(height: 8),
+          _Skeleton(width: 220, height: 14),
+        ],
+      ),
+    );
+  }
+}
+
+/// Loading placeholder for the videos list (header plus a few tiles).
+class _VideosSkeleton extends StatelessWidget {
+  const _VideosSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _Skeleton(width: 120, height: 18),
+        const SizedBox(height: 12),
+        for (var i = 0; i < 3; i++)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                _Skeleton(width: 32, height: 32, radius: 16),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [_Skeleton(width: double.infinity, height: 14), SizedBox(height: 6), _Skeleton(width: 80, height: 12)],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Loading placeholder for the related-media carousel.
+class _RelatedSkeleton extends StatelessWidget {
+  const _RelatedSkeleton({required this.cardWidth, required this.cardHeight});
+
+  final double cardWidth;
+  final double cardHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _Skeleton(width: 120, height: 18),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: cardHeight,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 4,
+            separatorBuilder: (context, _) => const SizedBox(width: 12),
+            itemBuilder: (context, index) => _Skeleton(width: cardWidth, height: cardHeight, radius: 8),
+          ),
+        ),
+      ],
     );
   }
 }

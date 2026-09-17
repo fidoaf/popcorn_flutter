@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/startup_error_app.dart';
@@ -67,14 +68,27 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
   Object? _startupError;
   AppServices get _services => _servicesOrNull!;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-  final CurrentRouteObserver _routeObserver = CurrentRouteObserver(PlatformDispatcher.instance.defaultRouteName);
+  final String _initialLocation = PlatformDispatcher.instance.defaultRouteName;
+  GoRouter? _router;
+  RouterLocationListenable? _location;
 
   @override
   void initState() {
     super.initState();
     AppServices.create()
         .then((services) {
-          if (mounted) setState(() => _servicesOrNull = services);
+          if (!mounted) return;
+          final router = createAppRouter(
+            navigatorKey: _navigatorKey,
+            pageBuilder: _buildPage,
+            isSignedIn: () => services.authController.isSignedIn,
+            initialLocation: _initialLocation,
+          );
+          setState(() {
+            _servicesOrNull = services;
+            _router = router;
+            _location = RouterLocationListenable(router.routeInformationProvider);
+          });
         })
         .catchError((Object error) {
           if (mounted) setState(() => _startupError = error);
@@ -83,6 +97,8 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
 
   @override
   void dispose() {
+    _location?.dispose();
+    _router?.dispose();
     _servicesOrNull?.dispose();
     super.dispose();
   }
@@ -101,56 +117,34 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
   @override
   Widget build(BuildContext context) {
     if (_startupError != null) return _bootstrapApp(const MaintenancePage());
-    if (_servicesOrNull == null) return _bootstrapApp(const PopcornMaterialSplashScreen());
-    return MaterialApp(
+    if (_servicesOrNull == null || _router == null) return _bootstrapApp(const PopcornMaterialSplashScreen());
+    return MaterialApp.router(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
-      navigatorKey: _navigatorKey,
-      navigatorObservers: [_routeObserver],
       locale: PlatformDispatcher.instance.locale,
       supportedLocales: AppLanguage.values.map((lang) => lang.locale),
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
       themeMode: ThemeMode.system,
       theme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.light),
       darkTheme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.dark),
+      routerConfig: _router!,
       builder: (context, child) => SystemBarsBackground(
         child: AuthGate(
           controller: _services.authController,
-          currentRoute: _routeObserver.routeName,
+          currentRoute: _location,
           isPublicRoute: AppRoutes.isPublic,
           loginBuilder: (context) => MaterialLoginView(
             controller: _services.authController,
-            onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
-            onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
+            onOpenPrivacy: () => _router!.push(AppRoutes.privacy),
+            onOpenTerms: () => _router!.push(AppRoutes.terms),
           ),
           child: child!,
         ),
       ),
-      initialRoute: AppRoutes.landing,
-      onGenerateRoute: (settings) => _buildRoute(settings, AppRoutes.parse(settings.name)),
-      onGenerateInitialRoutes: _initialRoutes,
     );
   }
 
-  List<Route<dynamic>> _initialRoutes(String initialRoute) {
-    final request = AppRoutes.parse(initialRoute);
-    if (request is LandingRoute) {
-      if (_services.authController.isSignedIn) {
-        return <Route<dynamic>>[_buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute())];
-      }
-      return <Route<dynamic>>[_buildRoute(const RouteSettings(name: AppRoutes.landing), const LandingRoute())];
-    }
-    final home = _buildRoute(const RouteSettings(name: AppRoutes.home), const HomeRoute());
-    if (request is HomeRoute || request is UnknownRoute || request is TrailerRoute) {
-      return <Route<dynamic>>[home];
-    }
-    if (request is SearchRoute) {
-      return <Route<dynamic>>[_buildRoute(RouteSettings(name: initialRoute), request)];
-    }
-    return <Route<dynamic>>[home, _buildRoute(RouteSettings(name: initialRoute), request)];
-  }
-
-  Route<dynamic> _buildRoute(RouteSettings settings, AppRouteRequest request) =>
-      MaterialPageRoute<void>(settings: settings, builder: (context) => _pageFor(context, request, settings.arguments));
+  Page<void> _buildPage(BuildContext context, GoRouterState state, AppRouteRequest request) =>
+      MaterialPage<void>(key: state.pageKey, child: _pageFor(context, request, state.extra));
 
   Widget _pageFor(BuildContext context, AppRouteRequest request, Object? arguments) {
     switch (request) {
@@ -188,9 +182,9 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
 
   Widget _landingPage(BuildContext context) => PopcornMaterialSplashScreen(
     child: PopcornLandingView(
-      onEnter: () => _navigatorKey.currentState?.pushReplacementNamed(AppRoutes.home),
-      onOpenPrivacy: () => _navigatorKey.currentState?.pushNamed(AppRoutes.privacy),
-      onOpenTerms: () => _navigatorKey.currentState?.pushNamed(AppRoutes.terms),
+      onEnter: () => context.go(AppRoutes.home),
+      onOpenPrivacy: () => context.push(AppRoutes.privacy),
+      onOpenTerms: () => context.push(AppRoutes.terms),
     ),
   );
 
@@ -208,7 +202,7 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
       body: SafeArea(
         child: MaterialFavoritesView(
           controller: _services.favoritesController,
-          onMediaSelected: (favorite) => Navigator.of(context).pushNamed(AppRoutes.details(favorite.type, favorite.item.id), arguments: favorite.item),
+          onMediaSelected: (favorite) => context.push(AppRoutes.details(favorite.type, favorite.item.id), extra: favorite.item),
         ),
       ),
     ),
@@ -220,10 +214,10 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
       body: SafeArea(
         child: MaterialContinueWatchingView(
           controller: _services.historyController,
-          onMediaSelected: (entry) => Navigator.of(context).pushNamed(AppRoutes.details(entry.type, entry.item.id), arguments: entry.item),
-          onMediaPlay: (entry) => Navigator.of(context).pushNamed(
+          onMediaSelected: (entry) => context.push(AppRoutes.details(entry.type, entry.item.id), extra: entry.item),
+          onMediaPlay: (entry) => context.push(
             AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
-            arguments: entry.item,
+            extra: entry.item,
           ),
         ),
       ),
@@ -276,17 +270,17 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
             favoritesController: _services.favoritesController,
             historyController: _services.historyController,
             mediaType: bundle.type,
-            onPlay: (playItem) => Navigator.of(context).pushNamed(AppRoutes.watch(bundle.type, playItem.id), arguments: playItem),
-            onResume: (playItem, {season, episode}) => Navigator.of(context).pushNamed(
+            onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id), extra: playItem),
+            onResume: (playItem, {season, episode}) => context.push(
               AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode),
-              arguments: playItem,
+              extra: playItem,
             ),
-            onVideoPlay: (video) => Navigator.of(context).pushNamed(AppRoutes.trailer, arguments: video),
-            onRelatedSelected: (related) => Navigator.of(context).pushNamed(AppRoutes.details(bundle.type, related.id), arguments: related),
+            onVideoPlay: (video) => context.push(AppRoutes.trailer, extra: video),
+            onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
             episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
-            onPlayEpisode: (season, episode) => Navigator.of(context).pushNamed(
+            onPlayEpisode: (season, episode) => context.push(
               AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
-              arguments: bundle.item,
+              extra: bundle.item,
             ),
           ),
         ),
@@ -302,7 +296,7 @@ class _AndroidHomeView extends StatelessWidget {
   final String? initialQuery;
   final MediaType? initialMediaType;
 
-  /// When `true`, shows the Prime Video-style browse home instead of the
+  /// When `true`, shows the streaming-style browse home instead of the
   /// search-first view.
   final bool browse;
 
@@ -320,26 +314,26 @@ class _AndroidHomeView extends StatelessWidget {
                 TextButton.icon(
                   icon: const Icon(Icons.history),
                   label: Text(WatchHistoryTranslations.pageTitle.trOf(context)),
-                  onPressed: () => Navigator.of(context).pushNamed(AppRoutes.history),
+                  onPressed: () => context.push(AppRoutes.history),
                 )
               else
                 IconButton(
                   icon: const Icon(Icons.history),
                   tooltip: WatchHistoryTranslations.pageTitle.trOf(context),
-                  onPressed: () => Navigator.of(context).pushNamed(AppRoutes.history),
+                  onPressed: () => context.push(AppRoutes.history),
                 ),
               const SizedBox(width: 4),
               if (showLabels)
                 TextButton.icon(
                   icon: const Icon(Icons.favorite),
                   label: Text(FavoritesTranslations.pageTitle.trOf(context)),
-                  onPressed: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+                  onPressed: () => context.push(AppRoutes.favorites),
                 )
               else
                 IconButton(
                   icon: const Icon(Icons.favorite),
                   tooltip: FavoritesTranslations.pageTitle.trOf(context),
-                  onPressed: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
+                  onPressed: () => context.push(AppRoutes.favorites),
                 ),
             ],
           ),
@@ -355,27 +349,27 @@ class _AndroidHomeView extends StatelessWidget {
           ],
         ),
         body: browse
-            ? PrimeHomeView(
+            ? BrowseHomeView(
                 feedController: services.homeFeedController,
                 favoritesController: services.favoritesController,
                 historyController: services.historyController,
                 searchController: services.searchController,
-                onOpenDetails: (media, type) => Navigator.of(context).pushNamed(AppRoutes.details(type, media.id), arguments: media),
-                onPlay: (media, type) => Navigator.of(context).pushNamed(AppRoutes.watch(type, media.id), arguments: media),
-                onResume: (entry) => Navigator.of(context).pushNamed(
+                onOpenDetails: (media, type) => context.push(AppRoutes.details(type, media.id), extra: media),
+                onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id), extra: media),
+                onResume: (entry) => context.push(
                   AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
-                  arguments: entry.item,
+                  extra: entry.item,
                 ),
-                onSeeAllFavorites: () => Navigator.of(context).pushNamed(AppRoutes.favorites),
-                onSeeAllHistory: () => Navigator.of(context).pushNamed(AppRoutes.history),
+                onSeeAllFavorites: () => context.push(AppRoutes.favorites),
+                onSeeAllHistory: () => context.push(AppRoutes.history),
               )
             : MaterialMediaSearchView(
                 controller: services.searchController,
                 favoritesController: services.favoritesController,
                 initialQuery: initialQuery,
                 initialMediaType: initialMediaType,
-                onMediaSelected: (media) => Navigator.of(context).pushNamed(AppRoutes.details(services.searchController.mediaType, media.id), arguments: media),
-                onMediaPlay: (media) => Navigator.of(context).pushNamed(AppRoutes.watch(services.searchController.mediaType, media.id), arguments: media),
+                onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
+                onMediaPlay: (media) => context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
               ),
       ),
     );

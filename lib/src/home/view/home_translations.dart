@@ -1,7 +1,7 @@
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/domain/translation.dart';
 
-/// Localized strings used by the Prime Video-style home screen.
+/// Localized strings used by the streaming-style home screen.
 class HomeTranslations {
   HomeTranslations._();
 

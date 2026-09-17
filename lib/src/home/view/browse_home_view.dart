@@ -17,7 +17,7 @@ import 'package:popcorn_flutter/src/search/view/media_search_state.dart';
 import 'package:popcorn_flutter/src/search/view/search_translations.dart';
 
 /// Fixed dark palette so the browse experience looks identical across the
-/// Material, Fluent and macOS shells (Prime Video is always dark).
+/// Material, Fluent and macOS shells (the browse home is always dark).
 abstract final class _Palette {
   static const background = Color(0xFF0F171E);
   static const backgroundTop = Color(0xFF16212B);
@@ -28,15 +28,15 @@ abstract final class _Palette {
   static const focus = Color(0xFFFFFFFF);
 }
 
-/// A framework-agnostic, Amazon Prime Video-style home screen: a full-bleed
+/// A framework-agnostic, streaming-style home screen: a full-bleed
 /// hero banner over horizontally scrolling poster carousels (continue watching,
 /// my list, trending movies, trending TV series).
 ///
 /// Content is wrapped in a transparent [Material] and uses a fixed dark palette
 /// so the exact same layout renders inside every platform shell (Material,
 /// Fluent, macOS) without depending on the surrounding theme.
-class PrimeHomeView extends StatefulWidget {
-  const PrimeHomeView({
+class BrowseHomeView extends StatefulWidget {
+  const BrowseHomeView({
     super.key,
     required this.feedController,
     required this.favoritesController,
@@ -48,6 +48,8 @@ class PrimeHomeView extends StatefulWidget {
     this.onSeeAllFavorites,
     this.onSeeAllHistory,
     this.enableDpadFocus = false,
+    this.initialQuery,
+    this.initialMediaType,
   });
 
   final HomeFeedController feedController;
@@ -74,12 +76,31 @@ class PrimeHomeView extends StatefulWidget {
   /// navigation (Fire TV).
   final bool enableDpadFocus;
 
+  /// When non-empty, opens the search overlay on first build pre-filled with
+  /// this query (e.g. from a `/search/{type}?q=` deep link).
+  final String? initialQuery;
+
+  /// The media type to search when [initialQuery] is provided.
+  final MediaType? initialMediaType;
+
   @override
-  State<PrimeHomeView> createState() => _PrimeHomeViewState();
+  State<BrowseHomeView> createState() => _BrowseHomeViewState();
 }
 
-class _PrimeHomeViewState extends State<PrimeHomeView> {
+class _BrowseHomeViewState extends State<BrowseHomeView> {
   bool _searchActive = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final query = widget.initialQuery?.trim() ?? '';
+    if (query.isEmpty) return;
+    // Seed the controller synchronously so the overlay's field shows the query.
+    _searchActive = true;
+    final type = widget.initialMediaType;
+    if (type != null) widget.searchController.setMediaType(type);
+    widget.searchController.search(query);
+  }
 
   void _openSearch() => setState(() => _searchActive = true);
 
@@ -163,7 +184,12 @@ class _PrimeHomeViewState extends State<PrimeHomeView> {
               itemCount: history.length,
               cardBuilder: (context, index) {
                 final entry = history[index];
-                return _PosterCard(item: entry.item, showResumeBadge: true, onTap: () => widget.onResume(entry));
+                return _PosterCard(
+                  item: entry.item,
+                  showResumeBadge: true,
+                  onTap: () => widget.onOpenDetails(entry.item, entry.type),
+                  onResume: () => widget.onResume(entry),
+                );
               },
             ),
           if (favorites.isNotEmpty)
@@ -236,7 +262,7 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-/// A full-cover search panel that slides over the browse home (Prime-style):
+/// A full-cover search panel that slides over the browse home:
 /// an autofocused input, a movie/TV toggle and a live results grid driven by
 /// the shared [MediaSearchController].
 class _SearchOverlay extends StatefulWidget {
@@ -754,11 +780,14 @@ class _CarouselRow extends StatelessWidget {
 
 /// A single 2:3 poster tile used in every carousel row.
 class _PosterCard extends StatelessWidget {
-  const _PosterCard({required this.item, required this.onTap, this.showResumeBadge = false});
+  const _PosterCard({required this.item, required this.onTap, this.showResumeBadge = false, this.onResume});
 
   final MediaItem item;
   final VoidCallback onTap;
   final bool showResumeBadge;
+
+  /// Tapped by the resume badge's play button; falls back to [onTap] when null.
+  final VoidCallback? onResume;
 
   static const double _width = 125;
   static const double _height = 188;
@@ -804,7 +833,22 @@ class _PosterCard extends StatelessWidget {
                         gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0xCC000000)]),
                       ),
                       padding: const EdgeInsets.all(8),
-                      child: const Row(children: [Icon(Icons.play_circle_fill, color: _Palette.textPrimary, size: 22)]),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: onResume == null
+                            ? const Icon(Icons.play_circle_fill, color: _Palette.textPrimary, size: 26)
+                            : _Pressable(
+                                onTap: onResume,
+                                borderRadius: 20,
+                                builder: (focused, hovered) => Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+                                  ),
+                                  child: const Icon(Icons.play_circle_fill, color: _Palette.textPrimary, size: 26),
+                                ),
+                              ),
+                      ),
                     ),
                   ),
               ],

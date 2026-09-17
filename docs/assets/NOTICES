@@ -6614,6 +6614,7 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 flutter_lints
+go_router
 path_provider_windows
 plugin_platform_interface
 shared_preferences_linux
