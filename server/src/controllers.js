@@ -16,6 +16,7 @@ class Controllers {
     this.streamProxy = streamProxy;
     this.limiter = limiter;
     this.streamCache = streamCache;
+    this.inFlightManifestLoads = new Map();
   }
 
   health(req, res) {
@@ -91,8 +92,20 @@ class Controllers {
     if (manifestUrl) {
       log.info('proxy-m3u8 cache hit', { media, key, manifestUrl });
     } else {
-      log.info('proxy-m3u8 cache miss; resolving manifest', { media, key });
-      manifestUrl = await this._resolveManifest(res, media, key, log);
+      const inFlight = this.inFlightManifestLoads.get(key);
+      if (inFlight) {
+        log.info('proxy-m3u8 waiting on in-flight manifest resolution', { media, key });
+        manifestUrl = await inFlight;
+      } else {
+        log.info('proxy-m3u8 cache miss; resolving manifest', { media, key });
+        const pendingLoad = this._resolveManifest(res, media, key, log);
+        this.inFlightManifestLoads.set(key, pendingLoad);
+        try {
+          manifestUrl = await pendingLoad;
+        } finally {
+          this.inFlightManifestLoads.delete(key);
+        }
+      }
       if (manifestUrl === undefined) return; // response already sent (busy/error)
     }
 
