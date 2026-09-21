@@ -217,7 +217,12 @@ class StreamScraper {
         const url = ${JSON.stringify(m3u8Url)};
         const video = document.getElementById('video');
         if (window.Hls && Hls.isSupported()) {
-          const hls = new Hls();
+          const hls = new Hls({
+            manifestLoadingTimeOut: 30000,
+            xhrSetup: function (xhr) {
+              xhr.timeout = 30000;
+            },
+          });
           hls.loadSource(url);
           hls.attachMedia(video);
           hls.on(Hls.Events.MANIFEST_PARSED, function () {

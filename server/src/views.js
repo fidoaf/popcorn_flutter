@@ -89,7 +89,13 @@ function playerPage(media, token) {
         }
 
         if (window.Hls && Hls.isSupported()) {
-          const hls = new Hls({ debug: false });
+          const hls = new Hls({
+            debug: false,
+            manifestLoadingTimeOut: 30000,
+            xhrSetup: function (xhr) {
+              xhr.timeout = 30000;
+            },
+          });
 
           hls.on(Hls.Events.MANIFEST_LOADING, () => statusEl.textContent = 'Loading manifest...');
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
