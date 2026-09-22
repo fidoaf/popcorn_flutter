@@ -83,6 +83,42 @@ class Controllers {
     }
   }
 
+  async manifest(req, res, url) {
+    const log = req.log || moduleLog;
+    const media = parseMediaParams(url.searchParams);
+    const key = cacheKey(media);
+    let manifestUrl = this.streamCache.get(key);
+
+    if (manifestUrl) {
+      log.info('manifest cache hit', { media, key });
+    } else {
+      const inFlight = this.inFlightManifestLoads.get(key);
+      if (inFlight) {
+        log.info('manifest waiting on in-flight resolution', { media, key });
+        manifestUrl = await inFlight;
+      } else {
+        log.info('manifest cache miss; resolving', { media, key });
+        const pendingLoad = this._resolveManifest(res, media, key, log);
+        this.inFlightManifestLoads.set(key, pendingLoad);
+        try {
+          manifestUrl = await pendingLoad;
+        } finally {
+          this.inFlightManifestLoads.delete(key);
+        }
+      }
+      if (manifestUrl === undefined) return; // response already sent (busy/error)
+    }
+
+    if (!manifestUrl) {
+      log.warn('manifest not found', { media, source: this._sourceUrl(media) });
+      sendJson(res, 404, { error: 'Stream not found for ' + media.imdbId, media });
+      return;
+    }
+
+    log.info('manifest resolved', { media });
+    sendJson(res, 200, { url: manifestUrl, token: this.auth.extractToken(req, url.searchParams) });
+  }
+
   async proxyM3u8(req, res, url) {
     const log = req.log || moduleLog;
     const media = parseMediaParams(url.searchParams);

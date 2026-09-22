@@ -4,8 +4,8 @@
 function parseMediaParams(searchParams) {
   const imdbId = searchParams.get('id') || searchParams.get('imdbId');
   const type = (searchParams.get('type') || 'movie').toLowerCase() === 'tv' ? 'tv' : 'movie';
-  const season = Math.max(1, Number(searchParams.get('season')) || 1);
-  const episode = Math.max(1, Number(searchParams.get('episode')) || 1);
+  const season = type === 'tv' ? Math.max(1, Number(searchParams.get('season')) || 1) : 1;
+  const episode = type === 'tv' ? Math.max(1, Number(searchParams.get('episode')) || 1) : 1;
   return { imdbId, type, season, episode };
 }
 

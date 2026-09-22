@@ -64,13 +64,39 @@ function playerPage(media, token) {
         const video = document.getElementById('video');
         const statusEl = document.getElementById('status');
         const errorEl = document.getElementById('error');
+        const params = new URLSearchParams(window.location.search);
+        const useDirectManifest = params.get('directManifest') === 'true';
         const proxiedM3u8 = '/proxy-m3u8?id=' + encodeURIComponent(imdbId) + (token ? '&token=' + encodeURIComponent(token) : '') + ${JSON.stringify(mediaSuffix)};
+        const manifestApiUrl = '/manifest?id=' + encodeURIComponent(imdbId) + (token ? '&token=' + encodeURIComponent(token) : '') + ${JSON.stringify(mediaSuffix)};
+
+        async function resolveManifestUrl() {
+          const manifestUrl = useDirectManifest ? manifestApiUrl : proxiedM3u8;
+          try {
+            const resp = await fetch(manifestUrl, {
+              headers: token ? { Authorization: 'Bearer ' + token } : {},
+            });
+            const text = await resp.text();
+            if (!resp.ok) {
+              throw new Error('HTTP ' + resp.status + ': ' + text);
+            }
+            if (useDirectManifest) {
+              const body = JSON.parse(text);
+              if (!body || !body.url) {
+                throw new Error('Missing manifest url in response');
+              }
+              return body.url;
+            }
+            return manifestUrl;
+          } catch (err) {
+            throw err;
+          }
+        }
 
         // Re-request the manifest to surface the server's JSON error payload,
         // which hls.js/native playback do not expose.
         async function fetchServerError() {
           try {
-            const resp = await fetch(proxiedM3u8, {
+            const resp = await fetch(useDirectManifest ? manifestApiUrl : proxiedM3u8, {
               headers: token ? { Authorization: 'Bearer ' + token } : {},
             });
             const text = await resp.text();
@@ -88,50 +114,62 @@ function playerPage(media, token) {
           errorEl.classList.add('show');
         }
 
-        if (window.Hls && Hls.isSupported()) {
-          const hls = new Hls({
-            debug: false,
-            manifestLoadingTimeOut: 30000,
-            xhrSetup: function (xhr) {
-              xhr.timeout = 30000;
-            },
-          });
+        async function startPlayback() {
+          let manifestUrl;
+          try {
+            manifestUrl = await resolveManifestUrl();
+          } catch (err) {
+            showError('Manifest resolution failed', String(err));
+            return;
+          }
 
-          hls.on(Hls.Events.MANIFEST_LOADING, () => statusEl.textContent = 'Loading manifest...');
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            statusEl.textContent = 'Ready';
-            video.play().catch(() => {});
-          });
-          hls.on(Hls.Events.ERROR, async function (event, data) {
-            if (!data.fatal) {
-              statusEl.textContent = 'Warning: ' + (data.details || data.type);
-              return;
-            }
-            console.error('[hls] Fatal Error:', data);
-            const info = await fetchServerError();
-            const respText = data.response && data.response.data ? String(data.response.data) : null;
-            showError(
-              'Error: ' + (data.details || data.type) + ' (HTTP ' + info.status + ')',
-              info.body || respText || data,
-            );
-          });
+          if (window.Hls && Hls.isSupported()) {
+            const hls = new Hls({
+              debug: false,
+              manifestLoadingTimeOut: 30000,
+              xhrSetup: function (xhr) {
+                xhr.timeout = 30000;
+              },
+            });
 
-          hls.loadSource(proxiedM3u8);
-          hls.attachMedia(video);
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          statusEl.textContent = 'Loading with native playback...';
-          video.src = proxiedM3u8;
-          video.addEventListener('loadedmetadata', function () {
-            statusEl.textContent = 'Ready';
-            video.play().catch(() => {});
-          });
-          video.addEventListener('error', async function () {
-            const info = await fetchServerError();
-            showError('Playback error (HTTP ' + info.status + ')', info.body);
-          });
-        } else {
-          statusEl.textContent = 'HLS not supported';
+            hls.on(Hls.Events.MANIFEST_LOADING, () => statusEl.textContent = 'Loading manifest...');
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              statusEl.textContent = 'Ready';
+              video.play().catch(() => {});
+            });
+            hls.on(Hls.Events.ERROR, async function (event, data) {
+              if (!data.fatal) {
+                statusEl.textContent = 'Warning: ' + (data.details || data.type);
+                return;
+              }
+              console.error('[hls] Fatal Error:', data);
+              const info = await fetchServerError();
+              const respText = data.response && data.response.data ? String(data.response.data) : null;
+              showError(
+                'Error: ' + (data.details || data.type) + ' (HTTP ' + info.status + ')',
+                info.body || respText || data,
+              );
+            });
+
+            hls.loadSource(manifestUrl);
+            hls.attachMedia(video);
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            statusEl.textContent = 'Loading with native playback...';
+            video.src = manifestUrl;
+            video.addEventListener('loadedmetadata', function () {
+              statusEl.textContent = 'Ready';
+              video.play().catch(() => {});
+            });
+            video.addEventListener('error', async function () {
+              const info = await fetchServerError();
+              showError('Playback error (HTTP ' + info.status + ')', info.body);
+            });
+          } else {
+            statusEl.textContent = 'HLS not supported';
+          }
         }
+
+        startPlayback();
       })();
     <\/script>
   </body>

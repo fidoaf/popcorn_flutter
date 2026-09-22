@@ -47,6 +47,7 @@ function createApp(env = process.env) {
     .register('/favicon.ico', (req, res) => controllers.favicon(req, res))
     .register('/proxy-stream', (req, res, url) => controllers.proxyStream(req, res, url))
     .register('/scrape', (req, res, url) => controllers.scrape(req, res, url))
+    .register('/manifest', (req, res, url) => controllers.manifest(req, res, url))
     .register('/proxy-m3u8', (req, res, url) => controllers.proxyM3u8(req, res, url))
     .register('/player', (req, res, url) => controllers.player(req, res, url))
     .register('/', (req, res) => controllers.landing(req, res));
