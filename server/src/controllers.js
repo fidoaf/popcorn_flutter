@@ -9,13 +9,14 @@ const moduleLog = createLogger('controllers');
 // Request handlers. Each method owns one endpoint and delegates the real work to
 // injected services, so this layer stays thin and free of business logic.
 class Controllers {
-  constructor({ config, auth, scraper, streamProxy, limiter, streamCache }) {
+  constructor({ config, auth, scraper, streamProxy, limiter, streamCache, reverseProxy }) {
     this.config = config;
     this.auth = auth;
     this.scraper = scraper;
     this.streamProxy = streamProxy;
     this.limiter = limiter;
     this.streamCache = streamCache;
+    this.reverseProxy = reverseProxy;
     this.inFlightManifestLoads = new Map();
   }
 
@@ -38,6 +39,26 @@ class Controllers {
       });
       res.end(data);
     });
+  }
+
+  // General CORS-stripping reverse proxy for arbitrary URLs.
+  proxy(req, res, url) {
+    const log = req.log || moduleLog;
+
+    if (req.method === 'OPTIONS') {
+      this.reverseProxy.preflight(res, log);
+      return;
+    }
+
+    const target = url.searchParams.get('url');
+    if (!target) {
+      log.warn('proxy missing url parameter');
+      sendJson(res, 400, { error: 'Missing url parameter' });
+      return;
+    }
+
+    log.info('proxy request', { method: req.method, target });
+    this.reverseProxy.forward(req, res, target, log);
   }
 
   proxyStream(req, res, url) {

@@ -6,6 +6,7 @@ const { BrowserPool } = require('./browserPool');
 const { ConcurrencyLimiter } = require('./concurrencyLimiter');
 const { StreamScraper } = require('./streamScraper');
 const { StreamProxy } = require('./streamProxy');
+const { ReverseProxy } = require('./reverseProxy');
 const { Controllers } = require('./controllers');
 const { Router } = require('./router');
 const { createLogger } = require('./logger');
@@ -32,6 +33,7 @@ function createApp(env = process.env) {
   const scraper = new StreamScraper({ browserPool, provider, config });
   const streamProxy = new StreamProxy();
   const streamCache = new Map();
+  const reverseProxy = new ReverseProxy({ maxRedirects: config.maxRedirects });
 
   const controllers = new Controllers({
     config,
@@ -40,6 +42,7 @@ function createApp(env = process.env) {
     streamProxy,
     limiter,
     streamCache,
+    reverseProxy,
   });
 
   const router = new Router({ auth })
@@ -50,6 +53,7 @@ function createApp(env = process.env) {
     .register('/manifest', (req, res, url) => controllers.manifest(req, res, url))
     .register('/proxy-m3u8', (req, res, url) => controllers.proxyM3u8(req, res, url))
     .register('/player', (req, res, url) => controllers.player(req, res, url))
+    .register('/proxy', (req, res, url) => controllers.proxy(req, res, url))
     .register('/', (req, res) => controllers.landing(req, res));
 
   const server = http.createServer((req, res) => router.handle(req, res));

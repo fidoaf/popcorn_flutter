@@ -20,6 +20,7 @@ function loadConfig(env = process.env) {
     apiTokens: parseTokens(env.API_TOKENS || env.AUTH_TOKEN),
     chromePath: env.PUPPETEER_EXECUTABLE_PATH || env.CHROME_BIN || null,
     publicPaths: new Set(['/', '/health', '/favicon.ico']),
+    maxRedirects: Number(env.MAX_REDIRECTS || 5),
     userAgent:
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
       '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

@@ -52,7 +52,11 @@ class Router {
     try {
       const url = new URL(req.url, `http://${req.headers.host}`);
 
-      if (!this.auth.isAuthorized(req, url.pathname, url.searchParams)) {
+      // CORS preflight requests carry no credentials, so they bypass auth and
+      // are answered by the target handler directly.
+      const isPreflight = req.method === 'OPTIONS';
+
+      if (!isPreflight && !this.auth.isAuthorized(req, url.pathname, url.searchParams)) {
         req.log.warn('unauthorized request rejected', { pathname: url.pathname });
         sendJson(res, 401, { ok: false, error: 'unauthorized' }, { 'WWW-Authenticate': 'Bearer' });
         return;
