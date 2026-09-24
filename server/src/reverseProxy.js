@@ -37,6 +37,17 @@ const PERMISSIVE_CORS = {
   'Access-Control-Max-Age': '86400',
 };
 
+const DEFAULT_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+  '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+// Injected into proxied pages so third-party scripts calling the History API
+// with the (cross-origin) upstream URL don't throw an uncaught SecurityError.
+const HISTORY_GUARD =
+  '<script>(function(){try{var h=window.history;["pushState","replaceState"].forEach(' +
+  'function(m){var o=h[m];if(typeof o==="function"){h[m]=function(){try{return o.apply(this,arguments);}' +
+  'catch(e){return;}};}});}catch(e){}})();</script>';
+
 function isCorsHeader(name) {
   return name.startsWith('access-control-') || name === 'timing-allow-origin';
 }
@@ -155,23 +166,29 @@ class ReverseProxy {
     const head = html.match(/<head[^>]*>/i);
     if (head) {
       const at = head.index + head[0].length;
-      return html.slice(0, at) + baseTag + html.slice(at);
+      return html.slice(0, at) + baseTag + HISTORY_GUARD + html.slice(at);
     }
     const htmlTag = html.match(/<html[^>]*>/i);
     if (htmlTag) {
       const at = htmlTag.index + htmlTag[0].length;
-      return html.slice(0, at) + baseTag + html.slice(at);
+      return html.slice(0, at) + baseTag + HISTORY_GUARD + html.slice(at);
     }
-    return baseTag + html;
+    return baseTag + HISTORY_GUARD + html;
   }
 
   _buildUpstreamHeaders(incoming, parsed) {
     const headers = {};
     for (const [name, value] of Object.entries(incoming)) {
-      if (HOP_BY_HOP.has(name.toLowerCase())) continue;
+      const lower = name.toLowerCase();
+      if (HOP_BY_HOP.has(lower)) continue;
+      // Don't leak the proxy's own origin to the upstream.
+      if (lower === 'referer' || lower === 'origin') continue;
       headers[name] = value;
     }
     headers.host = parsed.host;
+    // Present as a same-site browser request to reduce hotlink/bot rejections.
+    headers.referer = parsed.origin + '/';
+    if (!headers['user-agent']) headers['user-agent'] = DEFAULT_USER_AGENT;
     // Force an unencoded body so HTML can be buffered and rewritten reliably.
     headers['accept-encoding'] = 'identity';
     return headers;
