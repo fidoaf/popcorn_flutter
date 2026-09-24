@@ -16,10 +16,11 @@ function loadConfig(env = process.env) {
   return Object.freeze({
     port: Number(env.PORT || 3000),
     faviconPath: path.join(__dirname, '..', 'app_icon.ico'),
+    demoPath: path.join(__dirname, '..', 'proxy-demo.html'),
     maxConcurrentScrapes: 1,
     apiTokens: parseTokens(env.API_TOKENS || env.AUTH_TOKEN),
     chromePath: env.PUPPETEER_EXECUTABLE_PATH || env.CHROME_BIN || null,
-    publicPaths: new Set(['/', '/health', '/favicon.ico']),
+    publicPaths: new Set(['/', '/health', '/favicon.ico', '/demo']),
     maxRedirects: Number(env.MAX_REDIRECTS || 5),
     userAgent:
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +

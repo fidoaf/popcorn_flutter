@@ -48,6 +48,7 @@ function createApp(env = process.env) {
   const router = new Router({ auth })
     .register('/health', (req, res) => controllers.health(req, res))
     .register('/favicon.ico', (req, res) => controllers.favicon(req, res))
+    .register('/proxy-demo', (req, res) => controllers.demo(req, res))
     .register('/proxy-stream', (req, res, url) => controllers.proxyStream(req, res, url))
     .register('/scrape', (req, res, url) => controllers.scrape(req, res, url))
     .register('/manifest', (req, res, url) => controllers.manifest(req, res, url))

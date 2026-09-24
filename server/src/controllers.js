@@ -41,6 +41,19 @@ class Controllers {
     });
   }
 
+  demo(req, res) {
+    const log = req.log || moduleLog;
+    fs.readFile(this.config.demoPath, (err, data) => {
+      if (err) {
+        log.warn('demo page missing', { error: err });
+        sendJson(res, 404, { error: 'Demo page not found' });
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(data);
+    });
+  }
+
   // General CORS-stripping reverse proxy for arbitrary URLs.
   proxy(req, res, url) {
     const log = req.log || moduleLog;
