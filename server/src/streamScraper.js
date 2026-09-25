@@ -194,7 +194,7 @@ class StreamScraper {
       log.debug('opening HLS preview page', { m3u8Url });
       const playPage = await browser.newPage();
       await playPage.setViewport({ width: 1280, height: 720 });
-      await playPage.setContent(this._buildPreviewHtml(m3u8Url), { waitUntil: 'networkidle0' });
+      await playPage.setContent(this._buildPreviewHtml(m3u8Url), { waitUntil: 'domcontentloaded' });
       await playPage.close().catch(() => {});
       log.debug('HLS preview page closed');
     } catch (err) {
