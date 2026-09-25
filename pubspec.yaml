@@ -50,6 +50,10 @@ dependencies:
   intl: ^0.20.2
   file_selector: ^1.0.3
   crop_your_image: ^2.0.0
+  web: ^1.1.0
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_video: ^1.0.7
 
 
   # Phased-out:

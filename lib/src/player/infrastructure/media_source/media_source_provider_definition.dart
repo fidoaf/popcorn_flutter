@@ -31,6 +31,7 @@ final class MediaSourceProviderDefinition {
     this.headers = const <String, String>{},
     this.cookies = const <MediaCookie>[],
     this.body,
+    this.sandbox,
   });
 
   /// Builds a definition from its JSON representation.
@@ -57,6 +58,7 @@ final class MediaSourceProviderDefinition {
       headers: _parseStringMap(json['headers'], 'headers'),
       cookies: _parseCookies(json['cookies']),
       body: json['body'] as String?,
+      sandbox: _parseSandbox(json['sandbox']),
     );
   }
 
@@ -87,6 +89,10 @@ final class MediaSourceProviderDefinition {
 
   /// Optional request body template; may contain placeholders.
   final String? body;
+
+  /// Forces the web player's hosting `<iframe>` sandbox on (`true`) or off
+  /// (`false`). When null the platform default (sandboxed) is used.
+  final bool? sandbox;
 
   /// Builds a concrete [MediaSource] for [media]/[mediaType] by substituting
   /// every placeholder across the request template.
@@ -131,6 +137,7 @@ final class MediaSourceProviderDefinition {
       headers: resolvedHeaders,
       cookies: resolvedCookies,
       body: resolvedBody,
+      sandbox: sandbox,
     );
   }
 
@@ -142,6 +149,14 @@ final class MediaSourceProviderDefinition {
     final segments = path.split('/').where((segment) => segment.isNotEmpty);
     final normalized = segments.join('/');
     return path.startsWith('/') ? '/$normalized' : normalized;
+  }
+
+  static bool? _parseSandbox(Object? raw) {
+    if (raw == null) return null;
+    if (raw is! bool) {
+      throw const FormatException('Media source provider "sandbox" must be a boolean.');
+    }
+    return raw;
   }
 
   static MediaSourceMethod _parseMethod(Object? raw) {

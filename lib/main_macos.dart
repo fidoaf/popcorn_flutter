@@ -17,7 +17,6 @@ import 'package:popcorn_flutter/src/app/view/popcorn_appbar_logo.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
-import 'package:popcorn_flutter/src/details/view/macos/macos_media_details_view.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
 import 'package:popcorn_flutter/src/home/home.dart';
@@ -333,8 +332,15 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
     provider: provider,
     services: _services,
     loadingBuilder: (context) => _playerPage(context, '', const Center(child: ProgressCircle())),
-    builder: (context, source, resolved, onUrlChanged) =>
-        _playerPage(context, resolved.title, VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged)),
+    builder: (context, source, resolved, onUrlChanged) => _playerPage(
+      context,
+      resolved.title,
+      MediaXRayOverlay(
+        item: resolved,
+        detailsLoader: () => _services.repository.details(id, type),
+        child: VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged),
+      ),
+    ),
   );
 
   Widget _trailerPage(MediaVideo video) => Builder(

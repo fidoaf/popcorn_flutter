@@ -255,7 +255,13 @@ class _PopcornWebAppState extends State<_PopcornWebApp> with WidgetsBindingObser
     provider: provider,
     services: _services,
     loadingBuilder: (context) => _playerShell(const Center(child: CircularProgressIndicator())),
-    builder: (context, source, item, onUrlChanged) => _playerShell(VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged)),
+    builder: (context, source, item, onUrlChanged) => _playerShell(
+      MediaXRayOverlay(
+        item: item,
+        detailsLoader: () => _services.repository.details(id, type),
+        child: VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged),
+      ),
+    ),
   );
 
   Widget _trailerPage(MediaVideo video) => _playerShell(VideoPlayerFactory.create(source: MediaSource(url: video.embedUrl!)));

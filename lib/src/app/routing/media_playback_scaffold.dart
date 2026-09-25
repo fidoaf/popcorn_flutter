@@ -70,9 +70,11 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
     final resolvedEpisode = type == MediaType.tv ? (widget.episode ?? 1) : null;
     _season = resolvedSeason;
     _episode = resolvedEpisode;
-    widget.services.historyController.record(item, type, season: resolvedSeason, episode: resolvedEpisode);
     _item = item;
     _source = _provider().resolve(item, type, season: resolvedSeason, episode: resolvedEpisode);
+    // Defer recording so the controller's notifyListeners never fires while an
+    // ancestor is still building (initState runs mid-build).
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.services.historyController.record(item, type, season: resolvedSeason, episode: resolvedEpisode));
   }
 
   /// Handles a navigation reported by the player. For TV series it checks

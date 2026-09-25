@@ -1,5 +1,5 @@
 {
-  "initialProvider": "vidsrcsbs",
+  "initialProvider": "vidsrcbuzz",
   "providers": [
     {
       "name": "nxsha",
@@ -9,7 +9,19 @@
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },
       "headers": {},
-      "cookies": []
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "vidsrcbuzz",
+      "scheme": "https",
+      "host": "vidsrc.buzz",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "autoplay": "true", "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
     },
     {
       "name": "vidsrcsbs",
@@ -19,7 +31,8 @@
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },
       "headers": {},
-      "cookies": []
+      "cookies": [],
+      "sandbox": false
     },
     {
       "name": "vidsrcir",
@@ -29,7 +42,8 @@
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },
       "headers": {},
-      "cookies": []
+      "cookies": [],
+      "sandbox": false
     },
     {
       "name": "vidlux",
@@ -39,7 +53,8 @@
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },
       "headers": {},
-      "cookies": []
+      "cookies": [],
+      "sandbox": false
     },
     {
       "name": "vidsrcme",
@@ -49,7 +64,8 @@
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },
       "headers": {},
-      "cookies": []
+      "cookies": [],
+      "sandbox": false
     }
   ]
 }

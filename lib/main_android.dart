@@ -234,7 +234,13 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
     provider: provider,
     services: _services,
     loadingBuilder: (context) => _playerPage(const Center(child: CircularProgressIndicator())),
-    builder: (context, source, item, onUrlChanged) => _playerPage(VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged)),
+    builder: (context, source, item, onUrlChanged) => _playerPage(
+      MediaXRayOverlay(
+        item: item,
+        detailsLoader: () => _services.repository.details(id, type),
+        child: VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged),
+      ),
+    ),
   );
 
   Widget _trailerPage(MediaVideo video) => _playerPage(

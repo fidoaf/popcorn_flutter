@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:popcorn_flutter/src/search/domain/cast_member.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_episode.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
@@ -23,6 +24,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   static const String _searchBaseUrl = '$_baseUrl/search';
   static const String _posterBaseUrl = 'https://image.tmdb.org/t/p/w500';
   static const String _stillBaseUrl = 'https://image.tmdb.org/t/p/w300';
+  static const String _profileBaseUrl = 'https://image.tmdb.org/t/p/w185';
 
   final String _accessToken;
   final http.Client _client;
@@ -216,7 +218,8 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
   static MediaDetails _toMediaDetails(Map<String, dynamic> json, MediaType mediaType) {
     final director = _director(json, mediaType);
-    final cast = _cast(json);
+    final castMembers = _cast(json);
+    final cast = castMembers.map((member) => member.name).toList(growable: false);
     final status = MediaProductionStatus.fromTmdb(json['status'] as String?);
     switch (mediaType) {
       case MediaType.movie:
@@ -225,6 +228,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
           runtime: minutes == null || minutes <= 0 ? null : Duration(minutes: minutes),
           director: director,
           cast: cast,
+          castMembers: castMembers,
           status: status,
         );
       case MediaType.tv:
@@ -236,6 +240,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
           seasons: seasons,
           director: director,
           cast: cast,
+          castMembers: castMembers,
           status: status,
         );
     }
@@ -265,16 +270,26 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     return directors.isEmpty ? null : directors.join(', ');
   }
 
-  /// Resolves the leading [_maxCastMembers] cast members, ordered by billing.
-  static List<String> _cast(Map<String, dynamic> json) {
+  /// Resolves the leading [_maxCastMembers] cast members, ordered by billing,
+  /// each with the played character and a headshot when available.
+  static List<CastMember> _cast(Map<String, dynamic> json) {
     final cast = (json['credits'] as Map<String, dynamic>?)?['cast'] as List<dynamic>?;
-    final names = <String>[];
+    final members = <CastMember>[];
     for (final member in (cast ?? const <dynamic>[]).cast<Map<String, dynamic>>()) {
       final name = (member['name'] as String?)?.trim();
-      if (name != null && name.isNotEmpty) names.add(name);
-      if (names.length >= _maxCastMembers) break;
+      if (name == null || name.isEmpty) continue;
+      final character = (member['character'] as String?)?.trim();
+      final profilePath = member['profile_path'] as String?;
+      members.add(
+        CastMember(
+          name: name,
+          character: character == null || character.isEmpty ? null : character,
+          profileUrl: profilePath == null ? null : Uri.parse('$_profileBaseUrl$profilePath'),
+        ),
+      );
+      if (members.length >= _maxCastMembers) break;
     }
-    return List<String>.unmodifiable(names);
+    return List<CastMember>.unmodifiable(members);
   }
 
   static MediaSeason _toMediaSeason(Map<String, dynamic> json) {

@@ -1,3 +1,4 @@
+import 'package:popcorn_flutter/src/search/domain/cast_member.dart';
 import 'package:popcorn_flutter/src/search/domain/media_production_status.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 
@@ -15,6 +16,7 @@ final class MediaDetails {
     this.seasons = const <MediaSeason>[],
     this.director,
     this.cast = const <String>[],
+    this.castMembers = const <CastMember>[],
     this.status = MediaProductionStatus.unknown,
   });
 
@@ -36,6 +38,10 @@ final class MediaDetails {
   /// Leading cast members (actor names), most prominent first. Empty when
   /// unknown.
   final List<String> cast;
+
+  /// Leading cast members with headshots and characters, most prominent first.
+  /// Empty when unknown.
+  final List<CastMember> castMembers;
 
   /// Production lifecycle state (e.g. in production, ended, canceled).
   final MediaProductionStatus status;

@@ -63,6 +63,12 @@ class DetailsTranslations {
 
   static const cast = Translation({AppLanguage.en: 'Cast', AppLanguage.es: 'Reparto', AppLanguage.ca: 'Repartiment'});
 
+  /// Label for the in-player overlay button that reveals cast and info,
+  /// similar to Prime Video's X-Ray.
+  static const castAndInfo = Translation({AppLanguage.en: 'Cast & info', AppLanguage.es: 'Reparto e info', AppLanguage.ca: 'Repartiment i info'});
+
+  static const close = Translation({AppLanguage.en: 'Close', AppLanguage.es: 'Cerrar', AppLanguage.ca: 'Tanca'});
+
   static const share = Translation({AppLanguage.en: 'Share', AppLanguage.es: 'Compartir', AppLanguage.ca: 'Comparteix'});
 
   static const linkCopied = Translation({

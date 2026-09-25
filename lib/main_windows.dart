@@ -297,7 +297,14 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
     provider: provider,
     services: _services,
     loadingBuilder: (context) => _playerPage(context, const Center(child: ProgressRing())),
-    builder: (context, source, resolved, onUrlChanged) => _playerPage(context, VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged)),
+    builder: (context, source, resolved, onUrlChanged) => _playerPage(
+      context,
+      MediaXRayOverlay(
+        item: resolved,
+        detailsLoader: () => _services.repository.details(id, type),
+        child: VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged, engine: VideoPlayerEngine.mediaKit),
+      ),
+    ),
   );
 
   Widget _trailerPage(MediaVideo video) => Builder(

@@ -35,6 +35,7 @@ final class MediaSource {
     this.cookies = const <MediaCookie>[],
     this.body,
     this.data,
+    this.sandbox,
   });
 
   final Uri url;
@@ -48,4 +49,9 @@ final class MediaSource {
   /// URL (so its origin/referrer is honoured). Used to host embedded players
   /// that reject a bare navigation (e.g. YouTube inside a WebView).
   final String? data;
+
+  /// Whether the web player's hosting `<iframe>` must be sandboxed. `false`
+  /// removes the `sandbox` attribute entirely; `true` or `null` keep the
+  /// default sandbox. Only affects the web build.
+  final bool? sandbox;
 }
