@@ -10,6 +10,7 @@ import 'package:popcorn_flutter/src/player/domain/video_player.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/resume_store.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_racer.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_resolver.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/vidsrc_resolver.dart';
 
 /// A native [VideoPlayer] built on `media_kit`, offering an alternative to the
 /// WebView-based player.
@@ -473,40 +474,74 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
 
   void _openSubtitleMenu() {
     _showControls();
+    final remoteSubtitles = VidSrcResolver.handles(widget.source.url) ? VidSrcResolver.subtitles(widget.source) : Future.value(<VidSrcSubtitle>[]);
+    String? subtitleError;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: const Color(0xFF15151C),
-      builder: (context) {
-        final subtitleTracks = _tracks.subtitle.where((t) => t.id != 'auto').toList();
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    _menuHeader('Subtitles'),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _uploadSubtitle();
-                      },
-                      icon: const Icon(Icons.upload_file, color: Colors.white70, size: 18),
-                      label: const Text('Upload', style: TextStyle(color: Colors.white70)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, updateMenu) {
+          final subtitleTracks = _tracks.subtitle.where((t) => t.id != 'auto').toList();
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      _menuHeader('Subtitles'),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _uploadSubtitle();
+                        },
+                        icon: const Icon(Icons.upload_file, color: Colors.white70, size: 18),
+                        label: const Text('Upload', style: TextStyle(color: Colors.white70)),
+                      ),
+                    ],
+                  ),
+                  for (final track in subtitleTracks)
+                    _menuTile(track.id == 'no' ? 'Off' : _trackLabel(track.title, track.language, track.id), _selected.subtitle.id == track.id, () {
+                      _player.setSubtitleTrack(track);
+                      Navigator.pop(context);
+                    }),
+                  FutureBuilder<List<VidSrcSubtitle>>(
+                    future: remoteSubtitles,
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator());
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final subtitle in snapshot.data!)
+                            _menuTile(subtitle.label, _selected.subtitle.title == subtitle.label, () async {
+                              try {
+                                final text = await VidSrcResolver.subtitleText(widget.source, subtitle);
+                                if (!mounted || !context.mounted) return;
+                                await _player.setSubtitleTrack(SubtitleTrack.data(_toVtt(text), title: subtitle.label, language: subtitle.language));
+                                if (context.mounted) Navigator.pop(context);
+                              } catch (error) {
+                                debugPrint('[MediaKitPlayer] subtitle failed: $error');
+                                if (context.mounted) {
+                                  updateMenu(() => subtitleError = 'Could not load subtitles. Try another track.');
+                                }
+                              }
+                            }),
+                        ],
+                      );
+                    },
+                  ),
+                  if (subtitleError != null)
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(subtitleError!, style: const TextStyle(color: Colors.redAccent)),
                     ),
-                  ],
-                ),
-                for (final track in subtitleTracks)
-                  _menuTile(track.id == 'no' ? 'Off' : _trackLabel(track.title, track.language, track.id), _selected.subtitle.id == track.id, () {
-                    _player.setSubtitleTrack(track);
-                    Navigator.pop(context);
-                  }),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 

@@ -5,6 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:popcorn_flutter/src/player/domain/media_source.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_racer.dart';
 
+final class VidSrcSubtitle {
+  const VidSrcSubtitle({required this.label, required this.language, required this.url});
+
+  final String label;
+  final String language;
+  final Uri url;
+}
+
 /// Extracts direct stream URLs from VidSrc-family embed pages so a native player
 /// can play them without a WebView.
 ///
@@ -26,6 +34,51 @@ abstract final class VidSrcResolver {
 
   /// Whether [url] points at a VidSrc-family embed page this resolver handles.
   static bool handles(Uri url) => url.host.contains('vidsrc') && url.path.contains('/embed/');
+
+  static Future<List<VidSrcSubtitle>> subtitles(MediaSource source) async {
+    final origin = source.url.origin;
+    final headers = {'User-Agent': _userAgent, 'Referer': '$origin/', ...source.headers};
+    try {
+      final page = await http.get(source.url, headers: headers);
+      if (page.statusCode != 200) return const [];
+      final match = _configPattern.firstMatch(page.body);
+      if (match == null) return const [];
+      final config = jsonDecode(match.group(1)!) as Map<String, dynamic>;
+      final query = {
+        'a': 'subs',
+        'type': config['type'].toString(),
+        'id': config['id'].toString(),
+        's': (config['s'] ?? 0).toString(),
+        'e': (config['e'] ?? 0).toString(),
+        't': config['t'].toString(),
+      };
+      final response = await http.get(Uri.parse('$origin/pl/api.php').replace(queryParameters: query), headers: headers);
+      if (response.statusCode != 200) return const [];
+      final decoded = jsonDecode(response.body);
+      final entries = decoded is Map ? decoded['subs'] : null;
+      if (entries is! List) return const [];
+      return [
+        for (final entry in entries)
+          if (entry is Map && entry['label'] is String && (entry['ref'] is String || entry['url'] is String))
+            VidSrcSubtitle(
+              label: entry['label'] as String,
+              language: entry['lang']?.toString() ?? '',
+              url: entry['url'] is String
+                  ? Uri.parse('$origin/pl/').resolve(entry['url'] as String)
+                  : Uri.parse('$origin/pl/api.php').replace(queryParameters: {'a': 'sub', 'ref': entry['ref'] as String}),
+            ),
+      ];
+    } catch (error) {
+      debugPrint('[VidSrcResolver] subtitles failed: $error');
+      return const [];
+    }
+  }
+
+  static Future<String> subtitleText(MediaSource source, VidSrcSubtitle subtitle) async {
+    final response = await http.get(subtitle.url, headers: {'User-Agent': _userAgent, 'Referer': '${source.url.origin}/', ...source.headers});
+    if (response.statusCode != 200) throw StateError('Subtitle download failed (${response.statusCode})');
+    return utf8.decode(response.bodyBytes, allowMalformed: true);
+  }
 
   /// Resolves [source] into playable stream candidates, or an empty list when
   /// extraction fails (caller should fall back to the embed URL / WebView).
