@@ -90,6 +90,20 @@ flutter_launcher_icons:
     image_path: "assets/icons/app_icon.png"
     icon_size: 256
 
+# Windows MSIX package configuration.
+msix_config:
+  display_name: Popcorn
+  publisher_display_name: Com a casa en cap lloc
+  identity_name: com.comacasaencaplloc.popcorn-flutter
+  msix_version: 1.3.0.0
+  logo_path: assets/icons/app_icon.png
+  windows_build_args: --target=lib/main_windows.dart
+  install_certificate: false
+  app_installer:
+    publish_folder_path: build/publish
+    hours_between_update_checks: 0
+    automatic_background_task: true
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

@@ -22,8 +22,55 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  package-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.2'
+          channel: stable
+          cache: true
+      - name: Write env file (production)
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path assets/config | Out-Null
+          Set-Content -Path assets/config/app.env -Value $env:ENV_FILE -NoNewline
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Prepare App Installer output
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path build/publish | Out-Null
+      - name: Publish App Installer
+        run: dart run msix:publish
+      - name: Stage App Installer files
+        shell: pwsh
+        env:
+          GITHUB_REPOSITORY_NAME: ${{ github.event.repository.name }}
+        run: |
+          $publishPath = (Resolve-Path build/publish).Path
+          $appInstaller = Get-ChildItem $publishPath -Filter *.appinstaller | Select-Object -First 1
+          [xml]$manifest = Get-Content $appInstaller.FullName
+          $baseUrl = "https://$env:GITHUB_REPOSITORY_OWNER.github.io/$env:GITHUB_REPOSITORY_NAME/downloads"
+          $manifest.DocumentElement.SetAttribute('Uri', "$baseUrl/$($appInstaller.Name)")
+          $mainPackage = $manifest.SelectSingleNode("//*[local-name()='MainPackage']")
+          $mainPackage.SetAttribute('Uri', "$baseUrl/versions/$([IO.Path]::GetFileName($mainPackage.Uri))")
+          $manifest.Save($appInstaller.FullName)
+          New-Item -ItemType Directory -Force -Path msix | Out-Null
+          Copy-Item "$publishPath\*" msix -Recurse -Force
+          Copy-Item "$publishPath\versions\*.msix" msix/popcorn_flutter.msix -Force
+      - name: Upload App Installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: popcorn-windows-app-installer
+          path: msix
+
   deploy:
+    needs: package-windows
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -67,6 +114,11 @@ jobs:
           else
             printf '%s\n' "$ENV_FILE" > docs/admin/assets/assets/config/app.env
           fi
+      - name: Download MSIX
+        uses: actions/download-artifact@v4
+        with:
+          name: popcorn-windows-app-installer
+          path: docs/downloads
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
