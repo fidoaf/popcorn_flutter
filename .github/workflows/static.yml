@@ -72,7 +72,10 @@ jobs:
 
           $indexHtml = Join-Path 'msix' 'index.html'
           $trustNote = '<div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px 16px;margin:14px;border-radius:6px;font-family:sans-serif"><strong>First-time install?</strong> This app is signed with a development certificate. <a href="popcorn_flutter.cer" style="color:#0369a1">Download and install the certificate</a> (double-click it, choose "Local Machine", then "Place all certificates in the following store" &rarr; "Trusted People") before clicking Install.</div>'
-          (Get-Content $indexHtml -Raw) -replace '(<body>)', "`$1`n$trustNote" | Set-Content $indexHtml
+          $indexContent = (Get-Content $indexHtml -Raw) -replace '(<body>)', "`$1`n$trustNote"
+          # The msix package emits a root-relative download link; make it relative to this page instead.
+          $indexContent = $indexContent -replace "a\.href = '/", "a.href = './"
+          Set-Content $indexHtml -Value $indexContent
       - name: Upload App Installer artifact
         uses: actions/upload-artifact@v4
         with:
