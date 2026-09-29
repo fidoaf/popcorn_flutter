@@ -72,27 +72,4 @@ https://cinemeta-live.strem.io/meta/series/tt14688458.json
 
 
 
-In Flutter, when you're looking for **lower-level widgets or foundational building blocks**, you're typically referring to the **`foundation`** and **`widgets`** libraries:
-
-### 1. **`foundation` package**
-- This is **very low-level** and includes core classes and utilities used throughout Flutter.
-- It contains things like:
-  - `Key`, `ObjectKey`, `GlobalKey`
-  - `DiagnosticsNode` for debugging
-  - `ChangeNotifier`, `ValueNotifier`
-  - `PlatformDispatcher`, `SchedulerBinding`
-- It's part of the **Flutter SDK**, not a separate package you install.
-
-### 2. **`widgets` package**
-- This is the **core widget layer** of Flutter.
-- It includes:
-  - `StatelessWidget`, `StatefulWidget`
-  - `BuildContext`, `Element`, `InheritedWidget`
-  - Layout widgets like `Column`, `Row`, `Stack`
-- It builds on top of `foundation` and is still considered low-level, but more UI-focused.
-
-### Summary:
-- If you're working with **non-UI logic, lifecycle, or platform bindings**, you're in the **`foundation`** layer.
-- If you're building **UI components and layouts**, you're in the **`widgets`** layer.
-
-Would you like a diagram showing how these layers relate in Flutter’s architecture?
+https://srstop.link/index.php

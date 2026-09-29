@@ -63,6 +63,16 @@ jobs:
           New-Item -ItemType Directory -Force -Path msix | Out-Null
           Copy-Item "$publishPath\*" msix -Recurse -Force
           Copy-Item "$publishPath\versions\*.msix" msix/popcorn_flutter.msix -Force
+
+          # Export the public half of the bundled test-signing certificate so
+          # users can trust it; otherwise Windows disables the Install button.
+          $certPfx = Get-ChildItem "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\msix-*\lib\assets\test_certificate.pfx" | Select-Object -First 1
+          $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPfx.FullName, '1234')
+          Export-Certificate -Cert $cert -FilePath msix/popcorn_flutter.cer | Out-Null
+
+          $indexHtml = Join-Path 'msix' 'index.html'
+          $trustNote = '<div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px 16px;margin:14px;border-radius:6px;font-family:sans-serif"><strong>First-time install?</strong> This app is signed with a development certificate. <a href="popcorn_flutter.cer" style="color:#0369a1">Download and install the certificate</a> (double-click it, choose "Local Machine", then "Place all certificates in the following store" &rarr; "Trusted People") before clicking Install.</div>'
+          (Get-Content $indexHtml -Raw) -replace '(<body>)', "`$1`n$trustNote" | Set-Content $indexHtml
       - name: Upload App Installer artifact
         uses: actions/upload-artifact@v4
         with:
