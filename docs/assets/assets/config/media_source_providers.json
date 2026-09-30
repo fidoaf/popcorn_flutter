@@ -1,8 +1,26 @@
 {
-  "initialProvider": "vidsrcbuzz",
+  "initialProvider": "Render",
   "providers": [
     {
-      "name": "nxsha",
+      "name": "Render",
+      "scheme": "https",
+      "host": "popcorn-flutter.onrender.com",
+      "path": "/player",
+      "method": "GET",
+      "parameters": { 
+        "id": "{id}",
+        "type": "{type}",
+        "season": "{season}",
+        "episode": "{episode}",
+        "lang": "{language}", 
+        "sub": "{subtitles}" 
+      },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "Nxsha",
       "scheme": "https",
       "host": "web.nxsha.app",
       "path": "/embed/{type}/{id}/{season}/{episode}",
@@ -13,7 +31,7 @@
       "sandbox": false
     },
     {
-      "name": "vidsrcbuzz",
+      "name": "Vidsrc.buzz",
       "scheme": "https",
       "host": "vidsrc.buzz",
       "path": "/embed/{type}/{id}/{season}/{episode}",
@@ -24,7 +42,7 @@
       "sandbox": false
     },
     {
-      "name": "vidsrcsbs",
+      "name": "Vidsrc.sbs",
       "scheme": "https",
       "host": "vidsrc.sbs",
       "path": "/embed/{type}/{id}/{season}/{episode}",
@@ -35,7 +53,7 @@
       "sandbox": false
     },
     {
-      "name": "vidsrcir",
+      "name": "Vidsrc.ir",
       "scheme": "https",
       "host": "vidsrc.ir",
       "path": "/embed/{type}/{id}/{season}/{episode}",
@@ -46,7 +64,7 @@
       "sandbox": false
     },
     {
-      "name": "vidlux",
+      "name": "Vidlux",
       "scheme": "https",
       "host": "vidlux.xyz",
       "path": "/embed/{type}/{id}/{season}/{episode}",
@@ -57,7 +75,7 @@
       "sandbox": false
     },
     {
-      "name": "vidsrcme",
+      "name": "Vidsrc.me",
       "scheme": "https",
       "host": "vidsrcme.ru",
       "path": "/embed/{type}/{id}/{season}/{episode}",
