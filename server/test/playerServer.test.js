@@ -10,9 +10,13 @@ test('serves health, form, playback, and subtitles through injected services', a
     origin: 'https://vidsrc.buzz',
     async extract(media) {
       assert.equal(media.id, 'tt1375666');
+      assert.equal(media.lang, 'fr');
+      assert.equal(media.sub, '0');
       return { url: 'https://cdn.example/master.m3u8' };
     },
-    async listSubtitles() {
+    async listSubtitles(media) {
+      assert.equal(media.lang, 'fr');
+      assert.equal(media.sub, '0');
       return [{ ref: 'subtitle-ref', label: 'English', lang: 'English' }];
     },
     async fetchSubtitle(ref) {
@@ -41,16 +45,18 @@ test('serves health, form, playback, and subtitles through injected services', a
   assert.equal((await (await fetch(`${base}/health`)).text()), 'ok');
   const root = await (await fetch(`${base}/`)).text();
   assert.match(root, /Provider<select/);
+  assert.match(root, /Audio language<select/);
+  assert.match(root, /subtitle-preference/);
   assert.match(root, /<form id="media-form">/);
 
   const player = await (await fetch(`${base}/player?provider=vidsrcbuzz&id=tt1375666`)).text();
   assert.doesNotMatch(player, /<form id="media-form">/);
   assert.match(player, /const initialMedia = \{"providerId":"vidsrcbuzz"/);
 
-  const manifest = await fetch(`${base}/manifest?provider=vidsrcbuzz&id=tt1375666`);
+  const manifest = await fetch(`${base}/manifest?provider=vidsrcbuzz&id=tt1375666&lang=fr&sub=0`);
   assert.equal(await manifest.text(), 'vidsrcbuzz:https://cdn.example/master.m3u8');
 
-  const tracks = await (await fetch(`${base}/subtitles?provider=vidsrcbuzz&id=tt1375666`)).json();
+  const tracks = await (await fetch(`${base}/subtitles?provider=vidsrcbuzz&id=tt1375666&lang=fr&sub=0`)).json();
   assert.equal(tracks.length, 1);
   const subtitle = await fetch(`${base}/subtitle/${tracks[0].id}`);
   assert.match(await subtitle.text(), /^WEBVTT/);

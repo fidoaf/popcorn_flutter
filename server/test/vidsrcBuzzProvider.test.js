@@ -29,6 +29,8 @@ test('extracts and validates an HLS candidate using the provider API', async () 
     '/pl/api.php',
     '/stream/master.m3u8',
   ]);
+  assert.equal(calls[0].url.searchParams.get('lang'), 'en');
+  assert.equal(calls[0].url.searchParams.get('sub'), '1');
   assert.equal(calls[1].url.searchParams.get('refs'), 'server-ref');
   assert.equal(calls[0].options.headers.Referer, 'https://vidsrc.buzz/');
 });
@@ -48,8 +50,10 @@ test('lists subtitles with a fresh page token', async () => {
   };
 
   const provider = new VidSrcBuzzProvider({ fetchImpl });
-  const result = await provider.listSubtitles({ providerId: provider.id, type: 'tv', id: '1399', season: '2', episode: '3' });
+  const result = await provider.listSubtitles({ providerId: provider.id, type: 'tv', id: '1399', season: '2', episode: '3', lang: 'fr', sub: '0' });
 
   assert.deepEqual(result, [{ label: 'English', lang: 'English', ref: 'sub-ref' }]);
+  assert.equal(calls[0].searchParams.get('lang'), 'fr');
+  assert.equal(calls[0].searchParams.get('sub'), '0');
   assert.equal(calls[1].searchParams.get('t'), 'fresh-token');
 });

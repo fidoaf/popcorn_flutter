@@ -7,7 +7,11 @@ function escapeHtml(value) {
 function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}) {
   const selectedType = initialMedia?.type || 'movie';
   const selectedProvider = initialMedia?.providerId || providers[0]?.id || '';
-  const playbackMedia = initialMedia ? { ...initialMedia, providerId: selectedProvider } : null;
+  const selectedLanguage = initialMedia?.lang || 'en';
+  const selectedSubtitles = initialMedia?.sub ?? '1';
+  const playbackMedia = initialMedia
+    ? { ...initialMedia, providerId: selectedProvider, lang: selectedLanguage, sub: selectedSubtitles }
+    : null;
   const initialId = initialMedia?.id || '';
   const initialSeason = initialMedia?.season || '1';
   const initialEpisode = initialMedia?.episode || '1';
@@ -52,6 +56,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       <form id="media-form">
         <label class="field" for="media-provider">Provider<select id="media-provider">${providerOptions}</select></label>
         <label class="field" for="media-type">Type<select id="media-type"><option value="movie"${selectedType === 'movie' ? ' selected' : ''}>Movie</option><option value="tv"${selectedType === 'tv' ? ' selected' : ''}>TV show</option></select></label>
+        <label class="field" for="audio-language">Audio language<select id="audio-language"><option value="en"${selectedLanguage === 'en' ? ' selected' : ''}>English</option><option value="es"${selectedLanguage === 'es' ? ' selected' : ''}>Spanish</option><option value="fr"${selectedLanguage === 'fr' ? ' selected' : ''}>French</option><option value="de"${selectedLanguage === 'de' ? ' selected' : ''}>German</option><option value="it"${selectedLanguage === 'it' ? ' selected' : ''}>Italian</option><option value="pt"${selectedLanguage === 'pt' ? ' selected' : ''}>Portuguese</option><option value="ja"${selectedLanguage === 'ja' ? ' selected' : ''}>Japanese</option><option value="ko"${selectedLanguage === 'ko' ? ' selected' : ''}>Korean</option></select></label>
+        <label class="field" for="subtitle-preference">Subtitles<select id="subtitle-preference"><option value="1"${selectedSubtitles === '1' ? ' selected' : ''}>On</option><option value="0"${selectedSubtitles === '0' ? ' selected' : ''}>Off</option></select></label>
         <label class="field" for="media-id">IMDb or TMDB ID<input id="media-id" name="id" required pattern="(?:tt[0-9]+|[0-9]+)" placeholder="tt1375666 or 27205" value="${escapeHtml(initialId)}"></label>
         <label class="field episode-field" for="season"${selectedType === 'tv' ? '' : ' hidden'}>Season<input id="season" type="number" min="1" step="1" value="${escapeHtml(initialSeason)}"></label>
         <label class="field episode-field" for="episode"${selectedType === 'tv' ? '' : ' hidden'}>Episode<input id="episode" type="number" min="1" step="1" value="${escapeHtml(initialEpisode)}"></label>
@@ -72,6 +78,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     const form = document.getElementById('media-form');
     const providerInput = document.getElementById('media-provider');
     const typeInput = document.getElementById('media-type');
+    const languageInput = document.getElementById('audio-language');
+    const subtitlePreferenceInput = document.getElementById('subtitle-preference');
     const idInput = document.getElementById('media-id');
     const seasonInput = document.getElementById('season');
     const episodeInput = document.getElementById('episode');
@@ -83,7 +91,13 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     let selectedMedia;
     let requestGeneration = 0;
     function mediaQuery(media) {
-      const query = new URLSearchParams({ provider: media.providerId, type: media.type, id: media.id });
+      const query = new URLSearchParams({
+        provider: media.providerId,
+        type: media.type,
+        id: media.id,
+        lang: media.lang,
+        sub: media.sub,
+      });
       if (media.type === 'tv') {
         query.set('season', media.season);
         query.set('episode', media.episode);
@@ -191,6 +205,15 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
         }
         subtitles.disabled = false;
         if (!tracks.length) subtitles.title = 'No subtitles available';
+        if (media.sub === '1' && tracks.length) {
+          const languageNames = { en: 'english', es: 'spanish', fr: 'french', de: 'german', it: 'italian', pt: 'portuguese', ja: 'japanese', ko: 'korean' };
+          const preferredLanguage = languageNames[media.lang];
+          const preferred = tracks.find((track) =>
+            [track.lang, track.label].some((value) => String(value || '').toLowerCase() === preferredLanguage),
+          ) || tracks[0];
+          subtitles.value = preferred.id;
+          subtitles.dispatchEvent(new Event('change'));
+        }
       } catch (error) {
         subtitles.title = error.message;
       }
@@ -239,7 +262,13 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       form.addEventListener('submit', (event) => {
         event.preventDefault();
         if (!form.reportValidity()) return;
-        const media = { providerId: providerInput.value, type: typeInput.value, id: idInput.value.trim() };
+        const media = {
+          providerId: providerInput.value,
+          type: typeInput.value,
+          id: idInput.value.trim(),
+          lang: languageInput.value,
+          sub: subtitlePreferenceInput.value,
+        };
         if (media.type === 'tv') {
           media.season = seasonInput.value;
           media.episode = episodeInput.value;

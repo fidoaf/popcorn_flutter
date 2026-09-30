@@ -11,7 +11,7 @@ class VidSrcBuzzProvider {
   }
 
   async extract(media) {
-    const page = `${this.origin}/embed/${this._mediaPath(media)}`;
+    const page = this._embedUrl(media);
     const config = this._parseConfig(await (await this._get(page)).text());
     const refs = await this._serverRefs(config);
     if (!refs.length) throw new Error('No servers available');
@@ -45,7 +45,7 @@ class VidSrcBuzzProvider {
   }
 
   async listSubtitles(media) {
-    const page = `${this.origin}/embed/${this._mediaPath(media)}`;
+    const page = this._embedUrl(media);
     const config = this._parseConfig(await (await this._get(page)).text());
     const url = new URL('/pl/api.php', this.origin);
     url.search = new URLSearchParams({
@@ -116,6 +116,13 @@ class VidSrcBuzzProvider {
     return media.type === 'movie'
       ? `movie/${encodeURIComponent(media.id)}`
       : `tv/${encodeURIComponent(media.id)}/${encodeURIComponent(media.season)}/${encodeURIComponent(media.episode)}`;
+  }
+
+  _embedUrl(media) {
+    const url = new URL(`/embed/${this._mediaPath(media)}`, this.origin);
+    url.searchParams.set('lang', media.lang || 'en');
+    url.searchParams.set('sub', media.sub ?? '1');
+    return url;
   }
 }
 
