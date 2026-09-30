@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
@@ -61,7 +62,10 @@ class _MediaXRayOverlayState extends State<MediaXRayOverlay> {
                   alignment: Alignment.topCenter,
                   child: Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: _XRayButton(onPressed: _toggle),
+                    child: PointerInterceptor(
+                      intercepting: !_open,
+                      child: _XRayButton(onPressed: _toggle),
+                    ),
                   ),
                 ),
               ),
@@ -75,26 +79,29 @@ class _MediaXRayOverlayState extends State<MediaXRayOverlay> {
             child: AnimatedOpacity(
               opacity: _open ? 1 : 0,
               duration: const Duration(milliseconds: 200),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: GestureDetector(
-                      onTap: _toggle,
-                      child: const ColoredBox(color: Colors.black54),
-                    ),
-                  ),
-                  SafeArea(
-                    child: AnimatedSlide(
-                      offset: _open ? Offset.zero : const Offset(0, -1),
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOutCubic,
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: _XRayPanel(item: widget.item, details: _details, onClose: _toggle),
+              child: PointerInterceptor(
+                intercepting: _open,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: GestureDetector(
+                        onTap: _toggle,
+                        child: const ColoredBox(color: Colors.black54),
                       ),
                     ),
-                  ),
-                ],
+                    SafeArea(
+                      child: AnimatedSlide(
+                        offset: _open ? Offset.zero : const Offset(0, -1),
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOutCubic,
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: _XRayPanel(item: widget.item, details: _details, onClose: _toggle),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
