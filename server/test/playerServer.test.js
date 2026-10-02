@@ -2,6 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { ProviderRegistry } = require('../src/player/providerRegistry');
 const { createPlayerServer } = require('../src/player/playerServer');
+const { createServer } = require('../server');
+const { RedirectProvider } = require('../src/player/redirectProvider');
 
 test('serves health, form, playback, and subtitles through injected services', async (t) => {
   const provider = {
@@ -26,7 +28,16 @@ test('serves health, form, playback, and subtitles through injected services', a
       });
     },
   };
-  const providers = new ProviderRegistry([provider]);
+  const providers = new ProviderRegistry([
+    provider,
+    new RedirectProvider({
+      id: 'nxsha',
+      label: 'Nxsha',
+      host: 'web.nxsha.app',
+      path: '/embed/{type}/{id}/{season}/{episode}',
+      parameters: { lang: '{language}', sub: '{subtitles}' },
+    }),
+  ]);
   const resourceProxy = {
     async serve(_request, response, url, providerId) {
       response.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -56,6 +67,14 @@ test('serves health, form, playback, and subtitles through injected services', a
   const manifest = await fetch(`${base}/manifest?provider=vidsrcbuzz&id=tt1375666&lang=fr&sub=0`);
   assert.equal(await manifest.text(), 'vidsrcbuzz:https://cdn.example/master.m3u8');
 
+  const redirect = await fetch(`${base}/player?provider=nxsha&type=tv&id=1399&season=2&episode=3&lang=fr&sub=0`, { redirect: 'manual' });
+  assert.equal(redirect.status, 302);
+  assert.equal(redirect.headers.get('location'), 'https://web.nxsha.app/embed/tv/1399/2/3?lang=fr&sub=0');
+
+  const movieRedirect = await fetch(`${base}/player?provider=nxsha&type=movie&id=1248832&lang=en&sub=1`, { redirect: 'manual' });
+  assert.equal(movieRedirect.status, 302);
+  assert.equal(movieRedirect.headers.get('location'), 'https://web.nxsha.app/embed/movie/1248832?lang=en&sub=1');
+
   const tracks = await (await fetch(`${base}/subtitles?provider=vidsrcbuzz&id=tt1375666&lang=fr&sub=0`)).json();
   assert.equal(tracks.length, 1);
   const subtitle = await fetch(`${base}/subtitle/${tracks[0].id}`);
@@ -63,4 +82,63 @@ test('serves health, form, playback, and subtitles through injected services', a
 
   const invalid = await fetch(`${base}/manifest?provider=missing&id=tt1375666`);
   assert.equal(invalid.status, 400);
+});
+
+test('registers every configured embed provider except Render', async (t) => {
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  const root = await (await fetch(`${base}/`)).text();
+  for (const providerId of ['vidsrcbuzz', 'nxsha', 'vidsrcsbs', 'vidsrcir', 'vidlux', 'vidsrcme']) {
+    assert.match(root, new RegExp(`value="${providerId}"`));
+  }
+  assert.doesNotMatch(root, /value="render"/);
+
+  const redirectProviders = {
+    nxsha: 'https://web.nxsha.app',
+    vidsrcsbs: 'https://vidsrc.sbs',
+    vidsrcir: 'https://vidsrc.ir',
+    vidlux: 'https://vidlux.xyz',
+    vidsrcme: 'https://vidsrcme.ru',
+  };
+  for (const [providerId, origin] of Object.entries(redirectProviders)) {
+    const response = await fetch(`${base}/player?provider=${providerId}&id=1248832`, { redirect: 'manual' });
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('location'), `${origin}/embed/movie/1248832?lang=en&sub=1`);
+  }
+
+  const response = await fetch(`${base}/player?provider=render&id=123`, { redirect: 'manual' });
+  assert.equal(response.status, 400);
+});
+
+test('builds providers from configurable paths and query parameters', async (t) => {
+  const server = createServer(null, {
+    providerConfig: {
+      initialProvider: 'Custom Source',
+      providers: [
+        { name: 'Render', host: 'popcorn-flutter.onrender.com', path: '/player' },
+        { name: 'Vidsrc.buzz', host: 'vidsrc.buzz', path: '/embed/{type}/{id}' },
+        {
+          name: 'Custom Source',
+          scheme: 'https',
+          host: 'embed.example',
+          path: '/watch/{type}/{id}/{season}/{episode}',
+          parameters: { language: '{language}', captions: '{subtitles}', media: '{id}', mode: 'embed' },
+        },
+      ],
+    },
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  const root = await (await fetch(`${base}/`)).text();
+  assert.match(root, /value="customsource" selected/);
+  assert.doesNotMatch(root, /value="render"/);
+
+  const redirect = await fetch(`${base}/player?id=42`, { redirect: 'manual' });
+  assert.equal(redirect.status, 302);
+  assert.equal(redirect.headers.get('location'), 'https://embed.example/watch/movie/42?language=en&captions=1&media=42&mode=embed');
 });

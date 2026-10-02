@@ -2,16 +2,21 @@
 
 const { mediaFromQuery } = require('./src/player/mediaRequest');
 const { createPlayerServer } = require('./src/player/playerServer');
-const { ProviderRegistry, DEFAULT_PROVIDER_ID } = require('./src/player/providerRegistry');
+const { DEFAULT_PROVIDER_ID } = require('./src/player/providerRegistry');
+const { createProviderRegistry } = require('./src/player/providerFactory');
 const { ResourceProxy } = require('./src/player/resourceProxy');
-const { VidSrcBuzzProvider } = require('./src/player/vidsrcBuzzProvider');
 
 function createDefaultProviders(options = {}) {
-  return new ProviderRegistry([new VidSrcBuzzProvider(options)]);
+  return createProviderRegistry(options);
 }
 
 function createServer(initialMedia = null, dependencies = {}) {
-  const providers = dependencies.providers || createDefaultProviders({ fetchImpl: dependencies.fetchImpl });
+  const providers = dependencies.providers || createDefaultProviders({
+    providerConfig: dependencies.providerConfig,
+    configPath: dependencies.providerConfigPath,
+    fetchImpl: dependencies.fetchImpl,
+    timeoutMs: dependencies.timeoutMs,
+  });
   const resourceProxy = dependencies.resourceProxy || new ResourceProxy({
     providers,
     fetchImpl: dependencies.fetchImpl,
@@ -27,7 +32,12 @@ function createServer(initialMedia = null, dependencies = {}) {
 }
 
 function extract(type, id, season = '0', episode = '0', providerId = DEFAULT_PROVIDER_ID, dependencies = {}) {
-  const providers = dependencies.providers || createDefaultProviders({ fetchImpl: dependencies.fetchImpl });
+  const providers = dependencies.providers || createDefaultProviders({
+    providerConfig: dependencies.providerConfig,
+    configPath: dependencies.providerConfigPath,
+    fetchImpl: dependencies.fetchImpl,
+    timeoutMs: dependencies.timeoutMs,
+  });
   return providers.get(providerId).extract({ providerId, type, id, season, episode });
 }
 

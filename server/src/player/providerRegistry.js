@@ -1,12 +1,17 @@
 const DEFAULT_PROVIDER_ID = 'vidsrcbuzz';
 
 class ProviderRegistry {
-  constructor(providers) {
+  constructor(providers, defaultProviderId = DEFAULT_PROVIDER_ID) {
     this.providers = new Map(providers.map((provider) => [provider.id, provider]));
+    this.defaultProviderId = this.providers.has(defaultProviderId)
+      ? defaultProviderId
+      : this.providers.keys().next().value || defaultProviderId;
   }
 
   list() {
-    return [...this.providers.values()].map(({ id, label }) => ({ id, label }));
+    return [...this.providers.values()]
+      .sort((left, right) => Number(right.id === this.defaultProviderId) - Number(left.id === this.defaultProviderId))
+      .map(({ id, label }) => ({ id, label }));
   }
 
   get(id = DEFAULT_PROVIDER_ID) {

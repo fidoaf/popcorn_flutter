@@ -1,7 +1,7 @@
 const { DEFAULT_PROVIDER_ID } = require('./providerRegistry');
 
 function mediaFromQuery(params, providers) {
-  const providerId = params.get('provider') || DEFAULT_PROVIDER_ID;
+  const providerId = params.get('provider') || providers.defaultProviderId || DEFAULT_PROVIDER_ID;
   providers.get(providerId);
 
   const type = (params.get('type') || 'movie').toLowerCase();

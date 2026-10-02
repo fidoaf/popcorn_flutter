@@ -21,7 +21,12 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
         sendHtml(response, renderPlayerPage(initialMedia, { providers: providers.list() }));
       } else if (url.pathname === '/player') {
         const media = mediaFromQuery(url.searchParams, providers);
-        sendHtml(response, renderPlayerPage(media, { providers: providers.list(), showForm: false }));
+        const provider = providers.get(media.providerId);
+        if (typeof provider.embedUrl === 'function') {
+          response.writeHead(302, { Location: provider.embedUrl(media).href, 'Cache-Control': 'no-store' }).end();
+        } else {
+          sendHtml(response, renderPlayerPage(media, { providers: providers.list(), showForm: false }));
+        }
       } else if (url.pathname === '/favicon.ico') {
         response.writeHead(204).end();
       } else if (url.pathname === '/manifest') {

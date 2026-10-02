@@ -273,6 +273,10 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
           media.season = seasonInput.value;
           media.episode = episodeInput.value;
         }
+        if (media.providerId !== 'vidsrcbuzz') {
+          window.location.assign('/player?' + mediaQuery(media));
+          return;
+        }
         playMedia(media);
       });
       typeInput.dispatchEvent(new Event('change'));
