@@ -4,7 +4,7 @@ const { DEFAULT_PROVIDER_ID, ProviderRegistry } = require('./providerRegistry');
 const { RedirectProvider } = require('./redirectProvider');
 const { VidSrcBuzzProvider } = require('./vidsrcBuzzProvider');
 
-const DEFAULT_CONFIG_PATH = path.resolve(__dirname, '../../../assets/config/media_source_providers.json');
+const DEFAULT_CONFIG_PATH = path.resolve(__dirname, '../../config/media_source_providers.json');
 
 function loadProviderConfig(configPath = process.env.MEDIA_SOURCE_PROVIDERS_PATH || DEFAULT_CONFIG_PATH) {
   return JSON.parse(fs.readFileSync(path.resolve(configPath), 'utf8'));

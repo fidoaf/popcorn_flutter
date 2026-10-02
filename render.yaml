@@ -4,9 +4,9 @@ services:
     runtime: node
     plan: free
     region: oregon
-    rootDir: .
-    buildCommand: npm install --omit=dev --prefix server
-    startCommand: npm --prefix server start
+    rootDir: server
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

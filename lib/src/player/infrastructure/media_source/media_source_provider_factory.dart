@@ -39,7 +39,7 @@ abstract final class MediaSourceProviderFactory {
 
   /// Default asset bundling the provider definitions. This is the source of
   /// truth for the available backends; edit that file to change them.
-  static const String defaultAssetPath = 'assets/config/media_source_providers.json';
+  static const String defaultAssetPath = 'server/config/media_source_providers.json';
 
   /// Builds the provider from a raw JSON [source] string.
   static ConfigurableMediaSourceProvider createFromJson(String source, {MediaSourcePreferences? preferences}) =>

@@ -7,13 +7,13 @@
       "host": "popcorn-flutter.onrender.com",
       "path": "/player",
       "method": "GET",
-      "parameters": { 
+      "parameters": {
         "id": "{id}",
         "type": "{type}",
         "season": "{season}",
         "episode": "{episode}",
-        "lang": "{language}", 
-        "sub": "{subtitles}" 
+        "lang": "{language}",
+        "sub": "{subtitles}"
       },
       "headers": {},
       "cookies": [],
