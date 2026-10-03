@@ -40,6 +40,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     #now-playing{padding:10px 20px 0;color:#aeb3bd;font-size:13px}
     video{width:100%;flex:1;min-height:0;background:#000}
     footer{padding:8px 18px;min-height:36px;color:#aeb3bd;font-size:12px;display:flex;align-items:center;gap:12px}
+    #source-field[hidden]{display:none}
     button{background:none;border:0;color:#f5f5f5;text-decoration:underline;cursor:pointer;font:inherit}
     label{display:flex;align-items:center;gap:8px;margin-left:auto}
     footer label{margin-left:0}
@@ -66,7 +67,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     </header>` : ''}
     <div id="now-playing" hidden></div>
     <video id="video" controls playsinline hidden></video>
-    <footer><span id="status">Enter an IMDb or TMDB ID to start.</span> <button id="retry" hidden>Retry</button><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
+    <footer><span id="status">Enter an IMDb or TMDB ID to start.</span> <button id="retry" hidden>Retry</button><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
   <script>
@@ -75,6 +76,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     const retry = document.getElementById('retry');
     const quality = document.getElementById('quality');
     const subtitles = document.getElementById('subtitles');
+    const sourceField = document.getElementById('source-field');
+    const sourceSelect = document.getElementById('source');
     const form = document.getElementById('media-form');
     const providerInput = document.getElementById('media-provider');
     const typeInput = document.getElementById('media-type');
@@ -128,18 +131,20 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
         }
       }
     }
-    function start(media) {
+    function start(media, sourceId = sourceSelect.value) {
       const generation = ++requestGeneration;
       retry.hidden = true;
       status.textContent = 'Connecting to stream...';
       quality.replaceChildren(new Option('Auto', '-1'));
       quality.disabled = true;
       quality.title = 'Automatic quality selection';
+      const manifestQuery = new URLSearchParams(mediaQuery(media));
+      if (sourceId) manifestQuery.set('source', sourceId);
       try {
         if (window.Hls && Hls.isSupported()) {
           if (hls) hls.destroy();
           hls = new Hls();
-          hls.loadSource('/manifest?' + mediaQuery(media));
+          hls.loadSource('/manifest?' + manifestQuery);
           hls.attachMedia(video);
           const updateQualityLevels = () => {
             if (generation !== requestGeneration) return;
@@ -168,7 +173,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
             if (generation === requestGeneration && data.fatal) fail('Playback error: ' + data.details);
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = '/manifest?' + mediaQuery(media);
+          video.src = '/manifest?' + manifestQuery;
           quality.disabled = true;
           quality.title = 'Automatic quality selection is handled by the browser';
           video.addEventListener('loadedmetadata', () => autoplay(generation), { once: true });
@@ -180,6 +185,25 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
         }, { once: true });
       } catch (error) {
         fail('Unable to load stream: ' + error.message);
+      }
+    }
+    async function loadSources(media, generation) {
+      sourceField.hidden = true;
+      sourceSelect.disabled = true;
+      sourceSelect.replaceChildren(new Option('Auto', ''));
+      try {
+        const response = await fetch('/sources?' + mediaQuery(media));
+        if (!response.ok) throw new Error('Source list request failed');
+        const sources = await response.json();
+        if (generation !== requestGeneration || !sources.length) return;
+        for (const source of sources) {
+          const option = new Option(source.label + (source.language ? ' (' + source.language + ')' : ''), source.id);
+          sourceSelect.add(option);
+        }
+        sourceField.hidden = false;
+        sourceSelect.disabled = false;
+      } catch (_) {
+        sourceField.hidden = true;
       }
     }
     quality.addEventListener('change', () => {
@@ -236,7 +260,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       if (hls) { hls.destroy(); hls = null; }
       video.removeAttribute('src');
       video.load();
-      start(selectedMedia);
+      start(selectedMedia, sourceSelect.value);
     });
     function playMedia(media) {
       selectedMedia = media;
@@ -250,8 +274,17 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       clearSubtitleOptions();
       start(media);
       const generation = requestGeneration;
+      loadSources(media, generation);
       loadSubtitles(media, generation);
     }
+    sourceSelect.addEventListener('change', () => {
+      if (!selectedMedia) return;
+      if (hls) { hls.destroy(); hls = null; }
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      start(selectedMedia, sourceSelect.value);
+    });
     if (form) {
       typeInput.addEventListener('change', () => {
         const isTv = typeInput.value === 'tv';

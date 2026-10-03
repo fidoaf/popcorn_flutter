@@ -10,9 +10,16 @@ class VidSrcBuzzProvider {
     this.timeoutMs = timeoutMs;
   }
 
-  async extract(media) {
+  async extract(media, selectedSource = null) {
     const page = this._embedUrl(media);
     const config = this._parseConfig(await (await this._get(page)).text());
+    if (selectedSource) {
+      const playUrl = new URL('/pl/api.php', this.origin);
+      playUrl.search = new URLSearchParams({ a: 'play', ref: selectedSource.ref, t: selectedSource.token });
+      const candidate = await this._json(playUrl);
+      if (!candidate.url) throw new Error('Selected server did not return a playable stream');
+      return { page, ...(await this._validate(candidate)) };
+    }
     const refs = await this._serverRefs(config);
     if (!refs.length) throw new Error('No servers available');
 
@@ -44,6 +51,21 @@ class VidSrcBuzzProvider {
     throw new Error('No playable stream found');
   }
 
+  async listSources(media) {
+    const page = this._embedUrl(media);
+    const config = this._parseConfig(await (await this._get(page)).text());
+    const servers = await this._servers(config);
+    return {
+      token: config.t,
+      sources: servers.filter((server) => typeof server.ref === 'string' && server.ref).map((server) => ({
+        ref: server.ref,
+        name: typeof server.name === 'string' && server.name ? server.name : 'Streaming server',
+        lang: typeof server.lang === 'string' ? server.lang : '',
+        flag: typeof server.flag === 'string' ? server.flag : '',
+      })),
+    };
+  }
+
   async listSubtitles(media) {
     const page = this._embedUrl(media);
     const config = this._parseConfig(await (await this._get(page)).text());
@@ -67,6 +89,10 @@ class VidSrcBuzzProvider {
   }
 
   async _serverRefs(config) {
+    return (await this._servers(config)).map((server) => server.ref).filter(Boolean);
+  }
+
+  async _servers(config) {
     let servers = config.ssr?.servers || [];
     if (!servers.length) {
       const url = new URL('/pl/api.php', this.origin);
@@ -81,7 +107,7 @@ class VidSrcBuzzProvider {
       const sources = await this._json(url);
       servers = sources.servers || [];
     }
-    return servers.map((server) => server.ref).filter(Boolean);
+    return servers;
   }
 
   async _validate(candidate) {

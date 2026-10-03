@@ -35,6 +35,41 @@ test('extracts and validates an HLS candidate using the provider API', async () 
   assert.equal(calls[0].options.headers.Referer, 'https://vidsrc.buzz/');
 });
 
+test('lists VidSrc.buzz servers and extracts the selected source', async () => {
+  const calls = [];
+  const fetchImpl = async (input) => {
+    const url = new URL(input);
+    calls.push(url);
+    if (url.pathname === '/embed/movie/tt1375666') {
+      return new Response('var Q = {"type":"movie","id":"tt1375666","s":0,"e":0,"t":"page-token","ssr":{"servers":[{"ref":"first-ref","name":"Server SWM1","lang":"English","flag":"us"},{"ref":"second-ref","name":"Server VEM-3"}]}};');
+    }
+    if (url.pathname === '/pl/api.php' && url.searchParams.get('a') === 'play') {
+      return Response.json({ url: '/stream/selected.m3u8', type: 'hls' });
+    }
+    if (url.pathname === '/stream/selected.m3u8') {
+      return new Response('#EXTM3U\n#EXT-X-ENDLIST');
+    }
+    throw new Error(`Unexpected request: ${url.href}`);
+  };
+
+  const provider = new VidSrcBuzzProvider({ fetchImpl });
+  const media = { providerId: provider.id, type: 'movie', id: 'tt1375666', season: '0', episode: '0' };
+  const result = await provider.listSources(media);
+
+  assert.equal(result.token, 'page-token');
+  assert.deepEqual(result.sources, [
+    { ref: 'first-ref', name: 'Server SWM1', lang: 'English', flag: 'us' },
+    { ref: 'second-ref', name: 'Server VEM-3', lang: '', flag: '' },
+  ]);
+
+  const stream = await provider.extract(media, { ref: 'second-ref', token: result.token });
+  assert.equal(stream.url, 'https://vidsrc.buzz/stream/selected.m3u8');
+  const playRequest = calls.find((url) => url.pathname === '/pl/api.php');
+  assert.equal(playRequest.searchParams.get('a'), 'play');
+  assert.equal(playRequest.searchParams.get('ref'), 'second-ref');
+  assert.equal(playRequest.searchParams.get('t'), 'page-token');
+});
+
 test('lists subtitles with a fresh page token', async () => {
   const calls = [];
   const fetchImpl = async (input) => {

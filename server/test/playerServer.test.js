@@ -10,11 +10,19 @@ test('serves health, form, playback, and subtitles through injected services', a
     id: 'vidsrcbuzz',
     label: 'VidSrc.buzz',
     origin: 'https://vidsrc.buzz',
-    async extract(media) {
+    async extract(media, selectedSource) {
       assert.equal(media.id, 'tt1375666');
       assert.equal(media.lang, 'fr');
       assert.equal(media.sub, '0');
+      if (selectedSource) {
+        assert.equal(selectedSource.ref, 'source-ref');
+        assert.equal(selectedSource.token, 'source-token');
+      }
       return { url: 'https://cdn.example/master.m3u8' };
+    },
+    async listSources(media) {
+      assert.equal(media.id, 'tt1375666');
+      return { token: 'source-token', sources: [{ ref: 'source-ref', name: 'Server SWM1', lang: 'English' }] };
     },
     async listSubtitles(media) {
       assert.equal(media.lang, 'fr');
@@ -66,6 +74,13 @@ test('serves health, form, playback, and subtitles through injected services', a
 
   const manifest = await fetch(`${base}/manifest?provider=vidsrcbuzz&id=tt1375666&lang=fr&sub=0`);
   assert.equal(await manifest.text(), 'vidsrcbuzz:https://cdn.example/master.m3u8');
+
+  const sources = await (await fetch(`${base}/sources?provider=vidsrcbuzz&id=tt1375666&lang=fr&sub=0`)).json();
+  assert.equal(sources.length, 1);
+  assert.equal(sources[0].label, 'Server SWM1');
+  assert.equal(sources[0].ref, undefined);
+  const selectedManifest = await fetch(`${base}/manifest?provider=vidsrcbuzz&id=tt1375666&lang=fr&sub=0&source=${sources[0].id}`);
+  assert.equal(await selectedManifest.text(), 'vidsrcbuzz:https://cdn.example/master.m3u8');
 
   const redirect = await fetch(`${base}/player?provider=nxsha&type=tv&id=1399&season=2&episode=3&lang=fr&sub=0`, { redirect: 'manual' });
   assert.equal(redirect.status, 302);

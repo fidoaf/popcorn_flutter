@@ -2,8 +2,9 @@ const http = require('node:http');
 const { mediaFromQuery } = require('./mediaRequest');
 const { renderPlayerPage } = require('./playerPage');
 const { SubtitleRefStore } = require('./subtitleRefStore');
+const { SourceRefStore } = require('./sourceRefStore');
 
-function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore() }) {
+function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore() }) {
   if (!providers || !resourceProxy) throw new TypeError('Player server requires providers and a resource proxy');
 
   return http.createServer(async (request, response) => {
@@ -32,8 +33,30 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
       } else if (url.pathname === '/manifest') {
         const media = mediaFromQuery(url.searchParams, providers);
         const provider = providers.get(media.providerId);
-        const stream = await provider.extract(media);
+        const sourceId = url.searchParams.get('source');
+        const selectedSource = sourceId ? sourceRefs.get(sourceId, provider.id, media) : null;
+        if (sourceId && !selectedSource) {
+          const error = new Error('Selected source expired; reload the player');
+          error.statusCode = 400;
+          throw error;
+        }
+        const stream = await provider.extract(media, selectedSource);
         await resourceProxy.serve(request, response, stream.url, provider.id);
+      } else if (url.pathname === '/sources') {
+        const media = mediaFromQuery(url.searchParams, providers);
+        const provider = providers.get(media.providerId);
+        if (typeof provider.listSources !== 'function') {
+          sendJson(response, 200, []);
+          return;
+        }
+        const { token, sources } = await provider.listSources(media);
+        const result = sources.map((source) => ({
+          id: sourceRefs.add({ ref: source.ref, token }, provider.id, media),
+          label: source.name,
+          language: source.lang,
+          flag: source.flag,
+        }));
+        sendJson(response, 200, result);
       } else if (url.pathname === '/subtitles') {
         const media = mediaFromQuery(url.searchParams, providers);
         const provider = providers.get(media.providerId);
