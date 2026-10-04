@@ -95,6 +95,17 @@
       "headers": {},
       "cookies": [],
       "sandbox": false
+    },
+    {
+      "name": "OnlyPelis",
+      "scheme": "https",
+      "host": "onlypelis.com",
+      "path": "/pelicula/{id}/",
+      "method": "GET",
+      "parameters": {},
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
     }
   ]
 }

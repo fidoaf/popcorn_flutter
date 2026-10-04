@@ -59,7 +59,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
         <label class="field" for="media-type">Type<select id="media-type"><option value="movie"${selectedType === 'movie' ? ' selected' : ''}>Movie</option><option value="tv"${selectedType === 'tv' ? ' selected' : ''}>TV show</option></select></label>
         <label class="field" for="audio-language">Audio language<select id="audio-language"><option value="en"${selectedLanguage === 'en' ? ' selected' : ''}>English</option><option value="es"${selectedLanguage === 'es' ? ' selected' : ''}>Spanish</option><option value="fr"${selectedLanguage === 'fr' ? ' selected' : ''}>French</option><option value="de"${selectedLanguage === 'de' ? ' selected' : ''}>German</option><option value="it"${selectedLanguage === 'it' ? ' selected' : ''}>Italian</option><option value="pt"${selectedLanguage === 'pt' ? ' selected' : ''}>Portuguese</option><option value="ja"${selectedLanguage === 'ja' ? ' selected' : ''}>Japanese</option><option value="ko"${selectedLanguage === 'ko' ? ' selected' : ''}>Korean</option></select></label>
         <label class="field" for="subtitle-preference">Subtitles<select id="subtitle-preference"><option value="1"${selectedSubtitles === '1' ? ' selected' : ''}>On</option><option value="0"${selectedSubtitles === '0' ? ' selected' : ''}>Off</option></select></label>
-        <label class="field" for="media-id">IMDb or TMDB ID<input id="media-id" name="id" required pattern="(?:tt[0-9]+|[0-9]+)" placeholder="tt1375666 or 27205" value="${escapeHtml(initialId)}"></label>
+        <label class="field" for="media-id"><span id="media-id-label">Media / provider ID</span><input id="media-id" name="id" required pattern="(?:tt[0-9]+|[0-9]+)" placeholder="IMDb, TMDB, or provider-specific ID" value="${escapeHtml(initialId)}"></label>
         <label class="field episode-field" for="season"${selectedType === 'tv' ? '' : ' hidden'}>Season<input id="season" type="number" min="1" step="1" value="${escapeHtml(initialSeason)}"></label>
         <label class="field episode-field" for="episode"${selectedType === 'tv' ? '' : ' hidden'}>Episode<input id="episode" type="number" min="1" step="1" value="${escapeHtml(initialEpisode)}"></label>
         <button type="submit">Play</button>
@@ -67,7 +67,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     </header>` : ''}
     <div id="now-playing" hidden></div>
     <video id="video" controls playsinline hidden></video>
-    <footer><span id="status">Enter an IMDb or TMDB ID to start.</span> <button id="retry" hidden>Retry</button><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
+    <footer><span id="status">Enter an ID supported by the selected provider.</span> <button id="retry" hidden>Retry</button><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
   <script>
@@ -84,6 +84,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     const languageInput = document.getElementById('audio-language');
     const subtitlePreferenceInput = document.getElementById('subtitle-preference');
     const idInput = document.getElementById('media-id');
+    const idLabel = document.getElementById('media-id-label');
     const seasonInput = document.getElementById('season');
     const episodeInput = document.getElementById('episode');
     const episodeFields = document.querySelectorAll('.episode-field');
@@ -93,6 +94,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     let subtitleTrack;
     let selectedMedia;
     let requestGeneration = 0;
+    let mediaRecoveryAttempted = false;
     function mediaQuery(media) {
       const query = new URLSearchParams({
         provider: media.providerId,
@@ -133,6 +135,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     }
     function start(media, sourceId = sourceSelect.value) {
       const generation = ++requestGeneration;
+      mediaRecoveryAttempted = false;
       retry.hidden = true;
       status.textContent = 'Connecting to stream...';
       quality.replaceChildren(new Option('Auto', '-1'));
@@ -170,7 +173,14 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
             quality.options[0].textContent = level?.height ? 'Auto (' + level.height + 'p)' : 'Auto';
           });
           hls.on(Hls.Events.ERROR, (_, data) => {
-            if (generation === requestGeneration && data.fatal) fail('Playback error: ' + data.details);
+            if (generation !== requestGeneration || !data.fatal) return;
+            if (data.details === Hls.ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET && !mediaRecoveryAttempted) {
+              mediaRecoveryAttempted = true;
+              status.textContent = 'Recovering playback...';
+              hls.recoverMediaError();
+              return;
+            }
+            fail('Playback error: ' + data.details);
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = '/manifest?' + manifestQuery;
@@ -286,6 +296,11 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       start(selectedMedia, sourceSelect.value);
     });
     if (form) {
+      providerInput.addEventListener('change', () => {
+        const isOnlyPelis = providerInput.value === 'onlypelis';
+        idLabel.textContent = isOnlyPelis ? 'TMDB ID' : 'Media / provider ID';
+        idInput.placeholder = isOnlyPelis ? 'Numeric TMDB ID' : 'IMDb, TMDB, or provider-specific ID';
+      });
       typeInput.addEventListener('change', () => {
         const isTv = typeInput.value === 'tv';
         for (const field of episodeFields) field.hidden = !isTv;
@@ -312,6 +327,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
         }
         playMedia(media);
       });
+      providerInput.dispatchEvent(new Event('change'));
       typeInput.dispatchEvent(new Event('change'));
     }
     if (initialMedia) playMedia(initialMedia);

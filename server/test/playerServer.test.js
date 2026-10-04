@@ -106,7 +106,7 @@ test('registers configured providers and redirects providers without server extr
   const base = `http://127.0.0.1:${server.address().port}`;
 
   const root = await (await fetch(`${base}/`)).text();
-  for (const providerId of ['vidsrcbuzz', 'nxsha', 'cinesrc', 'vidsrcsbs', 'vidsrcir', 'vidlux', 'vidsrcme']) {
+  for (const providerId of ['vidsrcbuzz', 'nxsha', 'cinesrc', 'onlypelis', 'vidsrcsbs', 'vidsrcir', 'vidlux', 'vidsrcme']) {
     assert.match(root, new RegExp(`value="${providerId}"`));
   }
   assert.doesNotMatch(root, /value="render"/);
@@ -134,6 +134,14 @@ test('registers configured providers and redirects providers without server extr
   const nxshaPage = await fetch(`${base}/player?provider=nxsha&id=1248832`, { redirect: 'manual' });
   assert.equal(nxshaPage.status, 200);
   assert.match(await nxshaPage.text(), /const initialMedia = \{"providerId":"nxsha"/);
+
+  const onlyPelisPage = await fetch(`${base}/player?provider=onlypelis&id=977942`, { redirect: 'manual' });
+  assert.equal(onlyPelisPage.status, 200);
+  assert.match(await onlyPelisPage.text(), /const initialMedia = \{"providerId":"onlypelis","type":"movie","id":"977942"/);
+
+  const onlyPelisEpisodePage = await fetch(`${base}/player?provider=onlypelis&type=tv&id=1234&season=1&episode=1`, { redirect: 'manual' });
+  assert.equal(onlyPelisEpisodePage.status, 200);
+  assert.match(await onlyPelisEpisodePage.text(), /"providerId":"onlypelis","type":"tv","id":"1234"/);
 
   const response = await fetch(`${base}/player?provider=render&id=123`, { redirect: 'manual' });
   assert.equal(response.status, 400);

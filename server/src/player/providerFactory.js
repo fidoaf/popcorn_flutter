@@ -4,6 +4,7 @@ const { DEFAULT_PROVIDER_ID, ProviderRegistry } = require('./providerRegistry');
 const { RedirectProvider } = require('./redirectProvider');
 const { CinesrcProvider } = require('./cinesrcProvider');
 const { NxshaProvider } = require('./nxshaProvider');
+const { OnlyPelisProvider } = require('./onlyPelisProvider');
 const { VidSrcBuzzProvider } = require('./vidsrcBuzzProvider');
 
 const DEFAULT_CONFIG_PATH = path.resolve(__dirname, '../../config/media_source_providers.json');
@@ -53,6 +54,8 @@ function createProviderRegistry(options = {}) {
         fetchImpl: options.fetchImpl,
         timeoutMs: options.timeoutMs,
       }));
+    } else if (id === 'onlypelis') {
+      providers.push(new OnlyPelisProvider({ fetchImpl: options.fetchImpl, timeoutMs: options.timeoutMs }));
     } else {
       providers.push(new RedirectProvider({
         id,
