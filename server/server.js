@@ -15,6 +15,7 @@ function createServer(initialMedia = null, dependencies = {}) {
     providerConfig: dependencies.providerConfig,
     configPath: dependencies.providerConfigPath,
     fetchImpl: dependencies.fetchImpl,
+    browserPool: dependencies.browserPool,
     timeoutMs: dependencies.timeoutMs,
   });
   const resourceProxy = dependencies.resourceProxy || new ResourceProxy({
@@ -36,6 +37,7 @@ function extract(type, id, season = '0', episode = '0', providerId = DEFAULT_PRO
     providerConfig: dependencies.providerConfig,
     configPath: dependencies.providerConfigPath,
     fetchImpl: dependencies.fetchImpl,
+    browserPool: dependencies.browserPool,
     timeoutMs: dependencies.timeoutMs,
   });
   return providers.get(providerId).extract({ providerId, type, id, season, episode });

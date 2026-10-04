@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { DEFAULT_PROVIDER_ID, ProviderRegistry } = require('./providerRegistry');
 const { RedirectProvider } = require('./redirectProvider');
+const { CinesrcProvider } = require('./cinesrcProvider');
 const { NxshaProvider } = require('./nxshaProvider');
 const { VidSrcBuzzProvider } = require('./vidsrcBuzzProvider');
 
@@ -30,6 +31,17 @@ function createProviderRegistry(options = {}) {
 
     if (id === DEFAULT_PROVIDER_ID) {
       providers.push(new VidSrcBuzzProvider({ fetchImpl: options.fetchImpl, timeoutMs: options.timeoutMs }));
+    } else if (id === 'cinesrc') {
+      providers.push(new CinesrcProvider({
+        id,
+        label: definition.name,
+        scheme: definition.scheme,
+        host: definition.host,
+        path: definition.path,
+        parameters: definition.parameters,
+        browserPool: options.browserPool,
+        timeoutMs: options.timeoutMs,
+      }));
     } else if (id === 'nxsha') {
       providers.push(new NxshaProvider({
         id,

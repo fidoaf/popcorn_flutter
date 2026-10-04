@@ -31,6 +31,17 @@
       "sandbox": false
     },
     {
+      "name": "Cinesrc",
+      "scheme": "https",
+      "host": "cinesrc.st",
+      "path": "/embed/{type}/{id}",
+      "method": "GET",
+      "parameters": { "s": "{season}", "e": "{episode}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
       "name": "Vidsrc.buzz",
       "scheme": "https",
       "host": "vidsrc.buzz",

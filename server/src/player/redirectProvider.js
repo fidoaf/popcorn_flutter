@@ -38,7 +38,9 @@ class RedirectProvider {
     const url = new URL(this.origin);
     url.pathname = normalizedPath;
     for (const [key, value] of Object.entries(this.parameters)) {
-      url.searchParams.set(substitute(key), substitute(value));
+      const resolvedValue = substitute(value);
+      if (resolvedValue === '' && /\{(?:season|episode)\}/.test(value)) continue;
+      url.searchParams.set(substitute(key), resolvedValue);
     }
     return url;
   }
