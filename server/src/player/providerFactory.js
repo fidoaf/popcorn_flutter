@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { DEFAULT_PROVIDER_ID, ProviderRegistry } = require('./providerRegistry');
 const { RedirectProvider } = require('./redirectProvider');
+const { NxshaProvider } = require('./nxshaProvider');
 const { VidSrcBuzzProvider } = require('./vidsrcBuzzProvider');
 
 const DEFAULT_CONFIG_PATH = path.resolve(__dirname, '../../config/media_source_providers.json');
@@ -29,6 +30,17 @@ function createProviderRegistry(options = {}) {
 
     if (id === DEFAULT_PROVIDER_ID) {
       providers.push(new VidSrcBuzzProvider({ fetchImpl: options.fetchImpl, timeoutMs: options.timeoutMs }));
+    } else if (id === 'nxsha') {
+      providers.push(new NxshaProvider({
+        id,
+        label: definition.name,
+        scheme: definition.scheme,
+        host: definition.host,
+        path: definition.path,
+        parameters: definition.parameters,
+        fetchImpl: options.fetchImpl,
+        timeoutMs: options.timeoutMs,
+      }));
     } else {
       providers.push(new RedirectProvider({
         id,

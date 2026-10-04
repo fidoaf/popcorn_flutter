@@ -99,7 +99,7 @@ test('serves health, form, playback, and subtitles through injected services', a
   assert.equal(invalid.status, 400);
 });
 
-test('registers every configured embed provider except Render', async (t) => {
+test('registers configured providers and redirects providers without server extractors', async (t) => {
   const server = createServer();
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
@@ -112,7 +112,6 @@ test('registers every configured embed provider except Render', async (t) => {
   assert.doesNotMatch(root, /value="render"/);
 
   const redirectProviders = {
-    nxsha: 'https://web.nxsha.app',
     vidsrcsbs: 'https://vidsrc.sbs',
     vidsrcir: 'https://vidsrc.ir',
     vidlux: 'https://vidlux.xyz',
@@ -123,6 +122,10 @@ test('registers every configured embed provider except Render', async (t) => {
     assert.equal(response.status, 302);
     assert.equal(response.headers.get('location'), `${origin}/embed/movie/1248832?lang=en&sub=1`);
   }
+
+  const nxshaPage = await fetch(`${base}/player?provider=nxsha&id=1248832`, { redirect: 'manual' });
+  assert.equal(nxshaPage.status, 200);
+  assert.match(await nxshaPage.text(), /const initialMedia = \{"providerId":"nxsha"/);
 
   const response = await fetch(`${base}/player?provider=render&id=123`, { redirect: 'manual' });
   assert.equal(response.status, 400);

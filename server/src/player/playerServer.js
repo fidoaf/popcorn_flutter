@@ -7,7 +7,7 @@ const { SourceRefStore } = require('./sourceRefStore');
 function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore() }) {
   if (!providers || !resourceProxy) throw new TypeError('Player server requires providers and a resource proxy');
 
-  return http.createServer(async (request, response) => {
+  const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
     if (request.method !== 'GET') {
       response.writeHead(405).end();
@@ -23,7 +23,7 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
       } else if (url.pathname === '/player') {
         const media = mediaFromQuery(url.searchParams, providers);
         const provider = providers.get(media.providerId);
-        if (typeof provider.embedUrl === 'function') {
+        if (typeof provider.embedUrl === 'function' && typeof provider.extract !== 'function') {
           response.writeHead(302, { Location: provider.embedUrl(media).href, 'Cache-Control': 'no-store' }).end();
         } else {
           sendHtml(response, renderPlayerPage(media, { providers: providers.list(), showForm: false }));
@@ -57,6 +57,16 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
           flag: source.flag,
         }));
         sendJson(response, 200, result);
+      } else if (url.pathname === '/nxsha/servers') {
+        url.searchParams.set('provider', 'nxsha');
+        const media = mediaFromQuery(url.searchParams, providers);
+        const provider = providers.get(media.providerId);
+        if (typeof provider.listServers !== 'function') {
+          const error = new Error('Nxsha server lookup is unavailable');
+          error.statusCode = 400;
+          throw error;
+        }
+        sendJson(response, 200, await provider.listServers(media));
       } else if (url.pathname === '/subtitles') {
         const media = mediaFromQuery(url.searchParams, providers);
         const provider = providers.get(media.providerId);
@@ -87,6 +97,14 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
       }
     }
   });
+  server.once('close', () => {
+    for (const provider of providers.providers.values()) {
+      if (typeof provider.close === 'function') {
+        provider.close().catch((error) => console.warn(`Provider ${provider.id} close failed: ${error.message}`));
+      }
+    }
+  });
+  return server;
 }
 
 function sendHtml(response, html) {
