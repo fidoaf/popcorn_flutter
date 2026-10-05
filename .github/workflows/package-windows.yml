@@ -17,7 +17,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -65,7 +65,7 @@ jobs:
           $indexContent = $indexContent -replace "a\.href = '/", "a.href = './"
           Set-Content $indexHtml -Value $indexContent
       - name: Upload App Installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: popcorn-windows-app-installer
           path: msix
@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Write env file (production)
@@ -112,7 +112,7 @@ jobs:
             printf '%s\n' "$ENV_FILE" > docs/admin/assets/assets/config/app.env
           fi
       - name: Download App Installer files
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: popcorn-windows-app-installer
           path: docs/downloads
