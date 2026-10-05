@@ -82,7 +82,6 @@ class CupertinoMediaDetailsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = CupertinoTheme.of(context).textTheme;
-    final year = item.releaseDate?.year;
     final rating = item.voteAverage;
     final overview = item.overview.trim();
 
@@ -100,20 +99,26 @@ class CupertinoMediaDetailsView extends StatelessWidget {
                 children: [
                   Text(item.title, style: textTheme.navLargeTitleTextStyle),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (year != null) ...[
-                        Text('$year', style: textTheme.navTitleTextStyle),
-                        const SizedBox(width: 12),
-                      ] else ...[
-                        Text(DetailsTranslations.tba.trOf(context), style: textTheme.navTitleTextStyle),
-                        const SizedBox(width: 12),
-                      ],
-                      if (rating != null) ...[
-                        const Icon(CupertinoIcons.star_fill, size: 16, color: CupertinoColors.systemYellow),
-                        const SizedBox(width: 4),
-                        Text(context.formatDecimal(rating), style: textTheme.navTitleTextStyle),
-                      ],
+                      if (rating != null && rating > 0) Text(formatReleaseDateLabel(context, item.releaseDate), style: textTheme.navTitleTextStyle),
+                      if (rating != null && rating > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(CupertinoIcons.star_fill, size: 16, color: CupertinoColors.systemYellow),
+                            const SizedBox(width: 4),
+                            Text(context.formatDecimal(rating), style: textTheme.navTitleTextStyle),
+                          ],
+                        )
+                      else
+                        Text(
+                          '${formatReleaseDateLabel(context, item.releaseDate)} \u00b7 ${DetailsTranslations.noReviews.trOf(context)}',
+                          style: textTheme.navTitleTextStyle,
+                        ),
                     ],
                   ),
                   MetadataLineBuilder(

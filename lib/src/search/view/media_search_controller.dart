@@ -85,6 +85,7 @@ class MediaSearchController extends ChangeNotifier {
 
   void clear() {
     _latestRequest++;
+    _lastQuery = '';
     _setState(MediaSearchIdle(trendingItems: _trendingItems));
   }
 

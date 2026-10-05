@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/history/domain/watch_history_entry.dart';
@@ -89,17 +91,48 @@ class BrowseHomeView extends StatefulWidget {
 
 class _BrowseHomeViewState extends State<BrowseHomeView> {
   bool _searchActive = false;
+  GoRouter? _router;
+  Uri? _lastUri;
 
   @override
   void initState() {
     super.initState();
     final query = widget.initialQuery?.trim() ?? '';
-    if (query.isEmpty) return;
+    if (query.isEmpty) {
+      widget.searchController.clear();
+      return;
+    }
     // Seed the controller synchronously so the overlay's field shows the query.
     _searchActive = true;
     final type = widget.initialMediaType;
     if (type != null) widget.searchController.setMediaType(type);
     widget.searchController.search(query);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final router = GoRouter.maybeOf(context);
+    if (identical(router, _router)) return;
+    _router?.routeInformationProvider.removeListener(_onRouteChanged);
+    _router = router;
+    _lastUri = router?.routeInformationProvider.value.uri;
+    router?.routeInformationProvider.addListener(_onRouteChanged);
+  }
+
+  void _onRouteChanged() {
+    final uri = _router?.routeInformationProvider.value.uri;
+    final previousPath = _lastUri?.path;
+    _lastUri = uri;
+    if (uri?.path != AppRoutes.home || previousPath == AppRoutes.home) return;
+    if (_searchActive) setState(() => _searchActive = false);
+    widget.searchController.clear();
+  }
+
+  @override
+  void dispose() {
+    _router?.routeInformationProvider.removeListener(_onRouteChanged);
+    super.dispose();
   }
 
   void _openSearch() => setState(() => _searchActive = true);

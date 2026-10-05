@@ -36,6 +36,7 @@ GoRouter createAppRouter({
   required GlobalKey<NavigatorState> navigatorKey,
   required AppPageBuilder pageBuilder,
   required bool Function() isSignedIn,
+  required Listenable authState,
   required String initialLocation,
 }) {
   // Navigation uses `push` (ImperativeRouteMatch); without this the browser URL
@@ -43,16 +44,24 @@ GoRouter createAppRouter({
   GoRouter.optionURLReflectsImperativeAPIs = true;
   final request = AppRoutes.parse(initialLocation);
   final seedsHome = request is DetailsRoute || request is WatchRoute || request is FavoritesRoute || request is HistoryRoute || request is TrailerRoute;
+  var wasSignedIn = isSignedIn();
 
   GoRoute route(String path) => GoRoute(path: path, pageBuilder: (context, state) => pageBuilder(context, state, AppRoutes.parse(state.uri.toString())));
 
   final router = GoRouter(
     navigatorKey: navigatorKey,
+    refreshListenable: authState,
     initialLocation: seedsHome ? AppRoutes.home : initialLocation,
     overridePlatformDefaultLocation: true,
     redirect: (context, state) {
+      final signedIn = isSignedIn();
+      if (wasSignedIn && !signedIn && !AppRoutes.isPublic(state.uri.path)) {
+        wasSignedIn = false;
+        return AppRoutes.landing;
+      }
       // Signed-in users skip the public landing page.
-      if (state.uri.path == AppRoutes.landing && isSignedIn()) return AppRoutes.home;
+      if (state.uri.path == AppRoutes.landing && signedIn) return AppRoutes.home;
+      wasSignedIn = signedIn;
       return null;
     },
     errorPageBuilder: (context, state) => pageBuilder(context, state, const HomeRoute()),

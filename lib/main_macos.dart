@@ -164,6 +164,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
             navigatorKey: _navigatorKey,
             pageBuilder: _buildPage,
             isSignedIn: () => services.authController.isSignedIn,
+            authState: services.authController,
             initialLocation: _initialLocation,
           );
           setState(() {

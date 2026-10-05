@@ -141,6 +141,7 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
             navigatorKey: _navigatorKey,
             pageBuilder: _buildPage,
             isSignedIn: () => services.authController.isSignedIn,
+            authState: services.authController,
             initialLocation: _initialLocation,
           );
           setState(() {

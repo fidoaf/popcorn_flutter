@@ -1,0 +1,111 @@
+{
+  "initialProvider": "Render",
+  "providers": [
+    {
+      "name": "Render",
+      "scheme": "https",
+      "host": "popcorn-flutter.onrender.com",
+      "path": "/player",
+      "method": "GET",
+      "parameters": {
+        "id": "{id}",
+        "type": "{type}",
+        "season": "{season}",
+        "episode": "{episode}",
+        "lang": "{language}",
+        "sub": "{subtitles}"
+      },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "Nxsha",
+      "scheme": "https",
+      "host": "web.nxsha.app",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "Cinesrc",
+      "scheme": "https",
+      "host": "cinesrc.st",
+      "path": "/embed/{type}/{id}",
+      "method": "GET",
+      "parameters": { "s": "{season}", "e": "{episode}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "Vidsrc.buzz",
+      "scheme": "https",
+      "host": "vidsrc.buzz",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "autoplay": "true", "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "Vidsrc.sbs",
+      "scheme": "https",
+      "host": "vidsrc.sbs",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "Vidsrc.ir",
+      "scheme": "https",
+      "host": "vidsrc.ir",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "Vidlux",
+      "scheme": "https",
+      "host": "vidlux.xyz",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "Vidsrc.me",
+      "scheme": "https",
+      "host": "vidsrcme.ru",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "OnlyPelis",
+      "scheme": "https",
+      "host": "onlypelis.com",
+      "path": "/pelicula/{id}/",
+      "method": "GET",
+      "parameters": {},
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    }
+  ]
+}

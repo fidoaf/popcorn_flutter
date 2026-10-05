@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/details/view/details_play_action.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
-import 'package:popcorn_flutter/src/details/view/material/material_media_source_dropdown.dart';
 import 'package:popcorn_flutter/src/details/view/material/material_share_button.dart';
 import 'package:popcorn_flutter/src/details/view/media_details_format.dart';
 import 'package:popcorn_flutter/src/details/view/seasons_sheet.dart';
@@ -12,7 +11,6 @@ import 'package:popcorn_flutter/src/favorites/view/material/material_favorite_bu
 import 'package:popcorn_flutter/src/history/view/watch_history_controller.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
-import 'package:popcorn_flutter/src/player/infrastructure/media_source/configurable_media_source_provider.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
@@ -39,7 +37,6 @@ class MaterialMediaDetailsView extends StatelessWidget {
     this.favoritesController,
     this.historyController,
     this.mediaType,
-    this.mediaSourceProvider,
     this.autofocusPlay = false,
   });
   final MediaItem item;
@@ -82,17 +79,12 @@ class MaterialMediaDetailsView extends StatelessWidget {
   /// The [MediaType] of [item], needed to persist the favorite.
   final MediaType? mediaType;
 
-  /// Streaming backends the viewer can pick from. When `null` (or it exposes a
-  /// single provider) no source dropdown is shown.
-  final ConfigurableMediaSourceProvider? mediaSourceProvider;
-
   /// Autofocus the play button so a D-pad/remote has an initial focus target.
   final bool autofocusPlay;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final year = item.releaseDate?.year;
     final rating = item.voteAverage;
     final overview = item.overview.trim();
 
@@ -110,20 +102,26 @@ class MaterialMediaDetailsView extends StatelessWidget {
                 children: [
                   Text(item.title, style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (year != null) ...[
-                        Text('$year', style: theme.textTheme.titleMedium),
-                        const SizedBox(width: 12),
-                      ] else ...[
-                        Text(DetailsTranslations.tba.trOf(context), style: theme.textTheme.titleMedium),
-                        const SizedBox(width: 12),
-                      ],
-                      if (rating != null) ...[
-                        const Icon(Icons.star, size: 18),
-                        const SizedBox(width: 4),
-                        Text(context.formatDecimal(rating), style: theme.textTheme.titleMedium),
-                      ],
+                      if (rating != null && rating > 0) Text(formatReleaseDateLabel(context, item.releaseDate), style: theme.textTheme.titleMedium),
+                      if (rating != null && rating > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star, size: 18),
+                            const SizedBox(width: 4),
+                            Text(context.formatDecimal(rating), style: theme.textTheme.titleMedium),
+                          ],
+                        )
+                      else
+                        Text(
+                          '${formatReleaseDateLabel(context, item.releaseDate)} \u00b7 ${DetailsTranslations.noReviews.trOf(context)}',
+                          style: theme.textTheme.titleMedium,
+                        ),
                     ],
                   ),
                   MetadataLineBuilder(
@@ -230,10 +228,6 @@ class MaterialMediaDetailsView extends StatelessWidget {
             icon: const Icon(Icons.play_arrow),
             label: Text(detailsPlayLabel(context, entry)),
           ),
-        if (mediaSourceProvider != null && onPlay != null && item.isReleased) ...[
-          const SizedBox(width: 8),
-          MaterialMediaSourceDropdown(provider: mediaSourceProvider!),
-        ],
         if (favoritesController != null && mediaType != null) ...[
           const SizedBox(width: 8),
           MaterialFavoriteButton(
@@ -242,10 +236,7 @@ class MaterialMediaDetailsView extends StatelessWidget {
             iconSize: 28,
           ),
         ],
-        if (mediaType != null) ...[
-          const SizedBox(width: 8),
-          MaterialShareButton(item: item, type: mediaType!, provider: mediaSourceProvider?.name, iconSize: 28),
-        ],
+        if (mediaType != null) ...[const SizedBox(width: 8), MaterialShareButton(item: item, type: mediaType!, provider: 'Render', iconSize: 28)],
       ],
     );
   }

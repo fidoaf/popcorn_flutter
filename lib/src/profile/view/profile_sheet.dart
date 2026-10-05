@@ -89,8 +89,9 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                   onTap: switching
                       ? null
                       : () async {
-                          await widget.authController.signOut();
-                          if (context.mounted) Navigator.of(context).pop();
+                          final authController = widget.authController;
+                          Navigator.of(context).pop();
+                          await authController.signOut();
                         },
                 ),
                 const SizedBox(height: 8),

@@ -83,6 +83,7 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
             navigatorKey: _navigatorKey,
             pageBuilder: _buildPage,
             isSignedIn: () => services.authController.isSignedIn,
+            authState: services.authController,
             initialLocation: _initialLocation,
           );
           setState(() {
@@ -278,7 +279,6 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
             favoritesController: _services.favoritesController,
             historyController: _services.historyController,
             mediaType: bundle.type,
-            mediaSourceProvider: _services.mediaSourceProvider,
             onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id, provider: _services.mediaSourceProvider.name), extra: playItem),
             onResume: (playItem, {season, episode}) => context.push(
               AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode, provider: _services.mediaSourceProvider.name),

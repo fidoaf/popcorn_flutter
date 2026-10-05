@@ -1,8 +1,16 @@
 import 'package:flutter/widgets.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
+import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_production_status.dart';
+
+/// Formats a release date with a status label, or TBA when the date is unknown.
+String formatReleaseDateLabel(BuildContext context, DateTime? date) {
+  if (date == null) return DetailsTranslations.tba.trOf(context);
+  final label = date.isAfter(DateTime.now()) ? DetailsTranslations.comingSoonWithDate : DetailsTranslations.release;
+  return '${label.trOf(context)} ${context.formatDate(date)}';
+}
 
 /// Formats the extra metadata shown on the details page: the movie [runtime]
 /// (e.g. `2h 16m`) or the TV series season/episode counts

@@ -83,7 +83,6 @@ class MacosMediaDetailsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final typography = MacosTheme.of(context).typography;
-    final year = item.releaseDate?.year;
     final rating = item.voteAverage;
     final overview = item.overview.trim();
 
@@ -101,20 +100,26 @@ class MacosMediaDetailsView extends StatelessWidget {
                 children: [
                   Text(item.title, style: typography.largeTitle),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (year != null) ...[
-                        Text('$year', style: typography.headline),
-                        const SizedBox(width: 12),
-                      ] else ...[
-                        Text(DetailsTranslations.tba.trOf(context), style: typography.headline),
-                        const SizedBox(width: 12),
-                      ],
-                      if (rating != null) ...[
-                        const MacosIcon(CupertinoIcons.star_fill, size: 16, color: MacosColors.systemYellowColor),
-                        const SizedBox(width: 4),
-                        Text(context.formatDecimal(rating), style: typography.headline),
-                      ],
+                      if (rating != null && rating > 0) Text(formatReleaseDateLabel(context, item.releaseDate), style: typography.headline),
+                      if (rating != null && rating > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const MacosIcon(CupertinoIcons.star_fill, size: 16, color: MacosColors.systemYellowColor),
+                            const SizedBox(width: 4),
+                            Text(context.formatDecimal(rating), style: typography.headline),
+                          ],
+                        )
+                      else
+                        Text(
+                          '${formatReleaseDateLabel(context, item.releaseDate)} \u00b7 ${DetailsTranslations.noReviews.trOf(context)}',
+                          style: typography.headline,
+                        ),
                     ],
                   ),
                   MetadataLineBuilder(
