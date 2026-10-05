@@ -4,6 +4,75 @@ const { ProviderRegistry } = require('../src/player/providerRegistry');
 const { createPlayerServer } = require('../src/player/playerServer');
 const { createServer } = require('../server');
 const { RedirectProvider } = require('../src/player/redirectProvider');
+const { renderPlayerPage } = require('../src/player/playerPage');
+const vm = require('node:vm');
+
+test('player shows a circular loader while buffering and seeking until video is ready', () => {
+  const page = renderPlayerPage(null, { showForm: false });
+  assert.match(page, /id="video-loading" role="status" aria-label="Loading video" hidden/);
+  assert.match(page, /@keyframes video-loading-spin/);
+  assert.match(page, /pointer-events:none/);
+  const elements = new Map();
+  const document = {
+    getElementById(id) {
+      if (id === 'media-form') return null;
+      if (!elements.has(id)) {
+        const listeners = new Map();
+        elements.set(id, {
+          hidden: id === 'video-loading' || id === 'retry',
+          readyState: 2,
+          seeking: false,
+          addEventListener(event, callback) {
+            if (!listeners.has(event)) listeners.set(event, []);
+            listeners.get(event).push(callback);
+          },
+          dispatch(event) {
+            for (const callback of listeners.get(event) || []) callback();
+          },
+        });
+      }
+      return elements.get(id);
+    },
+    querySelectorAll() { return []; },
+  };
+  const script = page.match(/<script>([\s\S]*?)<\/script>/)[1];
+  vm.runInNewContext(script, { document });
+  const video = elements.get('video');
+  const loader = elements.get('video-loading');
+  assert.equal(loader.hidden, true);
+  video.dispatch('loadstart');
+  assert.equal(loader.hidden, false);
+  video.readyState = 3;
+  video.dispatch('canplay');
+  assert.equal(loader.hidden, true);
+  video.dispatch('waiting');
+  assert.equal(loader.hidden, false);
+  video.dispatch('playing');
+  assert.equal(loader.hidden, true);
+  video.seeking = true;
+  video.dispatch('seeking');
+  video.dispatch('canplay');
+  assert.equal(loader.hidden, false);
+  video.seeking = false;
+  video.readyState = 2;
+  video.dispatch('seeked');
+  assert.equal(loader.hidden, false);
+  video.readyState = 3;
+  video.dispatch('canplay');
+  assert.equal(loader.hidden, true);
+  video.dispatch('seeking');
+  video.dispatch('seeked');
+  assert.equal(loader.hidden, true);
+  video.dispatch('waiting');
+  video.dispatch('ended');
+  assert.equal(loader.hidden, true);
+  video.dispatch('waiting');
+  video.dispatch('error');
+  assert.equal(loader.hidden, true);
+  assert.equal(elements.get('retry').hidden, false);
+  video.dispatch('waiting');
+  assert.equal(loader.hidden, true);
+});
 
 test('serves health, form, playback, and subtitles through injected services', async (t) => {
   const provider = {

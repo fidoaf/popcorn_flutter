@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
+import 'package:popcorn_flutter/src/app/view/app_version_footer.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/history/domain/watch_history_entry.dart';
@@ -14,6 +15,7 @@ import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
+import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_controller.dart';
 import 'package:popcorn_flutter/src/search/view/media_search_state.dart';
 import 'package:popcorn_flutter/src/search/view/search_translations.dart';
@@ -64,7 +66,7 @@ class BrowseHomeView extends StatefulWidget {
   /// Opens the details page for a catalogue entry.
   final void Function(MediaItem item, MediaType type) onOpenDetails;
 
-  /// Starts playback of the hero title.
+  /// Starts playback of a catalogue title.
   final void Function(MediaItem item, MediaType type) onPlay;
 
   /// Resumes playback of a continue-watching entry (with its season/episode).
@@ -272,7 +274,24 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                 );
               },
             ),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          if (feedController.trendingTrailers.isNotEmpty)
+            _CarouselRow(
+              title: HomeTranslations.trendingTrailers.trOf(context),
+              itemCount: feedController.trendingTrailers.length,
+              cardHeight: 222,
+              cardBuilder: (context, index) {
+                final trailer = feedController.trendingTrailers[index];
+                return _TrailerCard(
+                  item: trailer.item,
+                  video: trailer.video,
+                  onDetails: () => widget.onOpenDetails(trailer.item, trailer.type),
+                  onPlay: () => context.push(AppRoutes.trailer, extra: trailer.video),
+                );
+              },
+            ),
+          const SliverToBoxAdapter(
+            child: Padding(padding: EdgeInsets.fromLTRB(16, 24, 16, 20), child: AppVersionFooter()),
+          ),
         ],
       ),
     );
@@ -818,13 +837,14 @@ class _HeroButton extends StatelessWidget {
 
 /// A titled horizontal carousel of poster cards.
 class _CarouselRow extends StatelessWidget {
-  const _CarouselRow({required this.title, required this.itemCount, required this.cardBuilder, this.onSeeAll, this.seeAllLabel});
+  const _CarouselRow({required this.title, required this.itemCount, required this.cardBuilder, this.onSeeAll, this.seeAllLabel, this.cardHeight = 188});
 
   final String title;
   final int itemCount;
   final Widget Function(BuildContext context, int index) cardBuilder;
   final VoidCallback? onSeeAll;
   final String? seeAllLabel;
+  final double cardHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -867,7 +887,7 @@ class _CarouselRow extends StatelessWidget {
               ),
             ),
             SizedBox(
-              height: 188,
+              height: cardHeight,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -878,6 +898,91 @@ class _CarouselRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TrailerCard extends StatelessWidget {
+  const _TrailerCard({required this.item, required this.video, required this.onDetails, required this.onPlay});
+
+  final MediaItem item;
+  final MediaVideo video;
+  final VoidCallback onDetails;
+  final VoidCallback onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final thumbnail = video.site == 'YouTube' ? Uri.https('i.ytimg.com', '/vi/${video.key}/hqdefault.jpg') : item.posterUrl;
+    final playLabel = '${HomeTranslations.play.trOf(context)}: ${item.title}';
+    return SizedBox(
+      width: 280,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (thumbnail != null)
+                    Image.network(
+                      thumbnail.toString(),
+                      fit: BoxFit.cover,
+                      loadingBuilder: _imageSkeletonBuilder,
+                      errorBuilder: (context, _, _) => const _PosterPlaceholder(),
+                    )
+                  else
+                    const _PosterPlaceholder(),
+                  const ColoredBox(color: Color(0x33000000)),
+                  Center(
+                    child: Tooltip(
+                      message: playLabel,
+                      child: Semantics(
+                        label: playLabel,
+                        button: true,
+                        child: _Pressable(
+                          onTap: onPlay,
+                          borderRadius: 28,
+                          builder: (focused, hovered) => Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: hovered || focused ? _Palette.accent : const Color(0xCC000000),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: _Palette.focus, width: focused ? 3 : 1),
+                            ),
+                            child: const Icon(Icons.play_arrow, color: _Palette.textPrimary, size: 34),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Pressable(
+            onTap: onDetails,
+            borderRadius: 4,
+            builder: (focused, hovered) => Text(
+              item.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: focused || hovered ? _Palette.accent : _Palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            video.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: _Palette.textSecondary, fontSize: 12),
+          ),
+        ],
       ),
     );
   }

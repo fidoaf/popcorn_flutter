@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
+import 'package:popcorn_flutter/src/app/view/app_version_footer.dart';
 import 'package:popcorn_flutter/src/app/view/poster_gallery.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
@@ -422,6 +423,7 @@ class _Footer extends StatelessWidget {
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
           ),
+          const AppVersionFooter(),
         ],
       ),
     );

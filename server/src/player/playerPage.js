@@ -38,7 +38,12 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     form button{min-height:34px;padding:0 14px;background:#e50914;border:0;border-radius:4px;color:white;font-weight:700}
     form button:hover{background:#ff2631}
     #now-playing{padding:10px 20px 0;color:#aeb3bd;font-size:13px}
+    #video-container{position:relative;display:flex;flex:1;min-height:0;background:#000}
+    #video-container[hidden],#video-loading[hidden]{display:none}
     video{width:100%;flex:1;min-height:0;background:#000}
+    #video-loading{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+    #video-loading::after{content:'';width:44px;height:44px;border:4px solid #ffffff40;border-top-color:#fff;border-radius:50%;animation:video-loading-spin .8s linear infinite}
+    @keyframes video-loading-spin{to{transform:rotate(360deg)}}
     footer{padding:8px 18px;min-height:36px;color:#aeb3bd;font-size:12px;display:flex;align-items:center;gap:12px}
     #source-field[hidden]{display:none}
     button{background:none;border:0;color:#f5f5f5;text-decoration:underline;cursor:pointer;font:inherit}
@@ -66,12 +71,17 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       </form>
     </header>` : ''}
     <div id="now-playing" hidden></div>
-    <video id="video" controls playsinline hidden></video>
+    <div id="video-container" hidden>
+      <video id="video" controls playsinline hidden></video>
+      <div id="video-loading" role="status" aria-label="Loading video" hidden></div>
+    </div>
     <footer><span id="status">Enter an ID supported by the selected provider.</span> <button id="retry" hidden>Retry</button><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
   <script>
     const video = document.getElementById('video');
+    const videoContainer = document.getElementById('video-container');
+    const videoLoading = document.getElementById('video-loading');
     const status = document.getElementById('status');
     const retry = document.getElementById('retry');
     const quality = document.getElementById('quality');
@@ -110,6 +120,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       return query.toString();
     }
     function fail(message) {
+      videoLoading.hidden = true;
       status.textContent = message;
       retry.hidden = false;
     }
@@ -135,6 +146,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     }
     function start(media, sourceId = sourceSelect.value) {
       const generation = ++requestGeneration;
+      videoLoading.hidden = false;
       mediaRecoveryAttempted = false;
       retry.hidden = true;
       status.textContent = 'Connecting to stream...';
@@ -223,6 +235,18 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       if (level === -1) quality.options[0].textContent = 'Auto';
     });
     video.addEventListener('error', () => fail('Video playback failed: ' + (video.error?.message || 'unsupported media')));
+    for (const event of ['loadstart', 'waiting', 'seeking']) {
+      video.addEventListener(event, () => {
+        if (!retry.hidden || video.hidden) return;
+        videoLoading.hidden = false;
+      });
+    }
+    for (const event of ['loadeddata', 'canplay', 'seeked', 'playing']) {
+      video.addEventListener(event, () => {
+        if (!video.seeking && video.readyState >= 3) videoLoading.hidden = true;
+      });
+    }
+    video.addEventListener('ended', () => { videoLoading.hidden = true; });
     async function loadSubtitles(media, generation) {
       try {
         const response = await fetch('/subtitles?' + mediaQuery(media));
@@ -276,6 +300,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       selectedMedia = media;
       nowPlaying.textContent = (media.type === 'movie' ? 'Movie ' : 'TV ') + media.id + (media.type === 'tv' ? ' · S' + media.season + ' E' + media.episode : '');
       nowPlaying.hidden = false;
+      videoContainer.hidden = false;
       video.hidden = false;
       video.pause();
       video.removeAttribute('src');

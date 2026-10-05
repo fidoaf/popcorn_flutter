@@ -340,6 +340,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
       name: (json['name'] as String?) ?? '',
       site: (json['site'] as String?) ?? '',
       type: (json['type'] as String?) ?? '',
+      publishedAt: _parseDate(json['published_at'] as String?),
     );
   }
 }

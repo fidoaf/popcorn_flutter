@@ -25,6 +25,12 @@ class HomeTranslations {
 
   static const trendingTv = Translation({AppLanguage.en: 'Trending TV Series', AppLanguage.es: 'Series en tendencia', AppLanguage.ca: 'Sèries en tendència'});
 
+  static const trendingTrailers = Translation({
+    AppLanguage.en: 'Trending trailers',
+    AppLanguage.es: 'Tráilers en tendencia',
+    AppLanguage.ca: 'Tràilers en tendència',
+  });
+
   static const seeAll = Translation({AppLanguage.en: 'See all', AppLanguage.es: 'Ver todo', AppLanguage.ca: 'Mostra-ho tot'});
 
   static const loadError = Translation({

@@ -1,6 +1,6 @@
 /// A video (trailer, teaser, clip, etc.) associated with a media item.
 final class MediaVideo {
-  const MediaVideo({required this.id, required this.key, required this.name, required this.site, required this.type});
+  const MediaVideo({required this.id, required this.key, required this.name, required this.site, required this.type, this.publishedAt});
 
   final String id;
 
@@ -14,6 +14,8 @@ final class MediaVideo {
 
   /// Video type (e.g. "Trailer", "Teaser", "Clip").
   final String type;
+
+  final DateTime? publishedAt;
 
   /// Returns the playable URL for this video, or `null` if the site is unsupported.
   Uri? get url {
