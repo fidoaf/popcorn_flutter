@@ -366,6 +366,9 @@ class _SearchOverlayState extends State<_SearchOverlay> {
   void initState() {
     super.initState();
     _queryController.text = widget.controller.query;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
   }
 
   @override
@@ -437,7 +440,7 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                               child: TextField(
                                 controller: _queryController,
                                 focusNode: _focusNode,
-                                autofocus: !widget.enableDpadFocus,
+                                autofocus: true,
                                 onChanged: _onChanged,
                                 onSubmitted: (_) => _submit(),
                                 textInputAction: TextInputAction.search,

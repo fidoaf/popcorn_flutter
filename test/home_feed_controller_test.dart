@@ -129,6 +129,50 @@ void main() {
     expect(controller.trendingTrailers, isEmpty);
   });
 
+  for (final enableDpadFocus in [false, true]) {
+    testWidgets('opening search shows the keyboard with D-pad focus $enableDpadFocus', (tester) async {
+      final repository = _Repository((id, type) async => []);
+      final feed = HomeFeedController(repository: repository);
+      final favorites = FavoritesController(repository: _EmptyFavorites());
+      final history = WatchHistoryController(repository: _EmptyHistory());
+      final search = MediaSearchController(repository: repository);
+      addTearDown(feed.dispose);
+      addTearDown(favorites.dispose);
+      addTearDown(history.dispose);
+      addTearDown(search.dispose);
+      await tester.pump();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BrowseHomeView(
+              feedController: feed,
+              favoritesController: favorites,
+              historyController: history,
+              searchController: search,
+              enableDpadFocus: enableDpadFocus,
+              onOpenDetails: (item, type) {},
+              onPlay: (item, type) {},
+              onResume: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Search'));
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.focusNode!.hasFocus, isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      tester.testTextInput.hide();
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      expect(tester.testTextInput.isVisible, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final size in [const Size(390, 844), const Size(1440, 900)]) {
     testWidgets('bottom trailer row opens the trailer player without playing the title at ${size.width}px', (tester) async {
       await tester.binding.setSurfaceSize(size);
@@ -142,7 +186,7 @@ void main() {
       addTearDown(favorites.dispose);
       addTearDown(history.dispose);
       addTearDown(search.dispose);
-      await pumpEventQueue();
+      await tester.pump();
       MediaItem? playedItem;
       MediaType? playedType;
       MediaVideo? playedVideo;
@@ -180,6 +224,7 @@ void main() {
       addTearDown(router.dispose);
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Trending trailers'), 200, scrollable: find.byType(Scrollable).first);
       expect(find.text('Trending trailers'), findsOneWidget);
       final button = find.byTooltip('Play: Movie');
       await tester.ensureVisible(button);
