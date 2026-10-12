@@ -231,7 +231,8 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
     switch (request) {
       case LandingRoute():
         return _landingPage(context);
-      case HomeRoute():
+      case HomeRoute(:final query, :final type):
+        return _MacosHomeView(services: _services, browse: true, initialQuery: query, initialMediaType: type);
       case UnknownRoute():
         return _MacosHomeView(services: _services, browse: true);
       case SearchRoute(:final query, :final type):
@@ -242,6 +243,12 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         return _historyPage(context);
       case DetailsRoute(:final type, :final id):
         return _detailsPage(type, id, arguments is MediaItem ? arguments : null);
+      case PersonRoute(:final id):
+        return PersonDetailsPage(
+          personId: id,
+          repository: _services.repository,
+          onCreditSelected: (credit) => context.push(AppRoutes.details(credit.type, credit.item.id), extra: credit.item),
+        );
       case WatchRoute(:final type, :final id, :final season, :final episode, :final provider):
         return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null, provider);
       case TrailerRoute():
@@ -399,6 +406,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
               item: bundle.item,
               details: bundle.details,
               videos: bundle.videos,
+              providers: bundle.providers,
               related: bundle.related,
               favoritesController: _services.favoritesController,
               historyController: _services.historyController,
@@ -521,6 +529,8 @@ class _MacosHomeView extends StatelessWidget {
                       favoritesController: services.favoritesController,
                       historyController: services.historyController,
                       searchController: services.searchController,
+                      initialQuery: initialQuery,
+                      initialMediaType: initialMediaType,
                       onOpenDetails: (media, type) => context.push(AppRoutes.details(type, media.id), extra: media),
                       onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id, provider: services.mediaSourceProvider.name), extra: media),
                       onResume: (entry) => context.push(

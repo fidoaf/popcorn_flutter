@@ -44,7 +44,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     #video-loading{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
     #video-loading::after{content:'';width:44px;height:44px;border:4px solid #ffffff40;border-top-color:#fff;border-radius:50%;animation:video-loading-spin .8s linear infinite}
     @keyframes video-loading-spin{to{transform:rotate(360deg)}}
-    footer{padding:8px 18px;min-height:36px;color:#aeb3bd;font-size:12px;display:flex;align-items:center;gap:12px}
+    footer{padding:8px 18px;min-height:36px;color:#aeb3bd;font-size:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
     #source-field[hidden]{display:none}
     button{background:none;border:0;color:#f5f5f5;text-decoration:underline;cursor:pointer;font:inherit}
     label{display:flex;align-items:center;gap:8px;margin-left:auto}
@@ -75,7 +75,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       <video id="video" controls playsinline hidden></video>
       <div id="video-loading" role="status" aria-label="Loading video" hidden></div>
     </div>
-    <footer><span id="status">Enter an ID supported by the selected provider.</span> <button id="retry" hidden>Retry</button><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
+    <footer><span id="status">Enter an ID supported by the selected provider.</span> <button id="retry" hidden>Retry</button><label for="provider">Provider<select id="provider" disabled>${providerOptions}</select></label><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
   <script>
@@ -86,6 +86,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     const retry = document.getElementById('retry');
     const quality = document.getElementById('quality');
     const subtitles = document.getElementById('subtitles');
+    const providerSelect = document.getElementById('provider');
     const sourceField = document.getElementById('source-field');
     const sourceSelect = document.getElementById('source');
     const form = document.getElementById('media-form');
@@ -298,6 +299,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     });
     function playMedia(media) {
       selectedMedia = media;
+      providerSelect.value = media.providerId;
+      providerSelect.disabled = false;
       nowPlaying.textContent = (media.type === 'movie' ? 'Movie ' : 'TV ') + media.id + (media.type === 'tv' ? ' · S' + media.season + ' E' + media.episode : '');
       nowPlaying.hidden = false;
       videoContainer.hidden = false;
@@ -312,6 +315,10 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       loadSources(media, generation);
       loadSubtitles(media, generation);
     }
+    providerSelect.addEventListener('change', () => {
+      if (!selectedMedia) return;
+      window.location.assign('/player?' + mediaQuery({ ...selectedMedia, providerId: providerSelect.value }));
+    });
     sourceSelect.addEventListener('change', () => {
       if (!selectedMedia) return;
       if (hls) { hls.destroy(); hls = null; }

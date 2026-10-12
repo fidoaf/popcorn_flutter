@@ -17,6 +17,7 @@ import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
+import 'package:popcorn_flutter/src/search/domain/media_watch_provider.dart';
 
 /// macOS-native details page for a single [MediaItem].
 ///
@@ -28,6 +29,7 @@ class MacosMediaDetailsView extends StatelessWidget {
     required this.item,
     this.details,
     this.videos,
+    this.providers,
     this.related,
     this.onPlay,
     this.onResume,
@@ -48,6 +50,9 @@ class MacosMediaDetailsView extends StatelessWidget {
 
   /// Videos (trailers, teasers, etc.) for this item, loaded on demand.
   final Future<List<MediaVideo>>? videos;
+
+  /// Regional streaming availability, rendered as provider logos only.
+  final Future<List<MediaWatchProvider>>? providers;
 
   /// Related titles (TMDB recommendations) for this item, loaded on demand.
   final Future<List<MediaItem>>? related;
@@ -174,6 +179,7 @@ class MacosMediaDetailsView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
+        if (providers != null) ...[WatchProvidersBuilder(providers: providers!), const SizedBox(height: 24)],
         Text(DetailsTranslations.overview.trOf(context), style: typography.headline),
         const SizedBox(height: 8),
         Text(overview.isEmpty ? DetailsTranslations.noOverview.trOf(context) : overview, style: typography.body),

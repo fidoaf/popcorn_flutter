@@ -16,6 +16,7 @@ import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
+import 'package:popcorn_flutter/src/search/domain/media_watch_provider.dart';
 
 /// Material (Android / web) details page for a single [MediaItem].
 ///
@@ -27,6 +28,7 @@ class MaterialMediaDetailsView extends StatelessWidget {
     required this.item,
     this.details,
     this.videos,
+    this.providers,
     this.related,
     this.onPlay,
     this.onResume,
@@ -47,6 +49,9 @@ class MaterialMediaDetailsView extends StatelessWidget {
 
   /// Videos (trailers, teasers, etc.) for this item, loaded on demand.
   final Future<List<MediaVideo>>? videos;
+
+  /// Regional streaming availability, rendered as provider logos only.
+  final Future<List<MediaWatchProvider>>? providers;
 
   /// Related titles (TMDB recommendations) for this item, loaded on demand.
   final Future<List<MediaItem>>? related;
@@ -170,6 +175,7 @@ class MaterialMediaDetailsView extends StatelessWidget {
         const SizedBox(height: 24),
         if ((onPlay != null && item.isReleased) || mediaType != null)
           historyController == null ? _playActions(context) : ListenableBuilder(listenable: historyController!, builder: (context, _) => _playActions(context)),
+        if (providers != null) ...[const SizedBox(height: 16), WatchProvidersBuilder(providers: providers!)],
         const SizedBox(height: 24),
         Text(DetailsTranslations.overview.trOf(context), style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),

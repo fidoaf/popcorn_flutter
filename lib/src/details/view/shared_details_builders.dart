@@ -1,8 +1,56 @@
 import 'package:flutter/widgets.dart';
+import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/media_details_format.dart';
+import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
+import 'package:popcorn_flutter/src/search/domain/media_watch_provider.dart';
+
+/// Renders provider logos only, hiding itself while loading or when unavailable.
+class WatchProvidersBuilder extends StatelessWidget {
+  const WatchProvidersBuilder({super.key, required this.providers});
+
+  final Future<List<MediaWatchProvider>> providers;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<MediaWatchProvider>>(
+      future: providers,
+      builder: (context, snapshot) {
+        final items = snapshot.data;
+        if (items == null || items.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final provider in items)
+                  Semantics(
+                    image: true,
+                    label: provider.name,
+                    child: Image.network(
+                      provider.logoUrl.toString(),
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const SizedBox(width: 40, height: 40),
+                    ),
+                  ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(DetailsTranslations.watchAvailabilityCredit.trOf(context), style: const TextStyle(fontSize: 11, color: Color(0xFF808080))),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
 
 /// Shared builder that resolves a [Future<MediaDetails>] and delegates
 /// rendering to [builder] once data is available.
@@ -266,10 +314,7 @@ class _SkeletonState extends State<_Skeleton> with SingleTickerProviderStateMixi
       builder: (context, _) => Container(
         width: widget.width,
         height: widget.height,
-        decoration: BoxDecoration(
-          color: Color.fromRGBO(128, 128, 128, 0.12 + _controller.value * 0.18),
-          borderRadius: BorderRadius.circular(widget.radius),
-        ),
+        decoration: BoxDecoration(color: Color.fromRGBO(128, 128, 128, 0.12 + _controller.value * 0.18), borderRadius: BorderRadius.circular(widget.radius)),
       ),
     );
   }
@@ -320,7 +365,11 @@ class _VideosSkeleton extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [_Skeleton(width: double.infinity, height: 14), SizedBox(height: 6), _Skeleton(width: 80, height: 12)],
+                    children: [
+                      _Skeleton(width: double.infinity, height: 14),
+                      SizedBox(height: 6),
+                      _Skeleton(width: 80, height: 12),
+                    ],
                   ),
                 ),
               ],

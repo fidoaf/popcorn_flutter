@@ -7,6 +7,59 @@ const { RedirectProvider } = require('../src/player/redirectProvider');
 const { renderPlayerPage } = require('../src/player/playerPage');
 const vm = require('node:vm');
 
+test('player provider selector precedes source and switches providers with current media settings', () => {
+  const media = { providerId: 'vidsrcbuzz', type: 'tv', id: '1399', season: '2', episode: '3', lang: 'fr', sub: '0' };
+  const page = renderPlayerPage(media, {
+    showForm: false,
+    providers: [{ id: 'vidsrcbuzz', label: 'VidSrc.buzz' }, { id: 'nxsha', label: 'Nxsha' }],
+  });
+  assert.match(page, /<label for="provider">Provider<select id="provider" disabled><option value="vidsrcbuzz" selected>VidSrc.buzz<\/option><option value="nxsha">Nxsha<\/option><\/select><\/label><label id="source-field"/);
+  assert.doesNotMatch(page, /<form id="media-form">/);
+  const elements = new Map();
+  const document = {
+    getElementById(id) {
+      if (id === 'media-form') return null;
+      if (!elements.has(id)) {
+        const listeners = new Map();
+        elements.set(id, {
+          value: '',
+          disabled: true,
+          addEventListener(event, callback) { listeners.set(event, callback); },
+          dispatch(event) { listeners.get(event)?.(); },
+          replaceChildren() {},
+          pause() {},
+          removeAttribute() {},
+          load() {},
+          canPlayType() { return true; },
+        });
+      }
+      return elements.get(id);
+    },
+    querySelectorAll() { return []; },
+  };
+  const navigations = [];
+  const script = page.match(/<script>([\s\S]*?)<\/script>/)[1];
+  vm.runInNewContext(script, {
+    document,
+    URLSearchParams,
+    Option: function Option() {},
+    fetch: () => new Promise(() => {}),
+    window: { location: { assign(url) { navigations.push(url); } } },
+  });
+  const provider = elements.get('provider');
+  assert.equal(provider.value, 'vidsrcbuzz');
+  assert.equal(provider.disabled, false);
+  elements.get('source').value = 'old-provider-source';
+  provider.value = 'nxsha';
+  provider.dispatch('change');
+  assert.equal(navigations.length, 1);
+  const url = new URL(navigations[0], 'http://localhost');
+  assert.equal(url.pathname, '/player');
+  assert.deepEqual(Object.fromEntries(url.searchParams), {
+    provider: 'nxsha', type: 'tv', id: '1399', lang: 'fr', sub: '0', season: '2', episode: '3',
+  });
+});
+
 test('player shows a circular loader while buffering and seeking until video is ready', () => {
   const page = renderPlayerPage(null, { showForm: false });
   assert.match(page, /id="video-loading" role="status" aria-label="Loading video" hidden/);

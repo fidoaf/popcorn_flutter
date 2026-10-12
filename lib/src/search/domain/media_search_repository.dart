@@ -1,8 +1,10 @@
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_episode.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_person.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
+import 'package:popcorn_flutter/src/search/domain/media_watch_provider.dart';
 
 /// Contract for searching movies and TV series from a remote catalogue.
 ///
@@ -24,6 +26,9 @@ abstract interface class MediaSearchRepository {
   /// known and the full [MediaItem] must be fetched.
   Future<MediaItem> mediaItem(int id, MediaType mediaType);
 
+  /// Returns a person's profile and most popular credits.
+  Future<MediaPerson> personDetails(int personId);
+
   /// Returns the trending entries of [mediaType] for the current week.
   Future<List<MediaItem>> trending(MediaType mediaType);
 
@@ -32,6 +37,9 @@ abstract interface class MediaSearchRepository {
 
   /// Returns the videos (trailers, teasers, clips) for the entry [id] of [mediaType].
   Future<List<MediaVideo>> videos(int id, MediaType mediaType);
+
+  /// Returns where [id] can be watched in [region] (ISO 3166-1 country code).
+  Future<List<MediaWatchProvider>> watchProviders(int id, MediaType mediaType, {required String region});
 
   /// Returns the episodes of season [seasonNumber] for the TV series [seriesId].
   Future<List<MediaEpisode>> episodes(int seriesId, int seasonNumber);

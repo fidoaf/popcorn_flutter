@@ -16,11 +16,17 @@ abstract final class AppRoutes {
   static const String privacy = '/privacy';
   static const String terms = '/terms';
 
+  static String homeSearch(String query, {MediaType type = MediaType.movie}) =>
+      query.trim().isEmpty ? home : Uri(path: home, queryParameters: {'q': query.trim(), 'type': type.name}).toString();
+
   /// `/search/{movie|tv}?q={query}`.
   static String search(String query, {MediaType type = MediaType.movie}) => '/search/${type.name}?q=${Uri.encodeQueryComponent(query)}';
 
   /// `/details/{movie|tv}/{id}`.
   static String details(MediaType type, int id) => '/details/${type.name}/$id';
+
+  /// `/person/{id}`.
+  static String person(int id) => '/person/$id';
 
   /// `/watch/{movie|tv}/{id}` with optional `?season=&episode=` for TV and an
   /// optional `?provider=` selecting the streaming backend by name.
@@ -42,7 +48,7 @@ abstract final class AppRoutes {
     if (segments.isEmpty) return const LandingRoute();
     switch (segments.first) {
       case 'home':
-        return const HomeRoute();
+        return HomeRoute(query: uri.queryParameters['q'] ?? '', type: _parseType(uri.queryParameters['type']));
       case 'favorites':
         return const FavoritesRoute();
       case 'history':
@@ -58,6 +64,9 @@ abstract final class AppRoutes {
       case 'details':
         final parsed = _parseTypeId(segments);
         return parsed == null ? const UnknownRoute() : DetailsRoute(type: parsed.$1, id: parsed.$2);
+      case 'person':
+        final id = segments.length > 1 ? int.tryParse(segments[1]) : null;
+        return id == null ? const UnknownRoute() : PersonRoute(id: id);
       case 'watch':
         final parsed = _parseTypeId(segments);
         if (parsed == null) return const UnknownRoute();
@@ -108,7 +117,10 @@ class LandingRoute extends AppRouteRequest {
 }
 
 class HomeRoute extends AppRouteRequest {
-  const HomeRoute();
+  const HomeRoute({this.query = '', this.type = MediaType.movie});
+
+  final String query;
+  final MediaType type;
 }
 
 class FavoritesRoute extends AppRouteRequest {
@@ -142,6 +154,12 @@ class DetailsRoute extends AppRouteRequest {
   const DetailsRoute({required this.type, required this.id});
 
   final MediaType type;
+  final int id;
+}
+
+class PersonRoute extends AppRouteRequest {
+  const PersonRoute({required this.id});
+
   final int id;
 }
 

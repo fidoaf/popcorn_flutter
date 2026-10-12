@@ -6,12 +6,14 @@ import 'package:popcorn_flutter/src/search/domain/cast_member.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_episode.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_person.dart';
 import 'package:popcorn_flutter/src/search/domain/media_production_status.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_exception.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
+import 'package:popcorn_flutter/src/search/domain/media_watch_provider.dart';
 
 /// [MediaSearchRepository] backed by The Movie Database (TMDB) REST API.
 final class TmdbMediaSearchRepository implements MediaSearchRepository {
@@ -107,6 +109,30 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   }
 
   @override
+  Future<MediaPerson> personDetails(int personId) async {
+    final endpoint = Uri.parse('$_baseUrl/person/$personId');
+    final uri = endpoint.replace(queryParameters: {'append_to_response': 'combined_credits'});
+
+    final http.Response response;
+    try {
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw const MediaSearchException('TMDB person request timeout'));
+    } on SocketException catch (e) {
+      throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
+    } catch (error) {
+      throw MediaSearchException('Unable to reach TMDB: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw MediaSearchException('TMDB person request failed with status ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return _toMediaPerson(decoded);
+  }
+
+  @override
   Future<List<MediaItem>> trending(MediaType mediaType) async {
     final uri = Uri.parse('$_baseUrl/trending/${_pathSegment(mediaType)}/week');
 
@@ -179,6 +205,46 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   }
 
   @override
+  Future<List<MediaWatchProvider>> watchProviders(int id, MediaType mediaType, {required String region}) async {
+    final uri = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id/watch/providers');
+
+    final http.Response response;
+    try {
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $_accessToken', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 10), onTimeout: () => throw const MediaSearchException('TMDB watch providers request timeout'));
+    } on SocketException catch (e) {
+      throw MediaSearchException('Network error: Unable to reach TMDB. Please check your internet connection. ($e)');
+    } catch (error) {
+      throw MediaSearchException('Unable to reach TMDB: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw MediaSearchException('TMDB watch providers failed with status ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final countries = decoded['results'] as Map<String, dynamic>?;
+    final availability = countries?[region.toUpperCase()] as Map<String, dynamic>?;
+    if (availability == null) return const [];
+
+    const categories = ['flatrate', 'free', 'ads', 'rent', 'buy'];
+    final seen = <int>{};
+    final providers = <MediaWatchProvider>[];
+    for (final category in categories) {
+      final entries = availability[category] as List<dynamic>? ?? const [];
+      for (final entry in entries.cast<Map<String, dynamic>>()) {
+        final id = (entry['provider_id'] as num?)?.toInt();
+        final logoPath = entry['logo_path'] as String?;
+        final name = (entry['provider_name'] as String?)?.trim();
+        if (id == null || logoPath == null || name == null || name.isEmpty || !seen.add(id)) continue;
+        providers.add(MediaWatchProvider(id: id, name: name, logoUrl: Uri.parse('https://image.tmdb.org/t/p/w92$logoPath')));
+      }
+    }
+    return List.unmodifiable(providers);
+  }
+
+  @override
   Future<List<MediaEpisode>> episodes(int seriesId, int seasonNumber) async {
     final uri = Uri.parse('$_baseUrl/tv/$seriesId/season/$seasonNumber');
 
@@ -217,7 +283,8 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   }
 
   static MediaDetails _toMediaDetails(Map<String, dynamic> json, MediaType mediaType) {
-    final director = _director(json, mediaType);
+    final directors = _directors(json, mediaType);
+    final director = directors.isEmpty ? null : directors.map((person) => person.name).join(', ');
     final castMembers = _cast(json);
     final cast = castMembers.map((member) => member.name).toList(growable: false);
     final status = MediaProductionStatus.fromTmdb(json['status'] as String?);
@@ -227,6 +294,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
         return MediaDetails(
           runtime: minutes == null || minutes <= 0 ? null : Duration(minutes: minutes),
           director: director,
+          directors: directors,
           cast: cast,
           castMembers: castMembers,
           status: status,
@@ -239,6 +307,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
           numberOfEpisodes: (json['number_of_episodes'] as num?)?.toInt(),
           seasons: seasons,
           director: director,
+          directors: directors,
           cast: cast,
           castMembers: castMembers,
           status: status,
@@ -251,23 +320,29 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
   /// Resolves the director of a movie (crew member with job `Director`) or the
   /// creator(s) of a TV series (`created_by`). Returns `null` when unknown.
-  static String? _director(Map<String, dynamic> json, MediaType mediaType) {
+  static List<CastMember> _directors(Map<String, dynamic> json, MediaType mediaType) {
     final crew = (json['credits'] as Map<String, dynamic>?)?['crew'] as List<dynamic>?;
-    final directors = <String>[];
+    final directors = <CastMember>[];
     for (final member in (crew ?? const <dynamic>[]).cast<Map<String, dynamic>>()) {
       if (member['job'] == 'Director') {
+        final id = (member['id'] as num?)?.toInt();
         final name = (member['name'] as String?)?.trim();
-        if (name != null && name.isNotEmpty && !directors.contains(name)) directors.add(name);
+        if (id != null && name != null && name.isNotEmpty && !directors.any((person) => person.id == id)) {
+          directors.add(CastMember(id: id, name: name));
+        }
       }
     }
     if (directors.isEmpty && mediaType == MediaType.tv) {
       final creators = (json['created_by'] as List<dynamic>?) ?? const <dynamic>[];
       for (final creator in creators.cast<Map<String, dynamic>>()) {
+        final id = (creator['id'] as num?)?.toInt();
         final name = (creator['name'] as String?)?.trim();
-        if (name != null && name.isNotEmpty && !directors.contains(name)) directors.add(name);
+        if (id != null && name != null && name.isNotEmpty && !directors.any((person) => person.id == id)) {
+          directors.add(CastMember(id: id, name: name));
+        }
       }
     }
-    return directors.isEmpty ? null : directors.join(', ');
+    return List.unmodifiable(directors);
   }
 
   /// Resolves the leading [_maxCastMembers] cast members, ordered by billing,
@@ -278,10 +353,12 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     for (final member in (cast ?? const <dynamic>[]).cast<Map<String, dynamic>>()) {
       final name = (member['name'] as String?)?.trim();
       if (name == null || name.isEmpty) continue;
+      final id = (member['id'] as num?)?.toInt();
       final character = (member['character'] as String?)?.trim();
       final profilePath = member['profile_path'] as String?;
       members.add(
         CastMember(
+          id: id,
           name: name,
           character: character == null || character.isEmpty ? null : character,
           profileUrl: profilePath == null ? null : Uri.parse('$_profileBaseUrl$profilePath'),
@@ -290,6 +367,41 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
       if (members.length >= _maxCastMembers) break;
     }
     return List<CastMember>.unmodifiable(members);
+  }
+
+  MediaPerson _toMediaPerson(Map<String, dynamic> json) {
+    final profilePath = json['profile_path'] as String?;
+    final credits = json['combined_credits'] as Map<String, dynamic>?;
+    final seen = <String>{};
+    final knownFor = <PersonCredit>[];
+    for (final category in ['cast', 'crew']) {
+      final entries = credits?[category] as List<dynamic>? ?? const [];
+      for (final entry in entries.cast<Map<String, dynamic>>()) {
+        final typeName = entry['media_type'] as String?;
+        final type = switch (typeName) {
+          'movie' => MediaType.movie,
+          'tv' => MediaType.tv,
+          _ => null,
+        };
+        final id = entry['id'] as int?;
+        if (type == null || id == null || !seen.add('${type.name}:$id')) continue;
+        final role = ((category == 'cast' ? entry['character'] : entry['job']) as String?)?.trim();
+        final popularity = (entry['popularity'] as num?)?.toDouble() ?? 0;
+        knownFor.add(PersonCredit(item: _toMediaItem(entry), type: type, role: role == null || role.isEmpty ? null : role, popularity: popularity));
+      }
+    }
+    knownFor.sort((first, second) => second.popularity.compareTo(first.popularity));
+    return MediaPerson(
+      id: json['id'] as int,
+      name: (json['name'] as String?) ?? '',
+      biography: (json['biography'] as String?) ?? '',
+      birthday: _parseDate(json['birthday'] as String?),
+      deathday: _parseDate(json['deathday'] as String?),
+      placeOfBirth: json['place_of_birth'] as String?,
+      knownForDepartment: json['known_for_department'] as String?,
+      profileUrl: profilePath == null ? null : Uri.parse('$_profileBaseUrl$profilePath'),
+      knownFor: List.unmodifiable(knownFor.take(20)),
+    );
   }
 
   static MediaSeason _toMediaSeason(Map<String, dynamic> json) {

@@ -15,6 +15,7 @@ final class MediaDetails {
     this.numberOfEpisodes,
     this.seasons = const <MediaSeason>[],
     this.director,
+    this.directors = const <CastMember>[],
     this.cast = const <String>[],
     this.castMembers = const <CastMember>[],
     this.status = MediaProductionStatus.unknown,
@@ -34,6 +35,9 @@ final class MediaDetails {
 
   /// Director of a movie or creator(s) of a TV series. `null` when unknown.
   final String? director;
+
+  /// Director/creator records with TMDB IDs for opening their profiles.
+  final List<CastMember> directors;
 
   /// Leading cast members (actor names), most prominent first. Empty when
   /// unknown.

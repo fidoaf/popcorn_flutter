@@ -49,7 +49,35 @@ class DetailsTranslations {
 
   static const videos = Translation({AppLanguage.en: 'Videos', AppLanguage.es: 'Vídeos', AppLanguage.ca: 'Vídeos'});
 
+  static const watchAvailabilityCredit = Translation({
+    AppLanguage.en: 'Availability data by JustWatch',
+    AppLanguage.es: 'Datos de disponibilidad de JustWatch',
+    AppLanguage.ca: 'Dades de disponibilitat de JustWatch',
+  });
+
   static const related = Translation({AppLanguage.en: 'More like this', AppLanguage.es: 'Títulos relacionados', AppLanguage.ca: 'Títols relacionats'});
+
+  static const personBiography = Translation({AppLanguage.en: 'Biography', AppLanguage.es: 'Biografía', AppLanguage.ca: 'Biografia'});
+
+  static const personKnownFor = Translation({AppLanguage.en: 'Known for', AppLanguage.es: 'Conocido por', AppLanguage.ca: 'Conegut per'});
+
+  static const personBorn = Translation({AppLanguage.en: 'Born', AppLanguage.es: 'Nacimiento', AppLanguage.ca: 'Naixement'});
+
+  static const personDied = Translation({AppLanguage.en: 'Died', AppLanguage.es: 'Fallecimiento', AppLanguage.ca: 'Defunció'});
+
+  static const personLoadError = Translation({
+    AppLanguage.en: 'Could not load this person.',
+    AppLanguage.es: 'No se pudo cargar esta persona.',
+    AppLanguage.ca: 'No s’ha pogut carregar aquesta persona.',
+  });
+
+  static const retry = Translation({AppLanguage.en: 'Retry', AppLanguage.es: 'Reintentar', AppLanguage.ca: 'Torna-ho a provar'});
+
+  static const personNoCredits = Translation({
+    AppLanguage.en: 'No credited titles available.',
+    AppLanguage.es: 'No hay títulos acreditados disponibles.',
+    AppLanguage.ca: 'No hi ha títols acreditats disponibles.',
+  });
 
   static const statusReturning = Translation({AppLanguage.en: 'Returning series', AppLanguage.es: 'Serie en emisión', AppLanguage.ca: 'Sèrie en emissió'});
 

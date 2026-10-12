@@ -93,12 +93,11 @@ class BrowseHomeView extends StatefulWidget {
 
 class _BrowseHomeViewState extends State<BrowseHomeView> {
   bool _searchActive = false;
-  GoRouter? _router;
-  Uri? _lastUri;
 
   @override
   void initState() {
     super.initState();
+    widget.searchController.addListener(_syncSearchUrl);
     final query = widget.initialQuery?.trim() ?? '';
     if (query.isEmpty) {
       widget.searchController.clear();
@@ -111,33 +110,30 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
     widget.searchController.search(query);
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final router = GoRouter.maybeOf(context);
-    if (identical(router, _router)) return;
-    _router?.routeInformationProvider.removeListener(_onRouteChanged);
-    _router = router;
-    _lastUri = router?.routeInformationProvider.value.uri;
-    router?.routeInformationProvider.addListener(_onRouteChanged);
-  }
-
-  void _onRouteChanged() {
-    final uri = _router?.routeInformationProvider.value.uri;
-    final previousPath = _lastUri?.path;
-    _lastUri = uri;
-    if (uri?.path != AppRoutes.home || previousPath == AppRoutes.home) return;
-    if (_searchActive) setState(() => _searchActive = false);
-    widget.searchController.clear();
+  void _syncSearchUrl() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final router = GoRouter.maybeOf(context);
+      if (router == null) return;
+      final uri = router.routeInformationProvider.value.uri;
+      if (uri.path != AppRoutes.home && !uri.path.startsWith('/search/')) return;
+      final query = widget.searchController.query;
+      final type = widget.searchController.mediaType;
+      final location = uri.path == AppRoutes.home || query.isEmpty ? AppRoutes.homeSearch(query, type: type) : AppRoutes.search(query, type: type);
+      if (uri.toString() != location) Router.neglect(context, () => router.go(location));
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   @override
   void dispose() {
-    _router?.routeInformationProvider.removeListener(_onRouteChanged);
+    widget.searchController.removeListener(_syncSearchUrl);
     super.dispose();
   }
 
-  void _openSearch() => setState(() => _searchActive = true);
+  void _openSearch() {
+    if (!_searchActive) setState(() => _searchActive = true);
+  }
 
   void _closeSearch() {
     setState(() => _searchActive = false);
@@ -163,20 +159,20 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
               listenable: Listenable.merge([widget.feedController, widget.favoritesController, widget.historyController]),
               builder: (context, _) => _buildBrowse(context),
             ),
-            Positioned.fill(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: _searchActive
-                    ? _SearchOverlay(
-                        key: const ValueKey('search-overlay'),
-                        controller: widget.searchController,
-                        favoritesController: widget.favoritesController,
-                        enableDpadFocus: widget.enableDpadFocus,
-                        onClose: _closeSearch,
-                        onOpenDetails: (item) => widget.onOpenDetails(item, widget.searchController.mediaType),
-                        onPlay: (item) => widget.onPlay(item, widget.searchController.mediaType),
-                      )
-                    : const SizedBox.shrink(key: ValueKey('search-none')),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: _searchActive ? 0 : null,
+              child: _SearchOverlay(
+                active: _searchActive,
+                onActivate: _openSearch,
+                controller: widget.searchController,
+                favoritesController: widget.favoritesController,
+                enableDpadFocus: widget.enableDpadFocus,
+                onClose: _closeSearch,
+                onOpenDetails: (item) => widget.onOpenDetails(item, widget.searchController.mediaType),
+                onPlay: (item) => widget.onPlay(item, widget.searchController.mediaType),
               ),
             ),
           ],
@@ -202,7 +198,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
       bottom: false,
       child: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(child: _SearchBar(onTap: _openSearch)),
+          const SliverToBoxAdapter(child: SizedBox(height: 60)),
           if (feedController.featured != null)
             SliverToBoxAdapter(
               child: _HeroBanner(
@@ -298,46 +294,11 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
   }
 }
 
-/// A rounded, tappable bar that opens the search screen.
-class _SearchBar extends StatelessWidget {
-  const _SearchBar({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: _Pressable(
-        onTap: onTap,
-        borderRadius: 22,
-        builder: (focused, hovered) => Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: _Palette.surface,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: focused ? _Palette.focus : _Palette.textSecondary.withValues(alpha: 0.25), width: focused ? 2 : 1),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.search, color: _Palette.textSecondary, size: 20),
-              const SizedBox(width: 10),
-              Text(HomeTranslations.search.trOf(context), style: const TextStyle(color: _Palette.textSecondary, fontSize: 15)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A full-cover search panel that slides over the browse home:
-/// an autofocused input, a movie/TV toggle and a live results grid driven by
-/// the shared [MediaSearchController].
+/// A persistent search input that expands to show the selector and results.
 class _SearchOverlay extends StatefulWidget {
   const _SearchOverlay({
-    super.key,
+    required this.active,
+    required this.onActivate,
     required this.controller,
     required this.favoritesController,
     required this.onClose,
@@ -346,6 +307,8 @@ class _SearchOverlay extends StatefulWidget {
     this.enableDpadFocus = false,
   });
 
+  final bool active;
+  final VoidCallback onActivate;
   final MediaSearchController controller;
   final FavoritesController favoritesController;
   final VoidCallback onClose;
@@ -366,9 +329,26 @@ class _SearchOverlayState extends State<_SearchOverlay> {
   void initState() {
     super.initState();
     _queryController.text = widget.controller.query;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focusNode.requestFocus();
-    });
+    _focusNode.addListener(_onFocusChanged);
+    if (widget.active) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    }
+  }
+
+  void _onFocusChanged() {
+    if (_focusNode.hasFocus && !widget.active) widget.onActivate();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SearchOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active && !widget.active) {
+      _debounce?.cancel();
+      _focusNode.unfocus();
+      _queryController.clear();
+    }
   }
 
   @override
@@ -401,32 +381,35 @@ class _SearchOverlayState extends State<_SearchOverlay> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: !widget.active,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) widget.onClose();
+        if (!didPop && widget.active) widget.onClose();
       },
       child: ColoredBox(
-        color: _Palette.background,
+        color: widget.active ? _Palette.background : Colors.transparent,
         child: SafeArea(
+          bottom: widget.active,
           child: Column(
+            mainAxisSize: widget.active ? MainAxisSize.max : MainAxisSize.min,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+                padding: widget.active ? const EdgeInsets.fromLTRB(8, 8, 12, 8) : const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Row(
                   children: [
-                    _Pressable(
-                      onTap: widget.onClose,
-                      borderRadius: 20,
-                      builder: (focused, hovered) => Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+                    if (widget.active)
+                      _Pressable(
+                        onTap: widget.onClose,
+                        borderRadius: 20,
+                        builder: (focused, hovered) => Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+                          ),
+                          child: const Icon(Icons.arrow_back, color: _Palette.textPrimary, size: 22),
                         ),
-                        child: const Icon(Icons.arrow_back, color: _Palette.textPrimary, size: 22),
                       ),
-                    ),
-                    const SizedBox(width: 4),
+                    if (widget.active) const SizedBox(width: 4),
                     Expanded(
                       child: Container(
                         height: 44,
@@ -440,7 +423,8 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                               child: TextField(
                                 controller: _queryController,
                                 focusNode: _focusNode,
-                                autofocus: true,
+                                autofocus: false,
+                                onTap: widget.onActivate,
                                 onChanged: _onChanged,
                                 onSubmitted: (_) => _submit(),
                                 textInputAction: TextInputAction.search,
@@ -449,7 +433,7 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                                 decoration: InputDecoration(
                                   isCollapsed: true,
                                   border: InputBorder.none,
-                                  hintText: SearchTranslations.searchPlaceholder.trOf(context),
+                                  hintText: widget.active ? SearchTranslations.searchPlaceholder.trOf(context) : HomeTranslations.search.trOf(context),
                                   hintStyle: const TextStyle(color: _Palette.textSecondary, fontSize: 15),
                                 ),
                               ),
@@ -472,10 +456,11 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                   ],
                 ),
               ),
-              _MediaTypeToggle(controller: widget.controller),
-              Expanded(
-                child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => _buildResults(context)),
-              ),
+              if (widget.active) _MediaTypeToggle(controller: widget.controller),
+              if (widget.active)
+                Expanded(
+                  child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => _buildResults(context)),
+                ),
             ],
           ),
         ),

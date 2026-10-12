@@ -43,7 +43,13 @@ GoRouter createAppRouter({
   // stays on the base location instead of the pushed route.
   GoRouter.optionURLReflectsImperativeAPIs = true;
   final request = AppRoutes.parse(initialLocation);
-  final seedsHome = request is DetailsRoute || request is WatchRoute || request is FavoritesRoute || request is HistoryRoute || request is TrailerRoute;
+  final seedsHome =
+      request is DetailsRoute ||
+      request is PersonRoute ||
+      request is WatchRoute ||
+      request is FavoritesRoute ||
+      request is HistoryRoute ||
+      request is TrailerRoute;
   var wasSignedIn = isSignedIn();
 
   GoRoute route(String path) => GoRoute(path: path, pageBuilder: (context, state) => pageBuilder(context, state, AppRoutes.parse(state.uri.toString())));
@@ -75,6 +81,7 @@ GoRouter createAppRouter({
       route('/trailer'),
       route('/search/:type'),
       route('/details/:type/:id'),
+      route('/person/:id'),
       route('/watch/:type/:id'),
     ],
   );

@@ -1,15 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
 /// The resolved data handed to a platform detail builder.
 class MediaDetailsBundle {
-  const MediaDetailsBundle({required this.item, required this.type, required this.details, required this.videos, required this.related});
+  const MediaDetailsBundle({
+    required this.item,
+    required this.type,
+    required this.details,
+    required this.videos,
+    required this.related,
+    required this.providers,
+  });
 
   final MediaItem item;
   final MediaType type;
   final Future<MediaDetails> details;
   final Future<List<MediaVideo>> videos;
   final Future<List<MediaItem>> related;
+  final Future<List<MediaWatchProvider>> providers;
 }
 
 /// Resolves the [MediaItem] for a details route — using [item] when navigating
@@ -48,6 +57,7 @@ class _MediaDetailsScaffoldState extends State<MediaDetailsScaffold> {
   Future<MediaDetails>? _details;
   Future<List<MediaVideo>>? _videos;
   Future<List<MediaItem>>? _related;
+  Future<List<MediaWatchProvider>>? _providers;
 
   @override
   void initState() {
@@ -72,6 +82,7 @@ class _MediaDetailsScaffoldState extends State<MediaDetailsScaffold> {
     _details = widget.repository.details(item.id, widget.type);
     _videos = widget.repository.videos(item.id, widget.type);
     _related = widget.repository.related(item.id, widget.type);
+    _providers = widget.repository.watchProviders(item.id, widget.type, region: PlatformDispatcher.instance.locale.countryCode ?? 'US');
   }
 
   @override
@@ -80,6 +91,9 @@ class _MediaDetailsScaffoldState extends State<MediaDetailsScaffold> {
     if (error != null) return widget.errorBuilder(context, error);
     final item = _item;
     if (item == null) return widget.loadingBuilder(context);
-    return widget.builder(context, MediaDetailsBundle(item: item, type: widget.type, details: _details!, videos: _videos!, related: _related!));
+    return widget.builder(
+      context,
+      MediaDetailsBundle(item: item, type: widget.type, details: _details!, videos: _videos!, related: _related!, providers: _providers!),
+    );
   }
 }

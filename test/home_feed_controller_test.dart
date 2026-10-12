@@ -37,6 +37,9 @@ class _Repository implements MediaSearchRepository {
   Future<List<MediaItem>> trending(MediaType type) async => type == MediaType.movie ? [_movie] : [_series];
 
   @override
+  Future<List<MediaItem>> search(String query, MediaType mediaType) async => mediaType == MediaType.movie ? [_movie] : [_series];
+
+  @override
   Future<List<MediaVideo>> videos(int id, MediaType type) => loadVideos(id, type);
 
   @override
@@ -129,6 +132,115 @@ void main() {
     expect(controller.trendingTrailers, isEmpty);
   });
 
+  for (final fromDeepLink in [false, true]) {
+    testWidgets('search URL and browser back preserve search with deep link $fromDeepLink', (tester) async {
+      const query = 'Series & friends + / ? #';
+      final repository = _Repository((id, type) async => []);
+      final feed = HomeFeedController(repository: repository);
+      final favorites = FavoritesController(repository: _EmptyFavorites());
+      final history = WatchHistoryController(repository: _EmptyHistory());
+      final search = MediaSearchController(repository: repository);
+      addTearDown(feed.dispose);
+      addTearDown(favorites.dispose);
+      addTearDown(history.dispose);
+      addTearDown(search.dispose);
+      final reflectsImperativeAPIs = GoRouter.optionURLReflectsImperativeAPIs;
+      GoRouter.optionURLReflectsImperativeAPIs = true;
+      addTearDown(() => GoRouter.optionURLReflectsImperativeAPIs = reflectsImperativeAPIs);
+      await tester.pump();
+
+      final router = GoRouter(
+        initialLocation: fromDeepLink ? AppRoutes.homeSearch(query, type: MediaType.tv) : AppRoutes.home,
+        routes: [
+          GoRoute(
+            path: AppRoutes.home,
+            builder: (context, state) => Scaffold(
+              body: BrowseHomeView(
+                feedController: feed,
+                favoritesController: favorites,
+                historyController: history,
+                searchController: search,
+                initialQuery: (AppRoutes.parse(state.uri.toString()) as HomeRoute).query,
+                initialMediaType: (AppRoutes.parse(state.uri.toString()) as HomeRoute).type,
+                onOpenDetails: (item, type) => context.push(AppRoutes.details(type, item.id)),
+                onPlay: (item, type) {},
+                onResume: (_) {},
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/details/:type/:id',
+            builder: (context, state) => const Scaffold(body: Text('Selected details')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+      if (fromDeepLink) {
+        expect(search.query, query);
+        expect(search.mediaType, MediaType.tv);
+        expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, query);
+        expect(find.text('Series'), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      }
+      final input = tester.state<EditableTextState>(find.byType(EditableText));
+      await tester.tap(find.byType(TextField));
+      search.setMediaType(MediaType.movie);
+      await tester.enterText(find.byType(TextField), query);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.queryParameters, {'q': query, 'type': 'movie'});
+      search.setMediaType(MediaType.tv);
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.queryParameters, {'q': query, 'type': 'tv'});
+      expect(tester.state<EditableTextState>(find.byType(EditableText)), same(input));
+      final results = search.state;
+      final homeRouteInformation = router.routeInformationProvider.value;
+
+      await tester.tap(find.text('Series').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Selected details'), findsOneWidget);
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(search.query, query);
+      expect(search.state, same(results));
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+
+      await tester.tap(find.text('Series').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Selected details'), findsOneWidget);
+      await router.routeInformationProvider.didPushRouteInformation(homeRouteInformation);
+      await tester.pumpAndSettle();
+
+      expect(search.query, query);
+      expect(search.mediaType, MediaType.tv);
+      expect(search.state, same(results));
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, query);
+      expect(tester.state<EditableTextState>(find.byType(EditableText)), same(input));
+      expect(find.text('Series'), findsWidgets);
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+      expect(search.query, isEmpty);
+      expect(router.routeInformationProvider.value.uri.toString(), AppRoutes.home);
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      await tester.enterText(find.byType(TextField), query);
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.queryParameters, {'q': query, 'type': 'tv'});
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(search.query, isEmpty);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, isEmpty);
+      expect(find.byIcon(Icons.arrow_back), findsNothing);
+      expect(router.routeInformationProvider.value.uri.toString(), AppRoutes.home);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final enableDpadFocus in [false, true]) {
     testWidgets('opening search shows the keyboard with D-pad focus $enableDpadFocus', (tester) async {
       final repository = _Repository((id, type) async => []);
@@ -158,9 +270,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Search'));
+      final initialInput = tester.state<EditableTextState>(find.byType(EditableText));
+      expect(tester.testTextInput.isVisible, isFalse);
+      await tester.tap(find.byType(TextField));
       await tester.pumpAndSettle();
 
+      expect(tester.state<EditableTextState>(find.byType(EditableText)), same(initialInput));
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.focusNode!.hasFocus, isTrue);
       expect(tester.testTextInput.isVisible, isTrue);
@@ -169,6 +284,17 @@ void main() {
       await tester.tap(find.byType(TextField));
       await tester.pump();
       expect(tester.testTextInput.isVisible, isTrue);
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(find.byIcon(Icons.arrow_back), findsNothing);
+      expect(tester.state<EditableTextState>(find.byType(EditableText)), same(initialInput));
+
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
