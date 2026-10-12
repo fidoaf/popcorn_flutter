@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:popcorn_flutter/src/player/domain/fullscreen_controller.dart';
 import 'package:popcorn_flutter/src/player/domain/media_source.dart';
+import 'package:popcorn_flutter/src/player/domain/playback_session.dart';
+import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/domain/video_player.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/resume_store.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_racer.dart';
@@ -29,17 +32,35 @@ final class MediaKitVideoPlayer extends VideoPlayer {
   final List<Uri> alternates;
 
   @override
-  Widget build(BuildContext context) =>
-      _MediaKitPlayer(source: source, fullscreenController: fullscreenController, alternates: alternates, onUrlChanged: onUrlChanged);
+  Widget build(BuildContext context) {
+    final scope = PlaybackSessionScope.of(context);
+    return _MediaKitPlayer(
+      source: source,
+      fullscreenController: fullscreenController,
+      alternates: alternates,
+      onUrlChanged: onUrlChanged,
+      initialSession: scope?.initial,
+      onSessionChanged: scope?.onChanged,
+    );
+  }
 }
 
 class _MediaKitPlayer extends StatefulWidget {
-  const _MediaKitPlayer({required this.source, required this.fullscreenController, required this.alternates, this.onUrlChanged});
+  const _MediaKitPlayer({
+    required this.source,
+    required this.fullscreenController,
+    required this.alternates,
+    this.onUrlChanged,
+    this.initialSession,
+    this.onSessionChanged,
+  });
 
   final MediaSource source;
   final FullscreenController fullscreenController;
   final List<Uri> alternates;
   final ValueChanged<Uri>? onUrlChanged;
+  final PlaybackSession? initialSession;
+  final ValueChanged<PlaybackSession>? onSessionChanged;
 
   @override
   State<_MediaKitPlayer> createState() => _MediaKitPlayerState();
@@ -71,12 +92,19 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   Duration? _resumeAt;
   Timer? _resumeCountdown;
   int _resumeSecondsLeft = 8;
+  late PlaybackSession _session;
+  bool _restoringSession = true;
+  bool _audioRestored = false;
+  bool _subtitlesRestored = false;
+  String? _activeSource;
+  DateTime _lastReported = DateTime.fromMillisecondsSinceEpoch(0);
 
   String get _resumeId => widget.source.url.toString();
 
   @override
   void initState() {
     super.initState();
+    _session = widget.initialSession ?? const PlaybackSession();
     if (!_mediaKitReady) {
       MediaKit.ensureInitialized();
       _mediaKitReady = true;
@@ -95,10 +123,14 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
         if (_scrubTarget != null) return;
         setState(() => _position = value);
         _maybeSavePosition(value);
+        if (DateTime.now().difference(_lastReported) >= const Duration(seconds: 5)) _reportSession();
       }),
       stream.duration.listen((value) => setState(() => _duration = value)),
       stream.buffer.listen((value) => setState(() => _buffer = value)),
-      stream.playing.listen((value) => setState(() => _playing = value)),
+      stream.playing.listen((value) {
+        setState(() => _playing = value);
+        if (!value) _reportSession();
+      }),
       stream.buffering.listen((value) => setState(() => _buffering = value)),
       stream.volume.listen(
         (value) => setState(() {
@@ -106,10 +138,19 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
           _muted = value == 0;
         }),
       ),
-      stream.tracks.listen((value) => setState(() => _tracks = value)),
-      stream.track.listen((value) => setState(() => _selected = value)),
+      stream.tracks.listen((value) {
+        setState(() => _tracks = value);
+        _restoreTracks();
+      }),
+      stream.track.listen((value) {
+        setState(() => _selected = value);
+        _reportSession();
+      }),
       stream.completed.listen((done) {
-        if (done) ResumeStore.clear(_resumeId);
+        if (done) {
+          ResumeStore.clear(_resumeId);
+          _reportSession(position: Duration.zero);
+        }
       }),
     ]);
   }
@@ -124,15 +165,84 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
       for (final alt in widget.alternates) StreamCandidate(url: alt, headers: widget.source.headers, isHls: _looksLikeHls(alt)),
     ];
     final winner = await StreamRacer.fastest(candidates) ?? candidates.first;
+    _activeSource = winner.sourceName ?? _session.source;
     if (!mounted) return;
     debugPrint('[MediaKitPlayer] candidates: ${candidates.map((c) => c.url).join(', ')}');
     debugPrint('[MediaKitPlayer] loading HLS: ${winner.url}');
     widget.onUrlChanged?.call(winner.url);
     await _player.open(Media(winner.url.toString(), httpHeaders: winner.headers.isEmpty ? null : winner.headers));
     await _prepareResume();
+    await _restoreRemoteSubtitles();
+    if (!mounted) return;
+    _restoringSession = false;
+    _restoreTracks();
+    _reportSession();
+  }
+
+  void _reportSession({Duration? position}) {
+    if (_restoringSession || widget.onSessionChanged == null) return;
+    _lastReported = DateTime.now();
+    _session = PlaybackSession(
+      provider: widget.source.url.queryParameters['provider'] ?? _session.provider,
+      source: _activeSource,
+      language: _selected.audio.language ?? _session.language ?? widget.source.url.queryParameters['lang'],
+      subtitles: _selected.subtitle.id == 'no'
+          ? ''
+          : _selected.subtitle.id == 'auto'
+          ? _session.subtitles
+          : jsonEncode([_selected.subtitle.title ?? '', _selected.subtitle.language ?? '']),
+      positionSeconds: (position ?? (_player.state.completed ? Duration.zero : _position)).inMilliseconds / 1000,
+    );
+    widget.onSessionChanged!(_session);
+  }
+
+  void _restoreTracks() {
+    final initial = widget.initialSession;
+    if (!_audioRestored && initial?.language != null) {
+      final track = _tracks.audio.where((track) => track.language == initial!.language).firstOrNull;
+      if (track != null) {
+        _audioRestored = true;
+        _player.setAudioTrack(track);
+      }
+    }
+    if (!_subtitlesRestored && initial?.subtitles != null) {
+      if (initial!.subtitles!.isEmpty) {
+        _subtitlesRestored = true;
+        _player.setSubtitleTrack(SubtitleTrack.no());
+      } else {
+        final track = _tracks.subtitle.where((track) => jsonEncode([track.title ?? '', track.language ?? '']) == initial.subtitles).firstOrNull;
+        if (track != null) {
+          _subtitlesRestored = true;
+          _player.setSubtitleTrack(track);
+        }
+      }
+    }
+  }
+
+  Future<void> _restoreRemoteSubtitles() async {
+    final preferred = widget.initialSession?.subtitles;
+    if (_subtitlesRestored || preferred == null || preferred.isEmpty) return;
+    try {
+      final tracks = await StreamResolver.subtitles(widget.source);
+      final selected = tracks.where((track) => jsonEncode([track.label, track.language]) == preferred).firstOrNull;
+      if (selected == null || !mounted) return;
+      final text = await StreamResolver.subtitleText(widget.source, selected);
+      if (!mounted) return;
+      _subtitlesRestored = true;
+      await _player.setSubtitleTrack(SubtitleTrack.data(_toVtt(text), title: selected.label, language: selected.language));
+    } catch (error) {
+      debugPrint('[MediaKitPlayer] subtitle restore failed: $error');
+    }
   }
 
   Future<void> _prepareResume() async {
+    if (widget.initialSession != null) {
+      if (_session.positionSeconds > 0) {
+        await _player.seek(Duration(milliseconds: (_session.positionSeconds * 1000).round()));
+        _position = Duration(milliseconds: (_session.positionSeconds * 1000).round());
+      }
+      return;
+    }
     final stored = await ResumeStore.read(_resumeId);
     if (!mounted || stored == null) return;
     setState(() {
@@ -149,7 +259,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   void _applyResume() {
     final target = _resumeAt;
     _dismissResume();
-    if (target != null) _player.seek(target);
+    if (target != null) _seek(target);
   }
 
   void _dismissResume() {
@@ -189,8 +299,15 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   void _seekBy(Duration delta) {
     final target = _position + delta;
     final clamped = target < Duration.zero ? Duration.zero : (target > _duration ? _duration : target);
-    _player.seek(clamped);
+    _seek(clamped);
     _showControls();
+  }
+
+  Future<void> _seek(Duration target) async {
+    await _player.seek(target);
+    if (!mounted) return;
+    setState(() => _position = target);
+    _reportSession(position: target);
   }
 
   void _toggleMute() {
@@ -209,6 +326,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
 
   @override
   void dispose() {
+    _reportSession(position: _player.state.completed ? Duration.zero : _position);
     _hideTimer?.cancel();
     _resumeCountdown?.cancel();
     if (_duration > Duration.zero && _position > const Duration(seconds: 5)) {
@@ -390,11 +508,11 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
           onHorizontalDragEnd: (_) {
             final target = _scrubTarget;
             _scrubTarget = null;
-            if (target != null && total > 0) _player.seek(Duration(milliseconds: (target * total).round()));
+            if (target != null && total > 0) _seek(Duration(milliseconds: (target * total).round()));
           },
           onTapDown: (d) {
             final fraction = (d.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
-            if (total > 0) _player.seek(Duration(milliseconds: (fraction * total).round()));
+            if (total > 0) _seek(Duration(milliseconds: (fraction * total).round()));
           },
           child: SizedBox(
             height: 16,
@@ -474,7 +592,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
 
   void _openSubtitleMenu() {
     _showControls();
-    final remoteSubtitles = VidSrcResolver.handles(widget.source.url) ? VidSrcResolver.subtitles(widget.source) : Future.value(<VidSrcSubtitle>[]);
+    final remoteSubtitles = StreamResolver.subtitles(widget.source);
     String? subtitleError;
     showModalBottomSheet<void>(
       context: context,
@@ -516,7 +634,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
                           for (final subtitle in snapshot.data!)
                             _menuTile(subtitle.label, _selected.subtitle.title == subtitle.label, () async {
                               try {
-                                final text = await VidSrcResolver.subtitleText(widget.source, subtitle);
+                                final text = await StreamResolver.subtitleText(widget.source, subtitle);
                                 if (!mounted || !context.mounted) return;
                                 await _player.setSubtitleTrack(SubtitleTrack.data(_toVtt(text), title: subtitle.label, language: subtitle.language));
                                 if (context.mounted) Navigator.pop(context);

@@ -42,19 +42,44 @@ abstract final class MediaSourceProviderFactory {
   static const String defaultAssetPath = 'assets/config/media_source_providers.json';
 
   /// Builds the provider from a raw JSON [source] string.
-  static ConfigurableMediaSourceProvider createFromJson(String source, {MediaSourcePreferences? preferences}) =>
-      createFromMap(jsonDecode(source) as Map<String, dynamic>, preferences: preferences);
+  static ConfigurableMediaSourceProvider createFromJson(
+    String source, {
+    MediaSourcePreferences? preferences,
+    String playerServerUrl = const String.fromEnvironment('PLAYER_SERVER_URL'),
+  }) => createFromMap(jsonDecode(source) as Map<String, dynamic>, preferences: preferences, playerServerUrl: playerServerUrl);
 
   /// Builds the provider from an already-decoded JSON [config] map.
-  static ConfigurableMediaSourceProvider createFromMap(Map<String, dynamic> config, {MediaSourcePreferences? preferences}) {
+  static ConfigurableMediaSourceProvider createFromMap(
+    Map<String, dynamic> config, {
+    MediaSourcePreferences? preferences,
+    String playerServerUrl = const String.fromEnvironment('PLAYER_SERVER_URL'),
+  }) {
     final resolvedPreferences = preferences ?? MediaSourcePreferences();
+    final serverUrl = playerServerUrl.isEmpty ? null : Uri.parse(playerServerUrl);
+    if (serverUrl != null &&
+        (!['http', 'https'].contains(serverUrl.scheme) ||
+            serverUrl.host.isEmpty ||
+            serverUrl.userInfo.isNotEmpty ||
+            serverUrl.hasQuery ||
+            serverUrl.hasFragment ||
+            !['', '/'].contains(serverUrl.path))) {
+      throw const FormatException('PLAYER_SERVER_URL must be an HTTP(S) origin, for example http://localhost:3001.');
+    }
     final rawProviders = config['providers'];
     if (rawProviders is! List || rawProviders.isEmpty) {
       throw const FormatException('Media source configuration must list at least one provider.');
     }
 
     final providers = rawProviders
-        .map((raw) => JsonMediaSourceProvider(MediaSourceProviderDefinition.fromJson(raw as Map<String, dynamic>), preferences: resolvedPreferences))
+        .map((raw) {
+          final definition = Map<String, dynamic>.from(raw as Map);
+          if (serverUrl != null && definition['path'] == '/player') {
+            definition['scheme'] = serverUrl.scheme;
+            definition['host'] = serverUrl.host;
+            definition['port'] = serverUrl.hasPort ? serverUrl.port : null;
+          }
+          return JsonMediaSourceProvider(MediaSourceProviderDefinition.fromJson(definition), preferences: resolvedPreferences);
+        })
         .toList(growable: false);
 
     final initialName = config['initialProvider'] as String?;

@@ -10,6 +10,7 @@ abstract interface class WatchHistoryRepository {
   /// Loads the persisted history, or an empty list when none is stored.
   Future<List<WatchHistoryEntry>> load();
 
-  /// Persists the given [entries], replacing any previously stored set.
-  Future<void> save(List<WatchHistoryEntry> entries);
+  Future<void> upsert(WatchHistoryEntry entry);
+
+  Future<void> remove(WatchHistoryEntry entry);
 }

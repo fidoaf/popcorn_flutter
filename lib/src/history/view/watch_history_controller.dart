@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:popcorn_flutter/src/history/domain/watch_history_entry.dart';
 import 'package:popcorn_flutter/src/history/domain/watch_history_repository.dart';
+import 'package:popcorn_flutter/src/player/domain/playback_session.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 
@@ -13,10 +14,11 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 class WatchHistoryController extends ChangeNotifier {
   // ignore: prefer_initializing_formals -- named parameters cannot be private.
   WatchHistoryController({required WatchHistoryRepository repository, this.maxEntries = 50}) : _repository = repository {
-    _load();
+    ready = _load();
   }
 
   final WatchHistoryRepository _repository;
+  late final Future<void> ready;
 
   /// The most entries to retain; older ones are dropped when the cap is hit.
   final int maxEntries;
@@ -29,20 +31,30 @@ class WatchHistoryController extends ChangeNotifier {
   /// Records that playback of [media] (of [mediaType]) started, moving it to
   /// the front of the history and persisting the change. For TV series,
   /// [season]/[episode] capture the episode left off at.
-  Future<void> record(MediaItem media, MediaType mediaType, {int? season, int? episode}) async {
-    final entry = WatchHistoryEntry(item: media, type: mediaType, season: season, episode: episode, watchedAt: DateTime.now());
+  Future<void> record(MediaItem media, MediaType mediaType, {int? season, int? episode, PlaybackSession? playback}) async {
+    final previous = _entries.where((entry) => entry.matches(mediaType, media.id)).firstOrNull;
+    final sameEpisode = previous?.season == season && previous?.episode == episode;
+    final entry = WatchHistoryEntry(
+      item: media,
+      type: mediaType,
+      season: season,
+      episode: episode,
+      watchedAt: DateTime.now(),
+      playback: playback ?? (sameEpisode ? previous?.playback : null) ?? const PlaybackSession(),
+    );
     final withoutExisting = _entries.where((existing) => !existing.matches(mediaType, media.id));
     _entries = [entry, ...withoutExisting].take(maxEntries).toList();
     notifyListeners();
-    await _repository.save(_entries);
+    await _repository.upsert(entry);
   }
 
   /// Removes the entry [id] of [type] from the history and persists the change.
   Future<void> remove(MediaType type, int id) async {
-    if (!_entries.any((entry) => entry.matches(type, id))) return;
+    final entry = _entries.where((entry) => entry.matches(type, id)).firstOrNull;
+    if (entry == null) return;
     _entries = _entries.where((entry) => !entry.matches(type, id)).toList();
     notifyListeners();
-    await _repository.save(_entries);
+    await _repository.remove(entry);
   }
 
   /// Reloads the history from storage, e.g. after the signed-in profile changes.

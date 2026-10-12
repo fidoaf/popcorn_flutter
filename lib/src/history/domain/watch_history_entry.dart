@@ -1,3 +1,4 @@
+import 'package:popcorn_flutter/src/player/domain/playback_session.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 
@@ -9,7 +10,16 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 /// records when playback last started so the history can be ordered
 /// most-recent-first.
 final class WatchHistoryEntry {
-  const WatchHistoryEntry({required this.item, required this.type, this.season, this.episode, required this.watchedAt});
+  const WatchHistoryEntry({
+    required this.item,
+    required this.type,
+    this.season,
+    this.episode,
+    required this.watchedAt,
+    this.playback = const PlaybackSession(),
+  });
+
+  final PlaybackSession playback;
 
   final MediaItem item;
   final MediaType type;
@@ -37,6 +47,7 @@ final class WatchHistoryEntry {
     'voteAverage': item.voteAverage,
     'season': season,
     'episode': episode,
+    'playback': playback.toJson(),
     'watchedAt': watchedAt.toIso8601String(),
   };
 
@@ -45,6 +56,7 @@ final class WatchHistoryEntry {
     final releaseDate = json['releaseDate'] as String?;
     final watchedAt = json['watchedAt'] as String?;
     return WatchHistoryEntry(
+      playback: PlaybackSession.fromJson(Map<String, dynamic>.from(json['playback'] as Map? ?? const {})),
       type: MediaType.values.firstWhere((type) => type.name == json['type'], orElse: () => MediaType.movie),
       season: (json['season'] as num?)?.toInt(),
       episode: (json['episode'] as num?)?.toInt(),

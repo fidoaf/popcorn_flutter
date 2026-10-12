@@ -6,10 +6,11 @@ import 'package:http/http.dart' as http;
 /// A stream candidate considered during racing.
 @immutable
 final class StreamCandidate {
-  const StreamCandidate({required this.url, this.headers = const <String, String>{}, this.isHls = true});
+  const StreamCandidate({required this.url, this.headers = const <String, String>{}, this.isHls = true, this.sourceName});
 
   final Uri url;
   final Map<String, String> headers;
+  final String? sourceName;
 
   /// HLS playlists are validated by their `#EXTM3U` marker; non-HLS (e.g. MP4)
   /// candidates are accepted on any successful response.

@@ -75,7 +75,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       <video id="video" controls playsinline hidden></video>
       <div id="video-loading" role="status" aria-label="Loading video" hidden></div>
     </div>
-    <footer><span id="status">Enter an ID supported by the selected provider.</span> <button id="retry" hidden>Retry</button><label for="provider">Provider<select id="provider" disabled>${providerOptions}</select></label><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
+    <footer><span id="status">Enter an ID supported by the selected provider.</span> <button id="retry" hidden>Retry</button><label for="provider">Provider<select id="provider" disabled>${providerOptions}</select></label><label for="playback-language">Language<select id="playback-language"><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ja">Japanese</option><option value="ko">Korean</option></select></label><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
   <script>
@@ -87,6 +87,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     const quality = document.getElementById('quality');
     const subtitles = document.getElementById('subtitles');
     const providerSelect = document.getElementById('provider');
+    const playbackLanguage = document.getElementById('playback-language');
     const sourceField = document.getElementById('source-field');
     const sourceSelect = document.getElementById('source');
     const form = document.getElementById('media-form');
@@ -106,6 +107,67 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     let selectedMedia;
     let requestGeneration = 0;
     let mediaRecoveryAttempted = false;
+    const resumeQuery = new URLSearchParams(window.location.search);
+    const requestedPosition = Number(resumeQuery.get('resume') || 0);
+    let resumePosition = Number.isFinite(requestedPosition) ? Math.max(0, requestedPosition) : 0;
+    let preferredSource = resumeQuery.get('resumeSource') || '';
+    let preferredSubtitles = resumeQuery.get('resumeSubtitles');
+    let activeSource = '';
+    let activeSubtitles = preferredSubtitles;
+    let restoringPosition = false;
+    let lastProgressAt = 0;
+    function sessionSnapshot(overrides = {}) {
+      return {
+        provider: selectedMedia.providerId,
+        source: activeSource,
+        language: selectedMedia.lang,
+        subtitles: activeSubtitles,
+        positionSeconds: video.ended ? 0 : resumePosition || (Number.isFinite(video.currentTime) ? video.currentTime : 0),
+        ...overrides,
+      };
+    }
+    function reportSession(event, overrides = {}) {
+      if (!selectedMedia || restoringPosition) return;
+      const message = { type: 'popcorn:playback', event, media: { type: selectedMedia.type, id: selectedMedia.id, season: selectedMedia.season, episode: selectedMedia.episode }, session: sessionSnapshot(overrides) };
+      const parentOrigin = resumeQuery.get('parentOrigin');
+      if (window.parent !== window && parentOrigin) window.parent.postMessage(message, parentOrigin);
+      window.flutter_inappwebview?.callHandler('popcornPlayback', message);
+    }
+    function restorePosition() {
+      if (!resumePosition || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      const target = Math.min(resumePosition, Math.max(0, video.duration - 0.1));
+      restoringPosition = true;
+      video.currentTime = target;
+      resumePosition = 0;
+    }
+    video.addEventListener('loadedmetadata', restorePosition);
+    video.addEventListener('durationchange', restorePosition);
+    video.addEventListener('seeked', () => {
+      restoringPosition = false;
+      reportSession('seeked');
+    });
+    video.addEventListener('timeupdate', () => {
+      if (resumePosition || Date.now() - lastProgressAt < 5000) return;
+      lastProgressAt = Date.now();
+      reportSession('progress');
+    });
+    video.addEventListener('pause', () => reportSession('pause'));
+    video.addEventListener('ended', () => reportSession('ended', { positionSeconds: 0 }));
+    window.addEventListener('pagehide', () => reportSession('pagehide'));
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') reportSession('hidden');
+    });
+    window.addEventListener('flutterInAppWebViewPlatformReady', () => reportSession('ready'));
+    function resumeNavigation(media) {
+      const query = new URLSearchParams(mediaQuery(media));
+      const session = sessionSnapshot();
+      if (session.positionSeconds > 0) query.set('resume', session.positionSeconds);
+      if (preferredSource) query.set('resumeSource', preferredSource);
+      if (activeSubtitles != null) query.set('resumeSubtitles', activeSubtitles);
+      const parentOrigin = resumeQuery.get('parentOrigin');
+      if (parentOrigin) query.set('parentOrigin', parentOrigin);
+      return '/player?' + query;
+    }
     function mediaQuery(media) {
       const query = new URLSearchParams({
         provider: media.providerId,
@@ -221,10 +283,22 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
         if (generation !== requestGeneration || !sources.length) return;
         for (const source of sources) {
           const option = new Option(source.label + (source.language ? ' (' + source.language + ')' : ''), source.id);
+          option.dataset.source = JSON.stringify([source.label, source.language || '']);
           sourceSelect.add(option);
         }
         sourceField.hidden = false;
         sourceSelect.disabled = false;
+        if (preferredSource) {
+          const option = Array.from(sourceSelect.options).find((option) => option.dataset.source === preferredSource);
+          if (option) {
+            sourceSelect.value = option.value;
+            sourceSelect.dispatchEvent(new Event('change'));
+          } else {
+            preferredSource = '';
+            activeSource = '';
+            reportSession('source');
+          }
+        }
       } catch (_) {
         sourceField.hidden = true;
       }
@@ -257,6 +331,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
         for (const track of tracks) {
           const option = document.createElement('option');
           option.value = track.id;
+          option.dataset.subtitle = JSON.stringify([track.label, track.language || '']);
+          option.dataset.language = track.language || 'en';
           option.textContent = track.language && track.language !== track.label
             ? track.label + ' (' + track.language + ')'
             : track.label;
@@ -264,20 +340,34 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
         }
         subtitles.disabled = false;
         if (!tracks.length) subtitles.title = 'No subtitles available';
-        if (media.sub === '1' && tracks.length) {
+        const restored = preferredSubtitles && Array.from(subtitles.options).find((option) => option.dataset.subtitle === preferredSubtitles);
+        if (restored) {
+          subtitles.value = restored.value;
+          subtitles.dispatchEvent(new Event('change'));
+        } else if (preferredSubtitles === '') {
+          subtitles.value = '';
+          subtitles.dispatchEvent(new Event('change'));
+        } else if (media.sub === '1' && tracks.length) {
           const languageNames = { en: 'english', es: 'spanish', fr: 'french', de: 'german', it: 'italian', pt: 'portuguese', ja: 'japanese', ko: 'korean' };
           const preferredLanguage = languageNames[media.lang];
           const preferred = tracks.find((track) =>
-            [track.lang, track.label].some((value) => String(value || '').toLowerCase() === preferredLanguage),
+            [track.language, track.label].some((value) => String(value || '').toLowerCase() === preferredLanguage),
           ) || tracks[0];
           subtitles.value = preferred.id;
           subtitles.dispatchEvent(new Event('change'));
+        } else {
+          activeSubtitles = '';
+          reportSession('subtitles');
         }
       } catch (error) {
         subtitles.title = error.message;
       }
     }
     subtitles.addEventListener('change', () => {
+      activeSubtitles = subtitles.value ? subtitles.selectedOptions[0].dataset.subtitle : '';
+      if (selectedMedia) selectedMedia.sub = subtitles.value ? '1' : '0';
+      preferredSubtitles = activeSubtitles;
+      reportSession('subtitles');
       if (subtitleTrack) { subtitleTrack.remove(); subtitleTrack = null; }
       if (!subtitles.value) return;
       subtitleTrack = document.createElement('track');
@@ -292,14 +382,21 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     });
     retry.addEventListener('click', () => {
       if (!selectedMedia) return;
+      resumePosition = resumePosition || video.currentTime || 0;
       if (hls) { hls.destroy(); hls = null; }
       video.removeAttribute('src');
       video.load();
       start(selectedMedia, sourceSelect.value);
     });
     function playMedia(media) {
+      if (selectedMedia && (selectedMedia.id !== media.id || selectedMedia.type !== media.type || selectedMedia.season !== media.season || selectedMedia.episode !== media.episode)) {
+        resumePosition = 0;
+        preferredSource = '';
+        preferredSubtitles = null;
+      }
       selectedMedia = media;
       providerSelect.value = media.providerId;
+      playbackLanguage.value = media.lang;
       providerSelect.disabled = false;
       nowPlaying.textContent = (media.type === 'movie' ? 'Movie ' : 'TV ') + media.id + (media.type === 'tv' ? ' · S' + media.season + ' E' + media.episode : '');
       nowPlaying.hidden = false;
@@ -312,15 +409,31 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       clearSubtitleOptions();
       start(media);
       const generation = requestGeneration;
-      loadSources(media, generation);
-      loadSubtitles(media, generation);
+      loadSources(media, generation).then(() => {
+        if (selectedMedia === media) loadSubtitles(media, requestGeneration);
+      });
+      reportSession('ready');
     }
     providerSelect.addEventListener('change', () => {
       if (!selectedMedia) return;
-      window.location.assign('/player?' + mediaQuery({ ...selectedMedia, providerId: providerSelect.value }));
+      reportSession('provider', { provider: providerSelect.value, source: '' });
+      preferredSource = '';
+      selectedMedia = { ...selectedMedia, providerId: providerSelect.value };
+      activeSource = '';
+      window.location.assign(resumeNavigation(selectedMedia));
+    });
+    playbackLanguage.addEventListener('change', () => {
+      if (!selectedMedia) return;
+      selectedMedia = { ...selectedMedia, lang: playbackLanguage.value };
+      reportSession('language');
+      window.location.assign(resumeNavigation(selectedMedia));
     });
     sourceSelect.addEventListener('change', () => {
       if (!selectedMedia) return;
+      resumePosition = resumePosition || video.currentTime || 0;
+      activeSource = sourceSelect.value ? sourceSelect.selectedOptions[0].dataset.source : '';
+      preferredSource = activeSource;
+      reportSession('source');
       if (hls) { hls.destroy(); hls = null; }
       video.pause();
       video.removeAttribute('src');

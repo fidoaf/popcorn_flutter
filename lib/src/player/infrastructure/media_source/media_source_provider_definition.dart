@@ -25,6 +25,7 @@ final class MediaSourceProviderDefinition {
     required this.name,
     required this.host,
     this.scheme = 'https',
+    this.port,
     this.path = '',
     this.method = MediaSourceMethod.get,
     this.parameters = const <String, String>{},
@@ -52,6 +53,7 @@ final class MediaSourceProviderDefinition {
       name: name,
       host: host,
       scheme: json['scheme'] as String? ?? 'https',
+      port: json['port'] as int?,
       path: json['path'] as String? ?? '',
       method: _parseMethod(json['method']),
       parameters: _parseStringMap(json['parameters'], 'parameters'),
@@ -70,6 +72,8 @@ final class MediaSourceProviderDefinition {
 
   /// URL scheme, defaulting to `https`.
   final String scheme;
+
+  final int? port;
 
   /// URL path template with `{id}`/`{type}`/`{season}`/`{episode}`
   /// placeholders, e.g. `/embed/{type}/{id}/{season}/{episode}`.
@@ -132,7 +136,13 @@ final class MediaSourceProviderDefinition {
     final resolvedBody = body == null ? null : Uint8List.fromList(utf8.encode(sub(body!)));
 
     return MediaSource(
-      url: Uri(scheme: scheme, host: host, path: _normalizePath(sub(path)), queryParameters: resolvedParameters.isEmpty ? null : resolvedParameters),
+      url: Uri(
+        scheme: scheme,
+        host: host,
+        port: port,
+        path: _normalizePath(sub(path)),
+        queryParameters: resolvedParameters.isEmpty ? null : resolvedParameters,
+      ),
       method: method,
       headers: resolvedHeaders,
       cookies: resolvedCookies,

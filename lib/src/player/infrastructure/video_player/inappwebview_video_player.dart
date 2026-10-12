@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:popcorn_flutter/src/player/domain/fullscreen_controller.dart';
 import 'package:popcorn_flutter/src/player/domain/media_source.dart';
+import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/domain/video_player.dart';
 
 final class InappwebviewVideoPlayer extends VideoPlayer {
@@ -101,7 +102,18 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
           ? URLRequest(url: _baseUrl)
           : _request,
       initialData: useInitialData ? InAppWebViewInitialData(data: source.data!, baseUrl: _baseUrl) : null,
-      onWebViewCreated: hasCookies ? _loadWithCookies : null,
+      onWebViewCreated: (controller) async {
+        controller.addJavaScriptHandler(
+          handlerName: 'popcornPlayback',
+          callback: (arguments) async {
+            final url = await controller.getUrl();
+            if (url?.host != source.url.host || arguments.length != 1) return null;
+            if (context.mounted) PlaybackSessionScope.of(context)?.accept(arguments.first);
+            return null;
+          },
+        );
+        if (hasCookies) await _loadWithCookies(controller);
+      },
       // On Windows, log every intercepted request and serve the inline embed
       // HTML for the base-URL navigation; elsewhere interception is unused.
       shouldInterceptRequest: interceptRequests ? _interceptRequest : null,

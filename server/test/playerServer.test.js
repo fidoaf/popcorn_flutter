@@ -7,16 +7,116 @@ const { RedirectProvider } = require('../src/player/redirectProvider');
 const { renderPlayerPage } = require('../src/player/playerPage');
 const vm = require('node:vm');
 
+test('restores a hosted session with fresh track IDs and reports settings, progress and seeks', async () => {
+  const media = { providerId: 'vidsrcbuzz', type: 'movie', id: '42', lang: 'es', sub: '1' };
+  const sourceKey = JSON.stringify(['Server 1', 'Spanish']);
+  const subtitleKey = JSON.stringify(['Spanish', 'Spanish']);
+  const query = new URLSearchParams({ resume: '120', resumeSource: sourceKey, resumeSubtitles: subtitleKey, parentOrigin: 'https://app.example' });
+  const elements = new Map();
+  function element() {
+    const listeners = new Map();
+    return {
+      value: '', options: [], dataset: {}, hidden: false, currentTime: 0, duration: 600, ended: false,
+      get selectedOptions() { return this.options.filter((option) => option.value === this.value); },
+      addEventListener(event, callback) {
+        if (!listeners.has(event)) listeners.set(event, []);
+        listeners.get(event).push(callback);
+      },
+      dispatchEvent(event) { this.dispatch(event.type); },
+      dispatch(event) { for (const callback of listeners.get(event) || []) callback(); },
+      replaceChildren(...options) { this.options = options; this.value = options[0]?.value || ''; },
+      add(option) { this.options.push(option); },
+      appendChild(option) { this.options.push(option); },
+      remove() {}, pause() {}, load() {}, removeAttribute() {},
+      canPlayType() { return true; },
+      async play() {},
+      track: {},
+    };
+  }
+  const document = {
+    addEventListener() {}, querySelectorAll() { return []; },
+    createElement() { return element(); },
+    getElementById(id) {
+      if (id === 'media-form') return null;
+      if (!elements.has(id)) elements.set(id, element());
+      return elements.get(id);
+    },
+  };
+  const messages = [];
+  const nativeMessages = [];
+  const navigations = [];
+  const windowListeners = new Map();
+  let now = 10000;
+  vm.runInNewContext(renderPlayerPage(media, { showForm: false }).match(/<script>([\s\S]*?)<\/script>/)[1], {
+    document, URLSearchParams, Event: class { constructor(type) { this.type = type; } },
+    Date: { now: () => now },
+    Option: function Option(label, value) { return { textContent: label, value, dataset: {} }; },
+    fetch: async (url) => ({ ok: true, json: async () => url.startsWith('/sources')
+      ? [{ id: 'fresh-source', label: 'Server 1', language: 'Spanish' }]
+      : [{ id: 'fresh-subtitle', label: 'Spanish', language: 'Spanish' }] }),
+    window: {
+      location: { search: '?' + query, assign(url) { navigations.push(url); } },
+      parent: { postMessage(message, origin) { assert.equal(origin, 'https://app.example'); messages.push(message); } },
+      flutter_inappwebview: { callHandler(name, message) { assert.equal(name, 'popcornPlayback'); nativeMessages.push(message); } },
+      addEventListener(name, callback) { windowListeners.set(name, callback); },
+    },
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  const video = elements.get('video');
+  assert.equal(elements.get('source').value, 'fresh-source');
+  assert.equal(elements.get('subtitles').value, 'fresh-subtitle');
+  assert.equal(video.options[0].src, '/subtitle/fresh-subtitle');
+  video.dispatch('loadedmetadata');
+  assert.equal(video.currentTime, 120);
+  video.dispatch('seeked');
+  assert.equal(messages.at(-1).event, 'seeked');
+  assert.equal(messages.at(-1).session.positionSeconds, 120);
+  assert.equal(messages.at(-1).session.source, sourceKey);
+  assert.equal(messages.at(-1).session.subtitles, subtitleKey);
+  video.currentTime = 130;
+  video.dispatch('timeupdate');
+  const count = messages.length;
+  video.currentTime = 131;
+  video.dispatch('timeupdate');
+  assert.equal(messages.length, count);
+  now += 5000;
+  video.dispatch('timeupdate');
+  assert.equal(messages.at(-1).session.positionSeconds, 131);
+  video.currentTime = 240;
+  video.dispatch('seeked');
+  assert.equal(messages.at(-1).session.positionSeconds, 240);
+  elements.get('subtitles').value = '';
+  elements.get('subtitles').dispatch('change');
+  assert.equal(messages.at(-1).session.subtitles, '');
+  elements.get('playback-language').value = 'fr';
+  elements.get('playback-language').dispatch('change');
+  assert.equal(messages.at(-1).session.language, 'fr');
+  const languageUrl = new URL(navigations.at(-1), 'https://player.example');
+  assert.equal(languageUrl.searchParams.get('resume'), '240');
+  assert.equal(languageUrl.searchParams.get('lang'), 'fr');
+  elements.get('provider').value = 'nxsha';
+  elements.get('provider').dispatch('change');
+  assert.equal(messages.at(-1).session.provider, 'nxsha');
+  assert.equal(messages.at(-1).session.source, '');
+  assert.equal(new URL(navigations.at(-1), 'https://player.example').searchParams.has('resumeSource'), false);
+  video.ended = true;
+  video.dispatch('ended');
+  windowListeners.get('pagehide')();
+  assert.equal(messages.at(-1).session.positionSeconds, 0);
+  assert.equal(nativeMessages.length, messages.length);
+});
+
 test('player provider selector precedes source and switches providers with current media settings', () => {
   const media = { providerId: 'vidsrcbuzz', type: 'tv', id: '1399', season: '2', episode: '3', lang: 'fr', sub: '0' };
   const page = renderPlayerPage(media, {
     showForm: false,
     providers: [{ id: 'vidsrcbuzz', label: 'VidSrc.buzz' }, { id: 'nxsha', label: 'Nxsha' }],
   });
-  assert.match(page, /<label for="provider">Provider<select id="provider" disabled><option value="vidsrcbuzz" selected>VidSrc.buzz<\/option><option value="nxsha">Nxsha<\/option><\/select><\/label><label id="source-field"/);
+  assert.match(page, /<label for="provider">Provider<select id="provider" disabled><option value="vidsrcbuzz" selected>VidSrc.buzz<\/option><option value="nxsha">Nxsha<\/option><\/select><\/label><label for="playback-language"/);
   assert.doesNotMatch(page, /<form id="media-form">/);
   const elements = new Map();
   const document = {
+    addEventListener() {},
     getElementById(id) {
       if (id === 'media-form') return null;
       if (!elements.has(id)) {
@@ -44,7 +144,7 @@ test('player provider selector precedes source and switches providers with curre
     URLSearchParams,
     Option: function Option() {},
     fetch: () => new Promise(() => {}),
-    window: { location: { assign(url) { navigations.push(url); } } },
+    window: { addEventListener() {}, location: { assign(url) { navigations.push(url); } } },
   });
   const provider = elements.get('provider');
   assert.equal(provider.value, 'vidsrcbuzz');
@@ -67,6 +167,7 @@ test('player shows a circular loader while buffering and seeking until video is 
   assert.match(page, /pointer-events:none/);
   const elements = new Map();
   const document = {
+    addEventListener() {},
     getElementById(id) {
       if (id === 'media-form') return null;
       if (!elements.has(id)) {
@@ -89,7 +190,7 @@ test('player shows a circular loader while buffering and seeking until video is 
     querySelectorAll() { return []; },
   };
   const script = page.match(/<script>([\s\S]*?)<\/script>/)[1];
-  vm.runInNewContext(script, { document });
+  vm.runInNewContext(script, { document, URLSearchParams, window: { location: {}, addEventListener() {} } });
   const video = elements.get('video');
   const loader = elements.get('video-loading');
   assert.equal(loader.hidden, true);

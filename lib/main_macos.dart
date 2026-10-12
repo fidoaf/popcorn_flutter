@@ -69,7 +69,7 @@ class _ErrorAppState extends State<ErrorApp> with TickerProviderStateMixin {
       darkTheme: MacosThemeData.dark(),
       home: MacosWindow(
         child: MacosScaffold(
-          toolBar: ToolBar(title: Text('Startup error')),
+          toolBar: const ToolBar(title: Text('Startup error')),
           children: [
             ContentArea(
               builder: (context, _) => Center(
@@ -80,10 +80,10 @@ class _ErrorAppState extends State<ErrorApp> with TickerProviderStateMixin {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
+                        const Text(
                           'Unable to start the application',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFFFFFFF), decoration: TextDecoration.none),
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFFFFFFF), decoration: TextDecoration.none),
                         ),
                         const SizedBox(height: 12),
                         Text(

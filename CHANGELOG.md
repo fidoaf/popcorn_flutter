@@ -5,6 +5,51 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3]
+
+### Added
+- Person detail pages with biographies, personal details, and notable credits.
+- Regional streaming provider availability on media detail pages.
+- Provider selection in the integrated media player.
+
+### Changed
+- Updated home search to expand in place and remain accessible while browsing.
+
+## [1.5.2]
+
+### Added
+- Trending trailers section.
+- Subtitle track selection in the media player.
+- Additional media providers and provider selection in the player.
+
+### Changed
+- Improved login profile selection and logout navigation.
+- Fixed soft keyboard issues and refined media details presentation.
+- Updated Windows packaging and deployment workflows.
+
+## [1.5.1]
+
+### Added
+- Additional language-specific and self-hosted media providers.
+
+### Changed
+- Improved server configuration and media source handling.
+
+## [1.5.0]
+
+### Added
+- New server-backed media player implementation.
+- Windows installer support.
+
+### Changed
+- Refactored player and server integration, including subtitle handling.
+
+## [1.4.0]
+
+### Changed
+- Improved app navigation and player startup behavior.
+- Updated Windows build and packaging pipelines.
+
 ## [1.3.0]
 
 ### Added

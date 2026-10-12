@@ -59,7 +59,10 @@ class _EmptyHistory implements WatchHistoryRepository {
   Future<List<WatchHistoryEntry>> load() async => [];
 
   @override
-  Future<void> save(List<WatchHistoryEntry> entries) async {}
+  Future<void> upsert(WatchHistoryEntry entry) async {}
+
+  @override
+  Future<void> remove(WatchHistoryEntry entry) async {}
 }
 
 void main() {

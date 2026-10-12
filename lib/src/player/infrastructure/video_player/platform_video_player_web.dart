@@ -3,6 +3,7 @@ import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/widgets.dart';
 import 'package:popcorn_flutter/src/player/domain/media_source.dart';
+import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/domain/video_player.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/fullscreen_controller_factory.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/media_kit_video_player.dart';
@@ -74,5 +75,47 @@ final class WebVideoPlayer extends VideoPlayer {
   }
 
   @override
-  Widget build(BuildContext context) => HtmlElementView(viewType: _viewType);
+  Widget build(BuildContext context) => _SessionIframe(viewType: _viewType, source: source);
+}
+
+class _SessionIframe extends StatefulWidget {
+  const _SessionIframe({required this.viewType, required this.source});
+
+  final String viewType;
+  final MediaSource source;
+
+  @override
+  State<_SessionIframe> createState() => _SessionIframeState();
+}
+
+class _SessionIframeState extends State<_SessionIframe> {
+  web.HTMLIFrameElement? _iframe;
+  PlaybackSessionScope? _scope;
+  late final JSFunction _listener;
+
+  @override
+  void initState() {
+    super.initState();
+    _listener = ((web.MessageEvent event) {
+      if (_iframe == null || event.origin != widget.source.url.origin || !event.source.strictEquals(_iframe!.contentWindow).toDart) return;
+      _scope?.accept(event.data.dartify());
+    }).toJS;
+    web.window.addEventListener('message', _listener);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scope = PlaybackSessionScope.of(context);
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      HtmlElementView(viewType: widget.viewType, onPlatformViewCreated: (id) => _iframe = ui_web.platformViewRegistry.getViewById(id) as web.HTMLIFrameElement);
+
+  @override
+  void dispose() {
+    web.window.removeEventListener('message', _listener);
+    super.dispose();
+  }
 }
