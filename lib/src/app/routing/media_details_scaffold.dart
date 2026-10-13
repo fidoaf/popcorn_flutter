@@ -82,7 +82,13 @@ class _MediaDetailsScaffoldState extends State<MediaDetailsScaffold> {
     _details = widget.repository.details(item.id, widget.type);
     _videos = widget.repository.videos(item.id, widget.type);
     _related = widget.repository.related(item.id, widget.type);
-    _providers = widget.repository.watchProviders(item.id, widget.type, region: PlatformDispatcher.instance.locale.countryCode ?? 'US');
+    _providers = widget.repository.watchProviders(
+      item.id,
+      widget.type,
+      region: PlatformDispatcher.instance.locale.countryCode ?? 'US',
+      title: item.title,
+      year: item.releaseDate?.year,
+    );
   }
 
   @override

@@ -3,8 +3,9 @@ const { mediaFromQuery } = require('./mediaRequest');
 const { renderPlayerPage } = require('./playerPage');
 const { SubtitleRefStore } = require('./subtitleRefStore');
 const { SourceRefStore } = require('./sourceRefStore');
+const { resolveJustWatchProviderLinks } = require('./justWatchProviderLinks');
 
-function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore() }) {
+function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch }) {
   if (!providers || !resourceProxy) throw new TypeError('Player server requires providers and a resource proxy');
 
   const server = http.createServer(async (request, response) => {
@@ -28,6 +29,15 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
         } else {
           sendHtml(response, renderPlayerPage(media, { providers: providers.list(), showForm: false }));
         }
+      } else if (url.pathname === '/watch-providers') {
+        const links = await resolveJustWatchProviderLinks({
+          type: url.searchParams.get('type'),
+          title: url.searchParams.get('title'),
+          year: url.searchParams.get('year'),
+          region: url.searchParams.get('region'),
+          fetchImpl,
+        });
+        sendJson(response, 200, links, { 'Access-Control-Allow-Origin': '*' });
       } else if (url.pathname === '/favicon.ico') {
         response.writeHead(204).end();
       } else if (url.pathname === '/manifest') {
@@ -112,8 +122,8 @@ function sendHtml(response, html) {
   response.end(html);
 }
 
-function sendJson(response, status, value) {
-  response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+function sendJson(response, status, value, headers = {}) {
+  response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
   response.end(JSON.stringify(value));
 }
 

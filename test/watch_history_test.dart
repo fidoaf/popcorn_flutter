@@ -15,10 +15,183 @@ import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit
 import 'package:popcorn_flutter/src/profile/domain/profile.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
+  testWidgets('player event scope refreshes when only the media identity changes', (tester) async {
+    PlaybackSessionScope? current;
+    final saved = <PlaybackSession>[];
+    final child = Builder(
+      builder: (context) {
+        current = PlaybackSessionScope.of(context);
+        return const SizedBox();
+      },
+    );
+    Widget scope(int id) => PlaybackSessionScope(initial: const PlaybackSession(), mediaId: id, mediaType: 'movie', onChanged: saved.add, child: child);
+    await tester.pumpWidget(scope(42));
+    expect(current!.mediaId, 42);
+    await tester.pumpWidget(scope(43));
+    expect(current!.mediaId, 43);
+    current!.accept({
+      'type': 'popcorn:playback',
+      'media': {'type': 'movie', 'id': '43'},
+      'session': {'positionSeconds': 300},
+    });
+    expect(saved.single.positionSeconds, 300);
+  });
+
+  test('five-second player progress updates reach the history table through five minutes', () async {
+    final savedPositions = <double>[];
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'test-key',
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+      httpClient: MockClient((request) async {
+        if (request.method == 'GET') return http.Response('[]', 200, headers: {'content-type': 'application/json'}, request: request);
+        final row = jsonDecode(request.body) as Map;
+        savedPositions.add((row['position_seconds'] as num).toDouble());
+        return http.Response('', 201, request: request);
+      }),
+    );
+    addTearDown(client.dispose);
+    final controller = WatchHistoryController(
+      repository: SupabaseWatchHistoryRepository(profileRepository: _Profiles(), mediaRepository: _Catalog(), client: client),
+    );
+    await controller.ready;
+    addTearDown(controller.dispose);
+    const item = MediaItem(id: 42, title: 'Movie', overview: '');
+    final writes = <Future<void>>[];
+    final scope = PlaybackSessionScope(
+      initial: const PlaybackSession(),
+      mediaId: 42,
+      mediaType: 'movie',
+      onChanged: (session) => writes.add(controller.record(item, MediaType.movie, playback: session)),
+      child: const SizedBox(),
+    );
+    for (var seconds = 5; seconds <= 300; seconds += 5) {
+      scope.accept({
+        'type': 'popcorn:playback',
+        'event': 'progress',
+        'media': {'type': 'movie', 'id': '42', 'season': '0', 'episode': '0'},
+        'session': {'provider': 'vidsrcbuzz', 'positionSeconds': seconds},
+      });
+    }
+    await Future.wait(writes);
+    expect(savedPositions, [for (var seconds = 5; seconds <= 300; seconds += 5) seconds.toDouble()]);
+    expect(controller.entries.single.playback.positionSeconds, 300);
+  });
+
+  test('database write failures propagate instead of reporting successful progress saves', () async {
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'test-key',
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+      httpClient: MockClient(
+        (request) async => request.method == 'GET'
+            ? http.Response('[]', 200, headers: {'content-type': 'application/json'}, request: request)
+            : http.Response(
+                jsonEncode({'code': '23502', 'message': 'null value in column "title" violates not-null constraint'}),
+                400,
+                headers: {'content-type': 'application/json'},
+                request: request,
+              ),
+      ),
+    );
+    addTearDown(client.dispose);
+    final controller = WatchHistoryController(
+      repository: SupabaseWatchHistoryRepository(profileRepository: _Profiles(), mediaRepository: _Catalog(), client: client),
+    );
+    await controller.ready;
+    addTearDown(controller.dispose);
+    await expectLater(
+      controller.record(
+        const MediaItem(id: 42, title: 'Movie', overview: ''),
+        MediaType.movie,
+        playback: const PlaybackSession(positionSeconds: 300),
+      ),
+      throwsA(isA<PostgrestException>()),
+    );
+  });
+
+  test('history loads catalog metadata and caches movie and TV identities separately', () async {
+    final catalog = _Catalog();
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'test-key',
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+      httpClient: MockClient((request) async {
+        final columns = request.url.queryParameters['select']!.split(',');
+        for (final column in ['title', 'overview', 'poster_url', 'release_date', 'vote_average']) {
+          expect(columns, isNot(contains(column)));
+        }
+        return http.Response(
+          jsonEncode([
+            {'media_id': 42, 'media_type': 'movie', 'position_seconds': 120, 'title': 'Stale stored title'},
+            {'media_id': 42, 'media_type': 'tv', 'season': 2, 'episode': 3, 'position_seconds': 240},
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+          request: request,
+        );
+      }),
+    );
+    addTearDown(client.dispose);
+    final repository = SupabaseWatchHistoryRepository(profileRepository: _Profiles(), mediaRepository: catalog, client: client);
+    final entries = await repository.load();
+    expect(entries.map((entry) => entry.item.title), ['Movie', 'Series']);
+    expect(entries.first.item.overview, 'Catalog overview');
+    expect(entries.first.item.posterUrl, Uri.parse('https://catalog.example/movie/42.jpg'));
+    expect(entries.first.playback.positionSeconds, 120);
+    expect(entries.last.season, 2);
+    expect(entries.last.episode, 3);
+    expect(entries.last.playback.positionSeconds, 240);
+    expect(catalog.requests, [(MediaType.movie, 42), (MediaType.tv, 42)]);
+    await repository.load();
+    expect(catalog.requests.length, 2);
+  });
+
+  test('failed catalog lookup retains resume data and retries on the next load', () async {
+    final catalog = _Catalog(fail: true);
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'test-key',
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+      httpClient: MockClient(
+        (request) async => http.Response(
+          jsonEncode([
+            {
+              'media_id': 42,
+              'media_type': 'tv',
+              'season': 2,
+              'episode': 3,
+              'position_seconds': 123.5,
+              'playback_provider': 'vidsrcbuzz',
+              'subtitle_selection': '',
+            },
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+          request: request,
+        ),
+      ),
+    );
+    addTearDown(client.dispose);
+    final repository = SupabaseWatchHistoryRepository(profileRepository: _Profiles(), mediaRepository: catalog, client: client);
+    final fallback = (await repository.load()).single;
+    expect(fallback.item.id, 42);
+    expect(fallback.item.title, 'tv 42');
+    expect(fallback.season, 2);
+    expect(fallback.episode, 3);
+    expect(fallback.playback.positionSeconds, 123.5);
+    expect(fallback.playback.provider, 'vidsrcbuzz');
+    expect(fallback.playback.subtitles, '');
+    catalog.fail = false;
+    expect((await repository.load()).single.item.title, 'Series');
+    expect(catalog.requests.length, 2);
+  });
+
   test('Supabase round-trips individual playback columns without a JSONB snapshot', () async {
     Map<String, dynamic>? saved;
     final client = SupabaseClient(
@@ -31,6 +204,9 @@ void main() {
           expect(request.url.queryParameters['on_conflict'], 'profile_id,media_type,media_id');
           saved = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
           expect(saved!.containsKey('playback'), isFalse);
+          for (final column in ['title', 'overview', 'poster_url', 'release_date', 'vote_average']) {
+            expect(saved!.containsKey(column), isFalse);
+          }
           expect(saved!['profile_id'], 'profile-1');
           return http.Response('', 201, request: request);
         }
@@ -40,7 +216,7 @@ void main() {
       }),
     );
     addTearDown(client.dispose);
-    final repository = SupabaseWatchHistoryRepository(profileRepository: _Profiles(), client: client);
+    final repository = SupabaseWatchHistoryRepository(profileRepository: _Profiles(), mediaRepository: _Catalog(), client: client);
     for (final subtitles in ['', null, '["Spanish","es"]']) {
       final playback = PlaybackSession(provider: 'vidsrcbuzz', source: '["Server 1","Spanish"]', language: 'es', subtitles: subtitles, positionSeconds: 123.5);
       await repository.upsert(
@@ -175,6 +351,28 @@ class _MemoryHistory implements WatchHistoryRepository {
 class _Profiles implements ProfileRepository {
   @override
   Future<Profile?> activeProfile() async => const Profile(id: 'profile-1', accountId: 'account-1', displayName: 'Viewer');
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _Catalog implements MediaSearchRepository {
+  _Catalog({this.fail = false});
+
+  bool fail;
+  final requests = <(MediaType, int)>[];
+
+  @override
+  Future<MediaItem> mediaItem(int id, MediaType mediaType) async {
+    requests.add((mediaType, id));
+    if (fail) throw StateError('Catalog unavailable');
+    return MediaItem(
+      id: id,
+      title: mediaType == MediaType.movie ? 'Movie' : 'Series',
+      overview: 'Catalog overview',
+      posterUrl: Uri.parse('https://catalog.example/${mediaType.name}/$id.jpg'),
+    );
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

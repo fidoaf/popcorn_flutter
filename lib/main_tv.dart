@@ -189,6 +189,12 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
           personId: id,
           repository: _services.repository,
           onCreditSelected: (credit) => context.push(AppRoutes.details(credit.type, credit.item.id), extra: credit.item),
+          pageBuilder: (context, title, body) => PopcornMaterialSplashScreen(
+            child: Scaffold(
+              appBar: AppBar(title: Text(title), actions: const [PopcornAppBarLogo()]),
+              body: SafeArea(child: body),
+            ),
+          ),
         );
       case WatchRoute(:final type, :final id, :final season, :final episode, :final provider):
         return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null, provider);

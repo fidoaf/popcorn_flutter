@@ -3,6 +3,7 @@ import 'package:popcorn_flutter/src/history/domain/watch_history_repository.dart
 import 'package:popcorn_flutter/src/player/domain/playback_session.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
+import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,13 +13,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Returns an empty list when signed out. [upsert] updates only one title's
 /// history; entries are read back most-recently-watched first.
 class SupabaseWatchHistoryRepository implements WatchHistoryRepository {
-  SupabaseWatchHistoryRepository({required ProfileRepository profileRepository, SupabaseClient? client})
+  SupabaseWatchHistoryRepository({required ProfileRepository profileRepository, required MediaSearchRepository mediaRepository, SupabaseClient? client})
     : _profiles = profileRepository,
+      _catalog = mediaRepository,
       _client = client ?? Supabase.instance.client;
 
   static const String _table = 'watch_history';
 
   final ProfileRepository _profiles;
+  final MediaSearchRepository _catalog;
+  final Map<(MediaType, int), MediaItem> _mediaCache = {};
   final SupabaseClient _client;
   Future<void> _pending = Future.value();
 
@@ -27,12 +31,17 @@ class SupabaseWatchHistoryRepository implements WatchHistoryRepository {
     final profile = await _profiles.activeProfile();
     if (profile == null) return const [];
     await _pending;
-    final rows = await _client.from(_table).select().eq('profile_id', profile.id).order('watched_at', ascending: false);
-    return rows.map(_fromRow).toList();
+    final rows = await _client
+        .from(_table)
+        .select('media_type,media_id,season,episode,watched_at,playback_provider,playback_source,audio_language,subtitle_selection,position_seconds')
+        .eq('profile_id', profile.id)
+        .order('watched_at', ascending: false);
+    return Future.wait(rows.map(_fromRow));
   }
 
   @override
   Future<void> upsert(WatchHistoryEntry entry) async {
+    if (entry.item.title.isNotEmpty) _cacheMedia(entry.type, entry.item);
     final profileFuture = _profiles.activeProfile();
     final write = _pending.then((_) async {
       final profile = await profileFuture;
@@ -59,11 +68,6 @@ class SupabaseWatchHistoryRepository implements WatchHistoryRepository {
     'profile_id': profileId,
     'media_type': entry.type.name,
     'media_id': entry.item.id,
-    'title': entry.item.title,
-    'overview': entry.item.overview,
-    'poster_url': entry.item.posterUrl?.toString(),
-    'release_date': entry.item.releaseDate?.toIso8601String(),
-    'vote_average': entry.item.voteAverage,
     'season': entry.season,
     'episode': entry.episode,
     'playback_provider': entry.playback.provider,
@@ -74,9 +78,24 @@ class SupabaseWatchHistoryRepository implements WatchHistoryRepository {
     'watched_at': entry.watchedAt.toIso8601String(),
   };
 
-  WatchHistoryEntry _fromRow(Map<String, dynamic> row) {
-    final posterUrl = row['poster_url'] as String?;
-    final releaseDate = row['release_date'] as String?;
+  void _cacheMedia(MediaType type, MediaItem item) {
+    final key = (type, item.id);
+    if (!_mediaCache.containsKey(key) && _mediaCache.length >= 100) _mediaCache.remove(_mediaCache.keys.first);
+    _mediaCache[key] = item;
+  }
+
+  Future<WatchHistoryEntry> _fromRow(Map<String, dynamic> row) async {
+    final type = MediaType.values.firstWhere((type) => type.name == row['media_type'], orElse: () => MediaType.movie);
+    final id = (row['media_id'] as num).toInt();
+    var item = _mediaCache[(type, id)];
+    if (item == null) {
+      try {
+        item = await _catalog.mediaItem(id, type);
+        _cacheMedia(type, item);
+      } catch (_) {
+        item = MediaItem(id: id, title: '${type.name} $id', overview: '');
+      }
+    }
     final watchedAt = row['watched_at'] as String?;
     return WatchHistoryEntry(
       playback: PlaybackSession.fromJson({
@@ -86,18 +105,11 @@ class SupabaseWatchHistoryRepository implements WatchHistoryRepository {
         'subtitles': row['subtitle_selection'],
         'positionSeconds': row['position_seconds'],
       }),
-      type: MediaType.values.firstWhere((type) => type.name == row['media_type'], orElse: () => MediaType.movie),
+      type: type,
       season: (row['season'] as num?)?.toInt(),
       episode: (row['episode'] as num?)?.toInt(),
       watchedAt: watchedAt == null ? DateTime.fromMillisecondsSinceEpoch(0) : DateTime.tryParse(watchedAt) ?? DateTime.fromMillisecondsSinceEpoch(0),
-      item: MediaItem(
-        id: (row['media_id'] as num).toInt(),
-        title: row['title'] as String? ?? '',
-        overview: row['overview'] as String? ?? '',
-        posterUrl: posterUrl == null ? null : Uri.tryParse(posterUrl),
-        releaseDate: releaseDate == null ? null : DateTime.tryParse(releaseDate),
-        voteAverage: (row['vote_average'] as num?)?.toDouble(),
-      ),
+      item: item,
     );
   }
 }

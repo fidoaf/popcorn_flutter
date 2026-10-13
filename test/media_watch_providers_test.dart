@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -17,6 +18,7 @@ void main() {
         jsonEncode({
           'results': {
             'ES': {
+              'link': 'https://www.justwatch.com/es/pelicula/title',
               'flatrate': [
                 {'provider_id': 8, 'provider_name': 'Netflix', 'logo_path': '/netflix.png'},
               ],
@@ -51,14 +53,61 @@ void main() {
     expect(providers.map((provider) => provider.id), [8, 20, 30, 40]);
     expect(providers.first.name, 'Netflix');
     expect(providers.first.logoUrl, Uri.parse('https://image.tmdb.org/t/p/w92/netflix.png'));
+    expect(providers.first.justWatchUrl, Uri.parse('https://www.justwatch.com/es/pelicula/title'));
   });
 
-  testWidgets('provider logos render without visible provider names', (tester) async {
+  test('uses the matching provider-specific JustWatch clickout', () async {
+    const clickoutUrl = 'https://click.justwatch.com/a?cx=offer-context&r=https%3A%2F%2Fapp.primevideo.com%2Fdetail%3Fgti%3Dtest';
+    final client = MockClient((request) async {
+      if (request.url.host == 'player.example') {
+        expect(request.url.path, '/watch-providers');
+        expect(request.url.queryParameters, {'type': 'movie', 'title': 'Spider-Man: Brand New Day', 'year': '2026', 'region': 'ES'});
+        return http.Response(jsonEncode({'10': clickoutUrl}), 200);
+      }
+      return http.Response(
+        jsonEncode({
+          'results': {
+            'ES': {
+              'link': 'https://www.themoviedb.org/movie/969681/watch?locale=ES',
+              'rent': [
+                {'provider_id': 10, 'provider_name': 'Amazon Video', 'logo_path': '/prime.png'},
+              ],
+            },
+          },
+        }),
+        200,
+      );
+    });
+    addTearDown(client.close);
+    final repository = TmdbMediaSearchRepository(accessToken: 'test', playerServerUrl: Uri.parse('https://player.example'), client: client);
+
+    final providers = await repository.watchProviders(969681, MediaType.movie, region: 'ES', title: 'Spider-Man: Brand New Day', year: 2026);
+
+    expect(providers.single.id, 10);
+    expect(providers.single.justWatchUrl, Uri.parse(clickoutUrl));
+  });
+
+  testWidgets('provider logos render as accessible JustWatch buttons', (tester) async {
+    const launcherChannel = MethodChannel('plugins.flutter.io/url_launcher');
+    final launchedMethods = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(launcherChannel, (call) async {
+      launchedMethods.add(call);
+      return true;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(launcherChannel, null));
+
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: WatchProvidersBuilder(
-            providers: Future.value([MediaWatchProvider(id: 8, name: 'Netflix', logoUrl: Uri.parse('https://image.tmdb.org/t/p/w92/netflix.png'))]),
+            providers: Future.value([
+              MediaWatchProvider(
+                id: 8,
+                name: 'Netflix',
+                logoUrl: Uri.parse('https://image.tmdb.org/t/p/w92/netflix.png'),
+                justWatchUrl: Uri.parse('https://click.justwatch.com/a?cx=offer-context&r=https%3A%2F%2Fapp.primevideo.com%2Fdetail%3Fgti%3Dtest'),
+              ),
+            ]),
           ),
         ),
       ),
@@ -67,5 +116,11 @@ void main() {
 
     expect(find.byType(Image), findsOneWidget);
     expect(find.text('Netflix'), findsNothing);
+    expect(find.bySemanticsLabel('Netflix on JustWatch'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Netflix on JustWatch'));
+    await tester.pump();
+
+    expect(launchedMethods.single.arguments['url'], 'https://click.justwatch.com/a?cx=offer-context&r=https%3A%2F%2Fapp.primevideo.com%2Fdetail%3Fgti%3Dtest');
   });
 }

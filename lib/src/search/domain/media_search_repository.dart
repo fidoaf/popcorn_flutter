@@ -39,7 +39,7 @@ abstract interface class MediaSearchRepository {
   Future<List<MediaVideo>> videos(int id, MediaType mediaType);
 
   /// Returns where [id] can be watched in [region] (ISO 3166-1 country code).
-  Future<List<MediaWatchProvider>> watchProviders(int id, MediaType mediaType, {required String region});
+  Future<List<MediaWatchProvider>> watchProviders(int id, MediaType mediaType, {required String region, String? title, int? year});
 
   /// Returns the episodes of season [seasonNumber] for the TV series [seriesId].
   Future<List<MediaEpisode>> episodes(int seriesId, int seasonNumber);

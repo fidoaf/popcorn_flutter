@@ -187,21 +187,21 @@ class FluentMediaDetailsView extends StatelessWidget {
           Text(overview.isEmpty ? DetailsTranslations.noOverview.trOf(context) : overview, style: typography.body),
           CreditsBuilder(
             details: details,
-            builder: (context, director, cast) => Padding(
+            builder: (context, directors, cast) => Padding(
               padding: const EdgeInsets.only(top: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (director != null) ...[
+                  if (directors.isNotEmpty) ...[
                     Text(DetailsTranslations.director.trOf(context), style: typography.subtitle),
                     const SizedBox(height: 8),
-                    Text(director, style: typography.body),
+                    PersonNames(members: directors, style: typography.body),
                   ],
-                  if (director != null && cast != null) const SizedBox(height: 16),
-                  if (cast != null) ...[
+                  if (directors.isNotEmpty && cast.isNotEmpty) const SizedBox(height: 16),
+                  if (cast.isNotEmpty) ...[
                     Text(DetailsTranslations.cast.trOf(context), style: typography.subtitle),
                     const SizedBox(height: 8),
-                    Text(cast, style: typography.body),
+                    PersonNames(members: cast, style: typography.body),
                   ],
                 ],
               ),

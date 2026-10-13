@@ -17,9 +17,10 @@ import 'package:popcorn_flutter/src/search/domain/media_watch_provider.dart';
 
 /// [MediaSearchRepository] backed by The Movie Database (TMDB) REST API.
 final class TmdbMediaSearchRepository implements MediaSearchRepository {
-  TmdbMediaSearchRepository({required String accessToken, http.Client? client})
+  TmdbMediaSearchRepository({required String accessToken, Uri? playerServerUrl, http.Client? client})
     // ignore: prefer_initializing_formals -- named parameters cannot be private.
     : _accessToken = accessToken,
+      _playerServerUrl = playerServerUrl,
       _client = client ?? http.Client();
 
   static const String _baseUrl = 'https://api.themoviedb.org/3';
@@ -29,6 +30,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   static const String _profileBaseUrl = 'https://image.tmdb.org/t/p/w185';
 
   final String _accessToken;
+  final Uri? _playerServerUrl;
   final http.Client _client;
 
   @override
@@ -205,8 +207,9 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   }
 
   @override
-  Future<List<MediaWatchProvider>> watchProviders(int id, MediaType mediaType, {required String region}) async {
+  Future<List<MediaWatchProvider>> watchProviders(int id, MediaType mediaType, {required String region, String? title, int? year}) async {
     final uri = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id/watch/providers');
+    final providerLinksFuture = title == null ? Future<Map<int, Uri>>.value(const {}) : _justWatchProviderLinks(title, mediaType, region, year);
 
     final http.Response response;
     try {
@@ -227,6 +230,12 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     final countries = decoded['results'] as Map<String, dynamic>?;
     final availability = countries?[region.toUpperCase()] as Map<String, dynamic>?;
     if (availability == null) return const [];
+    final justWatchUrl = Uri.tryParse(availability['link'] as String? ?? '');
+    final validJustWatchUrl =
+        justWatchUrl != null && justWatchUrl.scheme == 'https' && (justWatchUrl.host == 'www.justwatch.com' || justWatchUrl.host == 'justwatch.com')
+        ? justWatchUrl
+        : null;
+    final providerLinks = await providerLinksFuture;
 
     const categories = ['flatrate', 'free', 'ads', 'rent', 'buy'];
     final seen = <int>{};
@@ -238,10 +247,42 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
         final logoPath = entry['logo_path'] as String?;
         final name = (entry['provider_name'] as String?)?.trim();
         if (id == null || logoPath == null || name == null || name.isEmpty || !seen.add(id)) continue;
-        providers.add(MediaWatchProvider(id: id, name: name, logoUrl: Uri.parse('https://image.tmdb.org/t/p/w92$logoPath')));
+        providers.add(
+          MediaWatchProvider(
+            id: id,
+            name: name,
+            logoUrl: Uri.parse('https://image.tmdb.org/t/p/w92$logoPath'),
+            justWatchUrl: providerLinks[id] ?? validJustWatchUrl,
+          ),
+        );
       }
     }
     return List.unmodifiable(providers);
+  }
+
+  Future<Map<int, Uri>> _justWatchProviderLinks(String title, MediaType mediaType, String region, int? year) async {
+    final serverUrl = _playerServerUrl;
+    if (serverUrl == null) return const {};
+    final query = <String, String>{'type': _pathSegment(mediaType), 'title': title, 'region': region};
+    if (year != null) query['year'] = '$year';
+    final endpoint = serverUrl.replace(path: '/watch-providers', queryParameters: query);
+    try {
+      final response = await _client.get(endpoint).timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) return const {};
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) return const {};
+      final links = <int, Uri>{};
+      for (final entry in decoded.entries) {
+        final id = int.tryParse(entry.key);
+        final url = entry.value is String ? Uri.tryParse(entry.value as String) : null;
+        if (id != null && url != null && url.scheme == 'https' && (url.host == 'e.justwatch.com' || url.host == 'click.justwatch.com') && url.path == '/a') {
+          links[id] = url;
+        }
+      }
+      return links;
+    } catch (_) {
+      return const {};
+    }
   }
 
   @override
@@ -384,8 +425,12 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
           _ => null,
         };
         final id = entry['id'] as int?;
-        if (type == null || id == null || !seen.add('${type.name}:$id')) continue;
+        if (type == null || id == null) continue;
         final role = ((category == 'cast' ? entry['character'] : entry['job']) as String?)?.trim();
+        final genreIds = entry['genre_ids'] as List<dynamic>? ?? const <dynamic>[];
+        final isTalkShow = genreIds.any((genreId) => genreId is num && genreId.toInt() == 10767);
+        if (category == 'cast' && (_isSelfCredit(role) || isTalkShow)) continue;
+        if (!seen.add('${type.name}:$id')) continue;
         final popularity = (entry['popularity'] as num?)?.toDouble() ?? 0;
         knownFor.add(PersonCredit(item: _toMediaItem(entry), type: type, role: role == null || role.isEmpty ? null : role, popularity: popularity));
       }
@@ -402,6 +447,11 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
       profileUrl: profilePath == null ? null : Uri.parse('$_profileBaseUrl$profilePath'),
       knownFor: List.unmodifiable(knownFor.take(20)),
     );
+  }
+
+  static bool _isSelfCredit(String? role) {
+    if (role == null) return false;
+    return RegExp(r'^(self|himself|herself|themselves)\b', caseSensitive: false).hasMatch(role.trim());
   }
 
   static MediaSeason _toMediaSeason(Map<String, dynamic> json) {

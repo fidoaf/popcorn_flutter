@@ -304,15 +304,28 @@ class _Credits extends StatelessWidget {
         }
         final data = snapshot.data;
         if (data == null) return const SizedBox.shrink();
-        final director = data.director;
+        final directors = data.directors.isNotEmpty
+            ? data.directors
+            : data.director == null
+            ? const <CastMember>[]
+            : data.director!.split(', ').map((name) => CastMember(name: name)).toList(growable: false);
         final members = data.castMembers;
-        if (director == null && members.isEmpty) return const SizedBox.shrink();
+        if (directors.isEmpty && members.isEmpty) return const SizedBox.shrink();
         return Padding(
           padding: const EdgeInsets.only(top: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (director != null) ...[_CreditRow(label: DetailsTranslations.director.trOf(context), value: director), const SizedBox(height: 16)],
+              if (directors.isNotEmpty) ...[
+                _CreditRow(
+                  label: DetailsTranslations.director.trOf(context),
+                  value: PersonNames(
+                    members: directors,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               if (members.isNotEmpty) ...[
                 Text(
                   DetailsTranslations.cast.trOf(context),
@@ -387,10 +400,8 @@ class _CastCard extends StatelessWidget {
           ),
           if (member != null) ...[
             const SizedBox(height: 8),
-            Text(
-              member!.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            PersonNameLink(
+              member: member!,
               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
             ),
             if (member!.character != null)
@@ -411,7 +422,7 @@ class _CreditRow extends StatelessWidget {
   const _CreditRow({required this.label, required this.value});
 
   final String label;
-  final String value;
+  final Widget value;
 
   @override
   Widget build(BuildContext context) {
@@ -423,7 +434,7 @@ class _CreditRow extends StatelessWidget {
           style: const TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(color: Colors.white, height: 1.4)),
+        value,
       ],
     );
   }

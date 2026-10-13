@@ -37,5 +37,11 @@ class PlaybackSessionScope extends InheritedWidget {
   }
 
   @override
-  bool updateShouldNotify(PlaybackSessionScope oldWidget) => initial != oldWidget.initial || season != oldWidget.season || episode != oldWidget.episode;
+  bool updateShouldNotify(PlaybackSessionScope oldWidget) =>
+      initial != oldWidget.initial ||
+      mediaId != oldWidget.mediaId ||
+      mediaType != oldWidget.mediaType ||
+      season != oldWidget.season ||
+      episode != oldWidget.episode ||
+      onChanged != oldWidget.onChanged;
 }

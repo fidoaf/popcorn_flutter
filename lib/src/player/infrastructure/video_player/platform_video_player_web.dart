@@ -1,6 +1,7 @@
 import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:popcorn_flutter/src/player/domain/media_source.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
@@ -98,7 +99,9 @@ class _SessionIframeState extends State<_SessionIframe> {
     super.initState();
     _listener = ((web.MessageEvent event) {
       if (_iframe == null || event.origin != widget.source.url.origin || !event.source.strictEquals(_iframe!.contentWindow).toDart) return;
-      _scope?.accept(event.data.dartify());
+      final message = event.data.dartify();
+      if (kDebugMode && message is Map && message['type'] == 'popcorn:playback') debugPrint('[VideoPlayer] Playback event: ${message['event']}');
+      _scope?.accept(message);
     }).toJS;
     web.window.addEventListener('message', _listener);
   }

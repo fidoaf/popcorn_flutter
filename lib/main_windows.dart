@@ -221,10 +221,22 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
       case DetailsRoute(:final type, :final id):
         return _detailsPage(type, id, arguments is MediaItem ? arguments : null);
       case PersonRoute(:final id):
-        return PersonDetailsPage(
-          personId: id,
-          repository: _services.repository,
-          onCreditSelected: (credit) => context.push(AppRoutes.details(credit.type, credit.item.id), extra: credit.item),
+        return _PopOnEscape(
+          child: PersonDetailsPage(
+            personId: id,
+            repository: _services.repository,
+            onCreditSelected: (credit) => context.push(AppRoutes.details(credit.type, credit.item.id), extra: credit.item),
+            pageBuilder: (context, title, body) => PopcornFluentSplashScreen(
+              child: ScaffoldPage(
+                header: PageHeader(
+                  leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+                  title: Text(title),
+                  commandBar: const PopcornAppBarLogo(),
+                ),
+                content: body,
+              ),
+            ),
+          ),
         );
       case WatchRoute(:final type, :final id, :final season, :final episode, :final provider):
         return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null, provider);

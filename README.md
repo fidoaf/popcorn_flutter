@@ -37,9 +37,9 @@ seeks are saved immediately; normal progress is saved every five seconds and
 on pause. Completed videos resume from the beginning.
 
 Before deploying this feature, apply
-[`20261012000000_watch_history_playback.sql`](supabase/migrations/20261012000000_watch_history_playback.sql)
-followed by
 [`20261012000001_watch_history_playback_columns.sql`](supabase/migrations/20261012000001_watch_history_playback_columns.sql)
+followed by
+[`20261012000002_watch_history_resume_only.sql`](supabase/migrations/20261012000002_watch_history_resume_only.sql)
 to the existing Supabase database, then deploy both the Flutter app and the
 player server. The existing profile-scoped RLS policies and unique key on
 `(profile_id, media_type, media_id)` are required. No Realtime publication is
@@ -49,9 +49,16 @@ Playback settings use individual columns: `playback_provider`, `playback_source`
 `audio_language`, `subtitle_selection`, and `position_seconds`. Position is a
 nonnegative, finite number of seconds. A null subtitle selection means no saved
 choice; an empty string means subtitles are off. The follow-up migration copies
-existing JSONB snapshots into these columns and drops the `playback` column. If
-the first migration has already been applied, run only the follow-up migration.
-Older app versions that write the JSONB column must be upgraded as well.
+existing JSONB snapshots into these columns and drops the `playback` column.
+Skip migrations that have already been applied. Older app versions that write
+removed columns must be upgraded as well.
+
+History stores only ownership, media identity, episode, playback settings,
+position, and timestamp. The resume-only migration removes `title`, `overview`,
+`poster_url`, `release_date`, and `vote_average` without removing history rows.
+Display metadata is loaded from the catalog and cached in memory by media type
+and ID. If the catalog is unavailable, entries still retain their resume state
+and display their media ID until a later lookup succeeds.
 
 The hosted player and native player support session capture. Sources and
 subtitles are matched against fresh catalogs instead of reusing expired IDs.

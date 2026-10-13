@@ -190,6 +190,7 @@ class _PopcornWebAppState extends State<_PopcornWebApp> with WidgetsBindingObser
           personId: id,
           repository: _services.repository,
           onCreditSelected: (credit) => context.push(AppRoutes.details(credit.type, credit.item.id), extra: credit.item),
+          pageBuilder: _scaffoldPage,
         );
       case WatchRoute(:final type, :final id, :final season, :final episode, :final provider):
         return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null, provider);

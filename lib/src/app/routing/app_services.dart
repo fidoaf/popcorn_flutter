@@ -29,7 +29,9 @@ final class AppServices {
       homeFeedController: HomeFeedController(repository: repository),
       mediaSourceProvider: await MediaSourceProviderFactory.createFromAsset(),
       favoritesController: FavoritesController(repository: FavoritesRepositoryFactory.create(profileRepository: profileRepository)),
-      historyController: WatchHistoryController(repository: WatchHistoryRepositoryFactory.create(profileRepository: profileRepository)),
+      historyController: WatchHistoryController(
+        repository: WatchHistoryRepositoryFactory.create(profileRepository: profileRepository, mediaRepository: repository),
+      ),
       authController: AuthController(),
       profileController: ProfileController(repository: profileRepository),
     );

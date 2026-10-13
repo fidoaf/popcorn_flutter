@@ -6,11 +6,12 @@ import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 
 /// A TMDB-style person profile with biography and a selectable known-for rail.
 class PersonDetailsPage extends StatefulWidget {
-  const PersonDetailsPage({super.key, required this.personId, required this.repository, required this.onCreditSelected});
+  const PersonDetailsPage({super.key, required this.personId, required this.repository, required this.onCreditSelected, required this.pageBuilder});
 
   final int personId;
   final MediaSearchRepository repository;
   final ValueChanged<PersonCredit> onCreditSelected;
+  final Widget Function(BuildContext context, String title, Widget body) pageBuilder;
 
   @override
   State<PersonDetailsPage> createState() => _PersonDetailsPageState();
@@ -27,16 +28,12 @@ class _PersonDetailsPageState extends State<PersonDetailsPage> {
       future: _personFuture,
       builder: (context, snapshot) {
         final person = snapshot.data;
-        return Scaffold(
-          appBar: AppBar(title: Text(person?.name ?? '')),
-          body: SafeArea(
-            child: switch (snapshot.connectionState) {
-              ConnectionState.waiting => const Center(child: CircularProgressIndicator()),
-              _ when snapshot.hasError || person == null => _PersonError(onRetry: _retry),
-              _ => _PersonProfile(person: person, onCreditSelected: widget.onCreditSelected),
-            },
-          ),
-        );
+        final body = switch (snapshot.connectionState) {
+          ConnectionState.waiting => const Center(child: CircularProgressIndicator()),
+          _ when snapshot.hasError || person == null => _PersonError(onRetry: _retry),
+          _ => _PersonProfile(person: person, onCreditSelected: widget.onCreditSelected),
+        };
+        return widget.pageBuilder(context, person?.name ?? '', body);
       },
     );
   }

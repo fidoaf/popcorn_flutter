@@ -1,11 +1,15 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
 import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/media_details_format.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/search/domain/cast_member.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 import 'package:popcorn_flutter/src/search/domain/media_watch_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Renders provider logos only, hiding itself while loading or when unavailable.
 class WatchProvidersBuilder extends StatelessWidget {
@@ -29,14 +33,28 @@ class WatchProvidersBuilder extends StatelessWidget {
               children: [
                 for (final provider in items)
                   Semantics(
-                    image: true,
-                    label: provider.name,
-                    child: Image.network(
-                      provider.logoUrl.toString(),
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => const SizedBox(width: 40, height: 40),
+                    button: provider.justWatchUrl != null,
+                    enabled: provider.justWatchUrl != null,
+                    label: '${provider.name} on JustWatch',
+                    child: Tooltip(
+                      message: provider.name,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(4),
+                        onTap: provider.justWatchUrl == null ? null : () => launchUrl(provider.justWatchUrl!),
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Center(
+                            child: Image.network(
+                              provider.logoUrl.toString(),
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 40, height: 40),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -129,9 +147,8 @@ class CreditsBuilder extends StatelessWidget {
 
   final Future<MediaDetails>? details;
 
-  /// Called with the director (may be null) and the cast names joined into a
-  /// single line (may be null when empty).
-  final Widget Function(BuildContext context, String? director, String? cast) builder;
+  /// Called with director and cast records, including person IDs when known.
+  final Widget Function(BuildContext context, List<CastMember> directors, List<CastMember> cast) builder;
 
   @override
   Widget build(BuildContext context) {
@@ -142,11 +159,64 @@ class CreditsBuilder extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) return const _CreditsSkeleton();
         final data = snapshot.data;
         if (data == null) return const SizedBox.shrink();
-        final director = data.director;
-        final cast = data.cast.isEmpty ? null : data.cast.join(', ');
-        if (director == null && cast == null) return const SizedBox.shrink();
-        return builder(context, director, cast);
+        final directors = data.directors.isNotEmpty
+            ? data.directors
+            : data.director == null
+            ? const <CastMember>[]
+            : data.director!.split(', ').map((name) => CastMember(name: name)).toList(growable: false);
+        final cast = data.castMembers.isNotEmpty ? data.castMembers : data.cast.map((name) => CastMember(name: name)).toList(growable: false);
+        if (directors.isEmpty && cast.isEmpty) return const SizedBox.shrink();
+        return builder(context, directors, cast);
       },
+    );
+  }
+}
+
+/// Renders person names as links when their TMDB IDs are available.
+class PersonNames extends StatelessWidget {
+  const PersonNames({super.key, required this.members, this.style});
+
+  final List<CastMember> members;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    if (members.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 0,
+      runSpacing: 4,
+      children: [
+        for (var index = 0; index < members.length; index++)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PersonNameLink(member: members[index], style: style),
+              if (index < members.length - 1) Text(',', style: style),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class PersonNameLink extends StatelessWidget {
+  const PersonNameLink({super.key, required this.member, this.style});
+
+  final CastMember member;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = member.id != null;
+    final baseStyle = style ?? DefaultTextStyle.of(context).style;
+    final linkStyle = enabled ? baseStyle.copyWith(color: Theme.of(context).colorScheme.primary, decoration: TextDecoration.underline) : style;
+    return Semantics(
+      link: enabled,
+      enabled: enabled,
+      child: InkWell(
+        onTap: enabled ? () => context.push(AppRoutes.person(member.id!)) : null,
+        child: Text(member.name, style: linkStyle),
+      ),
     );
   }
 }

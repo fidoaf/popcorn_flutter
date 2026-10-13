@@ -182,21 +182,21 @@ class MaterialMediaDetailsView extends StatelessWidget {
         Text(overview.isEmpty ? DetailsTranslations.noOverview.trOf(context) : overview, style: theme.textTheme.bodyMedium),
         CreditsBuilder(
           details: details,
-          builder: (context, director, cast) => Padding(
+          builder: (context, directors, cast) => Padding(
             padding: const EdgeInsets.only(top: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (director != null) ...[
+                if (directors.isNotEmpty) ...[
                   Text(DetailsTranslations.director.trOf(context), style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
-                  Text(director, style: theme.textTheme.bodyMedium),
+                  PersonNames(members: directors, style: theme.textTheme.bodyMedium),
                 ],
-                if (director != null && cast != null) const SizedBox(height: 16),
-                if (cast != null) ...[
+                if (directors.isNotEmpty && cast.isNotEmpty) const SizedBox(height: 16),
+                if (cast.isNotEmpty) ...[
                   Text(DetailsTranslations.cast.trOf(context), style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
-                  Text(cast, style: theme.textTheme.bodyMedium),
+                  PersonNames(members: cast, style: theme.textTheme.bodyMedium),
                 ],
               ],
             ),

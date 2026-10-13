@@ -51,6 +51,7 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
   int? _episode;
   PlaybackSession _initialSession = const PlaybackSession();
   String? _profileId;
+  String? _historySaveError;
 
   @override
   void initState() {
@@ -73,6 +74,7 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
   Future<void> _start(MediaItem item) async {
     final history = widget.services.historyController;
     try {
+      await widget.services.profileController.reload();
       await history.ready;
       await history.reload();
     } catch (error) {
@@ -118,14 +120,25 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
 
   void _record(PlaybackSession playback) {
     final item = _item;
-    if (item == null || _profileId != widget.services.profileController.activeProfileId) return;
+    if (item == null) return;
+    if (_profileId != widget.services.profileController.activeProfileId) {
+      if (kDebugMode) debugPrint('[WatchHistory] Ignored playback event because the active profile changed');
+      return;
+    }
     final season = _season;
     final episode = _episode;
     void save() {
       if (_profileId != widget.services.profileController.activeProfileId) return;
-      widget.services.historyController.record(item, widget.type, season: season, episode: episode, playback: playback).catchError((Object error) {
-        debugPrint('Unable to save playback history: $error');
-      });
+      widget.services.historyController
+          .record(item, widget.type, season: season, episode: episode, playback: playback)
+          .then((_) {
+            if (kDebugMode) debugPrint('[WatchHistory] Saved ${widget.type.name} ${item.id} at ${playback.positionSeconds}s');
+            if (mounted && _historySaveError != null) setState(() => _historySaveError = null);
+          })
+          .catchError((Object error) {
+            debugPrint('Unable to save playback history: $error');
+            if (mounted) setState(() => _historySaveError = 'Watch history could not be saved: $error');
+          });
     }
 
     if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
@@ -194,7 +207,22 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
       mediaType: widget.type.name,
       season: _season,
       episode: _episode,
-      child: widget.builder(context, source, _item!, _onUrlChanged),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          widget.builder(context, source, _item!, _onUrlChanged),
+          if (_historySaveError != null)
+            Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                color: const Color(0xFF9B1C20),
+                child: Text(_historySaveError!, style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 14)),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

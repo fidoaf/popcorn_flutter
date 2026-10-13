@@ -6,6 +6,7 @@ import 'package:popcorn_flutter/src/search/infrastructure/tmdb_media_search_repo
 /// wiring the concrete TMDB data source with its credentials.
 abstract final class MediaSearchRepositoryFactory {
   static const String _accessTokenKey = 'tmdb.accessToken';
+  static const String _playerServerUrl = String.fromEnvironment('PLAYER_SERVER_URL', defaultValue: 'https://popcorn-flutter.onrender.com');
   const MediaSearchRepositoryFactory._();
 
   static MediaSearchRepository create() {
@@ -13,6 +14,6 @@ abstract final class MediaSearchRepositoryFactory {
     if (accessToken == null || accessToken.isEmpty) {
       throw StateError('Missing $_accessTokenKey in environment (.env).');
     }
-    return TmdbMediaSearchRepository(accessToken: accessToken);
+    return TmdbMediaSearchRepository(accessToken: accessToken, playerServerUrl: Uri.parse(_playerServerUrl));
   }
 }

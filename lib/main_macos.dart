@@ -248,6 +248,16 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
           personId: id,
           repository: _services.repository,
           onCreditSelected: (credit) => context.push(AppRoutes.details(credit.type, credit.item.id), extra: credit.item),
+          pageBuilder: (context, title, body) => PopcornMacosSplashScreen(
+            child: MacosScaffold(
+              toolBar: ToolBar(
+                title: Text(title),
+                leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+                actions: [CustomToolbarItem(inToolbarBuilder: (context) => const PopcornAppBarLogo())],
+              ),
+              children: [ContentArea(builder: (context, _) => body)],
+            ),
+          ),
         );
       case WatchRoute(:final type, :final id, :final season, :final episode, :final provider):
         return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null, provider);
