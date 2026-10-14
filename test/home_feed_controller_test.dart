@@ -29,15 +29,25 @@ MediaVideo _video(String key, {String type = 'Trailer', String site = 'YouTube',
     MediaVideo(id: key, key: key, name: key, site: site, type: type, publishedAt: date == null ? null : DateTime.parse(date));
 
 class _Repository implements MediaSearchRepository {
-  _Repository(this.loadVideos);
+  _Repository(
+    this.loadVideos, {
+    this.movies = const [_movie],
+    this.tvSeries = const [_series],
+    this.movieSearchResults = const [_movie],
+    this.tvSearchResults = const [_series],
+  });
 
   final Future<List<MediaVideo>> Function(int, MediaType) loadVideos;
+  final List<MediaItem> movies;
+  final List<MediaItem> tvSeries;
+  final List<MediaItem> movieSearchResults;
+  final List<MediaItem> tvSearchResults;
 
   @override
-  Future<List<MediaItem>> trending(MediaType type) async => type == MediaType.movie ? [_movie] : [_series];
+  Future<List<MediaItem>> trending(MediaType type) async => type == MediaType.movie ? movies : tvSeries;
 
   @override
-  Future<List<MediaItem>> search(String query, MediaType mediaType) async => mediaType == MediaType.movie ? [_movie] : [_series];
+  Future<List<MediaItem>> search(String query, MediaType mediaType) async => mediaType == MediaType.movie ? movieSearchResults : tvSearchResults;
 
   @override
   Future<List<MediaVideo>> videos(int id, MediaType type) => loadVideos(id, type);
@@ -55,8 +65,12 @@ class _EmptyFavorites implements FavoritesRepository {
 }
 
 class _EmptyHistory implements WatchHistoryRepository {
+  _EmptyHistory({this.entries = const []});
+
+  final List<WatchHistoryEntry> entries;
+
   @override
-  Future<List<WatchHistoryEntry>> load() async => [];
+  Future<List<WatchHistoryEntry>> load() async => entries;
 
   @override
   Future<void> upsert(WatchHistoryEntry entry) async {}
@@ -82,6 +96,54 @@ void main() {
     final repository = TmdbMediaSearchRepository(accessToken: 'test', client: client);
     final videos = await repository.videos(1, MediaType.movie);
     expect(videos.single.publishedAt, DateTime.utc(2026, 10, 1, 12));
+  });
+
+  test('TMDB TV trending and search results load latest episode metadata', () async {
+    final latestEpisodeAirDate = DateTime.now().subtract(const Duration(days: 7));
+    var detailRequests = 0;
+    final client = MockClient((request) async {
+      switch (request.url.path) {
+        case '/3/trending/tv/week':
+        case '/3/search/tv':
+          return http.Response(
+            jsonEncode({
+              'results': [
+                {'id': 1, 'name': 'Series', 'first_air_date': '2020-01-01'},
+              ],
+            }),
+            200,
+          );
+        case '/3/tv/1':
+          detailRequests++;
+          return http.Response(
+            jsonEncode({
+              'id': 1,
+              'name': 'Series',
+              'first_air_date': '2020-01-01',
+              'last_episode_to_air': {'air_date': latestEpisodeAirDate.toIso8601String(), 'episode_number': 2},
+              'seasons': [
+                {'season_number': 0, 'air_date': latestEpisodeAirDate.toIso8601String()},
+                {'season_number': 3, 'air_date': latestEpisodeAirDate.toIso8601String()},
+              ],
+            }),
+            200,
+          );
+        default:
+          throw StateError('Unexpected TMDB request: ${request.url}');
+      }
+    });
+    addTearDown(client.close);
+    final repository = TmdbMediaSearchRepository(accessToken: 'test', client: client);
+
+    final trendingItem = (await repository.trending(MediaType.tv)).single;
+    final searchItem = (await repository.search('Series', MediaType.tv)).single;
+
+    expect(trendingItem.releaseDate, DateTime(2020));
+    expect(trendingItem.latestEpisodeAirDate, latestEpisodeAirDate);
+    expect(trendingItem.latestEpisodeNumber, 2);
+    expect(trendingItem.latestSeasonAirDate, latestEpisodeAirDate);
+    expect(searchItem.latestSeasonAirDate, latestEpisodeAirDate);
+    expect(detailRequests, 1);
   });
 
   test('selects the newest playable trailer per trending title and sorts by publication date', () async {
@@ -134,6 +196,165 @@ void main() {
     await pumpEventQueue();
     expect(controller.trendingTrailers, isEmpty);
   });
+
+  testWidgets('TV poster cards show new series and new season labels', (tester) async {
+    final now = DateTime.now();
+    final feed = HomeFeedController(
+      repository: _Repository(
+        (id, type) async => [],
+        tvSeries: [
+          MediaItem(id: 2, title: 'New Series', overview: '', releaseDate: now.subtract(const Duration(days: 7))),
+          MediaItem(
+            id: 3,
+            title: 'New Season',
+            overview: '',
+            releaseDate: now.subtract(const Duration(days: 365)),
+            latestEpisodeAirDate: now.subtract(const Duration(days: 7)),
+            latestEpisodeNumber: 1,
+          ),
+          MediaItem(
+            id: 4,
+            title: 'No New Season',
+            overview: '',
+            releaseDate: now.subtract(const Duration(days: 365)),
+            latestEpisodeAirDate: now.subtract(const Duration(days: 31)),
+            latestEpisodeNumber: 2,
+          ),
+          MediaItem(
+            id: 8,
+            title: 'New Season Episode Two',
+            overview: '',
+            releaseDate: now.subtract(const Duration(days: 365)),
+            latestEpisodeAirDate: now.subtract(const Duration(days: 7)),
+            latestEpisodeNumber: 2,
+          ),
+        ],
+      ),
+    );
+    final favorites = FavoritesController(repository: _EmptyFavorites());
+    final history = WatchHistoryController(repository: _EmptyHistory());
+    final search = MediaSearchController(repository: _Repository((id, type) async => []));
+    addTearDown(feed.dispose);
+    addTearDown(favorites.dispose);
+    addTearDown(history.dispose);
+    addTearDown(search.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BrowseHomeView(
+            feedController: feed,
+            favoritesController: favorites,
+            historyController: history,
+            searchController: search,
+            onOpenDetails: (item, type) {},
+            onPlay: (item, type) {},
+            onResume: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Trending TV Series'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('NEW SERIES'), findsOneWidget);
+    expect(find.text('SEASON PREMIERE'), findsOneWidget);
+    expect(find.text('NEW SEASON'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('recent movie posters and season premieres are labeled', (tester) async {
+    final now = DateTime.now();
+    final feed = HomeFeedController(
+      repository: _Repository(
+        (id, type) async => [],
+        movies: [MediaItem(id: 5, title: 'New Movie', overview: '', releaseDate: now.subtract(const Duration(days: 7)))],
+        tvSeries: const [],
+      ),
+    );
+    final favorites = FavoritesController(repository: _EmptyFavorites());
+    final history = WatchHistoryController(
+      repository: _EmptyHistory(
+        entries: [WatchHistoryEntry(item: _series, type: MediaType.tv, season: 2, episode: 1, watchedAt: now)],
+      ),
+    );
+    final search = MediaSearchController(repository: _Repository((id, type) async => []));
+    addTearDown(feed.dispose);
+    addTearDown(favorites.dispose);
+    addTearDown(history.dispose);
+    addTearDown(search.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BrowseHomeView(
+            feedController: feed,
+            favoritesController: favorites,
+            historyController: history,
+            searchController: search,
+            onOpenDetails: (item, type) {},
+            onPlay: (item, type) {},
+            onResume: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Trending Movies'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('NEW MOVIE'), findsOneWidget);
+    expect(find.text('SEASON PREMIERE'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final type in MediaType.values) {
+    testWidgets('search result posters show recent ${type.name} tags', (tester) async {
+      final now = DateTime.now();
+      final movie = MediaItem(id: 6, title: 'Recent Movie', overview: '', releaseDate: now.subtract(const Duration(days: 7)));
+      final series = MediaItem(
+        id: 7,
+        title: 'Recent Series Premiere',
+        overview: '',
+        releaseDate: now.subtract(const Duration(days: 365)),
+        latestEpisodeAirDate: now.subtract(const Duration(days: 7)),
+        latestEpisodeNumber: 2,
+        latestSeasonAirDate: now.subtract(const Duration(days: 7)),
+      );
+      final repository = _Repository((id, mediaType) async => [], movieSearchResults: [movie], tvSearchResults: [series]);
+      final feed = HomeFeedController(repository: repository);
+      final favorites = FavoritesController(repository: _EmptyFavorites());
+      final history = WatchHistoryController(repository: _EmptyHistory());
+      final search = MediaSearchController(repository: repository);
+      addTearDown(feed.dispose);
+      addTearDown(favorites.dispose);
+      addTearDown(history.dispose);
+      addTearDown(search.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BrowseHomeView(
+              feedController: feed,
+              favoritesController: favorites,
+              historyController: history,
+              searchController: search,
+              initialQuery: 'recent',
+              initialMediaType: type,
+              onOpenDetails: (item, mediaType) {},
+              onPlay: (item, mediaType) {},
+              onResume: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(type == MediaType.movie ? 'NEW MOVIE' : 'SEASON PREMIERE'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   for (final fromDeepLink in [false, true]) {
     testWidgets('search URL and browser back preserve search with deep link $fromDeepLink', (tester) async {

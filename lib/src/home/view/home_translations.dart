@@ -25,6 +25,14 @@ class HomeTranslations {
 
   static const trendingTv = Translation({AppLanguage.en: 'Trending TV Series', AppLanguage.es: 'Series en tendencia', AppLanguage.ca: 'Sèries en tendència'});
 
+  static const newSeason = Translation({AppLanguage.en: 'NEW SEASON', AppLanguage.es: 'NUEVA TEMPORADA', AppLanguage.ca: 'NOVA TEMPORADA'});
+
+  static const seasonPremiere = Translation({AppLanguage.en: 'SEASON PREMIERE', AppLanguage.es: 'ESTRENO DE TEMPORADA', AppLanguage.ca: 'ESTRENA DE TEMPORADA'});
+
+  static const newSeries = Translation({AppLanguage.en: 'NEW SERIES', AppLanguage.es: 'NUEVA SERIE', AppLanguage.ca: 'SÈRIE NOVA'});
+
+  static const newMovie = Translation({AppLanguage.en: 'NEW MOVIE', AppLanguage.es: 'NUEVA PELÍCULA', AppLanguage.ca: 'PEL·LÍCULA NOVA'});
+
   static const trendingTrailers = Translation({
     AppLanguage.en: 'Trending trailers',
     AppLanguage.es: 'Tráilers en tendencia',

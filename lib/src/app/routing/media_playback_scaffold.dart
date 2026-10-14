@@ -9,6 +9,7 @@ import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/next_episode.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/player/view/player_close_button.dart';
+import 'package:popcorn_flutter/src/player/view/player_overlay_layout.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
 /// Resolves the playable [MediaSource] for a `/watch` route and records the
@@ -256,7 +257,7 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
               right: 0,
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 12, right: 12),
+                  padding: EdgeInsets.only(top: 12 + playerOverlayTopInset(context), right: 12),
                   child: PlayerCloseButton(
                     onClose: () {
                       final router = GoRouter.of(context);

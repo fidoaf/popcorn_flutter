@@ -220,6 +220,9 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                   item: entry.item,
                   mediaType: entry.type,
                   favoritesController: widget.favoritesController,
+                  badgeLabel: entry.type == MediaType.tv && entry.episode == 1
+                      ? HomeTranslations.seasonPremiere.trOf(context)
+                      : _posterBadgeLabel(entry.item, entry.type, context),
                   showResumeBadge: true,
                   onTap: () => widget.onOpenDetails(entry.item, entry.type),
                   onResume: () => widget.onResume(entry),
@@ -238,6 +241,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                   item: favorite.item,
                   mediaType: favorite.type,
                   favoritesController: widget.favoritesController,
+                  badgeLabel: _posterBadgeLabel(favorite.item, favorite.type, context),
                   onTap: () => widget.onOpenDetails(favorite.item, favorite.type),
                 );
               },
@@ -252,6 +256,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                   item: item,
                   mediaType: MediaType.movie,
                   favoritesController: widget.favoritesController,
+                  badgeLabel: _posterBadgeLabel(item, MediaType.movie, context),
                   onTap: () => widget.onOpenDetails(item, MediaType.movie),
                 );
               },
@@ -266,6 +271,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                   item: item,
                   mediaType: MediaType.tv,
                   favoritesController: widget.favoritesController,
+                  badgeLabel: _posterBadgeLabel(item, MediaType.tv, context),
                   onTap: () => widget.onOpenDetails(item, MediaType.tv),
                 );
               },
@@ -523,6 +529,7 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                 item: item,
                 mediaType: widget.controller.mediaType,
                 favoritesController: widget.favoritesController,
+                badgeLabel: _posterBadgeLabel(item, widget.controller.mediaType, context),
                 autofocus: widget.enableDpadFocus && index == 0,
                 onTap: () => widget.onOpenDetails(item),
               );
@@ -580,12 +587,20 @@ class _MediaTypeToggle extends StatelessWidget {
 
 /// A poster + title cell used in the search results grid.
 class _SearchResultCard extends StatelessWidget {
-  const _SearchResultCard({required this.item, required this.mediaType, required this.favoritesController, required this.onTap, this.autofocus = false});
+  const _SearchResultCard({
+    required this.item,
+    required this.mediaType,
+    required this.favoritesController,
+    required this.onTap,
+    this.badgeLabel,
+    this.autofocus = false,
+  });
 
   final MediaItem item;
   final MediaType mediaType;
   final FavoritesController favoritesController;
   final VoidCallback onTap;
+  final String? badgeLabel;
   final bool autofocus;
 
   @override
@@ -619,6 +634,7 @@ class _SearchResultCard extends StatelessWidget {
                           : const _PosterPlaceholder(),
                     ),
                   ),
+                  if (badgeLabel != null) Positioned(top: 0, right: 0, child: _PosterBadge(label: badgeLabel!)),
                   Positioned(
                     right: 4,
                     bottom: 4,
@@ -983,6 +999,7 @@ class _PosterCard extends StatelessWidget {
     required this.mediaType,
     required this.favoritesController,
     required this.onTap,
+    this.badgeLabel,
     this.showResumeBadge = false,
     this.onResume,
   });
@@ -991,6 +1008,7 @@ class _PosterCard extends StatelessWidget {
   final MediaType mediaType;
   final FavoritesController favoritesController;
   final VoidCallback onTap;
+  final String? badgeLabel;
   final bool showResumeBadge;
 
   /// Tapped by the resume badge's play button; falls back to [onTap] when null.
@@ -1030,6 +1048,7 @@ class _PosterCard extends StatelessWidget {
                   )
                 else
                   const _PosterPlaceholder(),
+                if (badgeLabel != null) Positioned(top: 0, right: 0, child: _PosterBadge(label: badgeLabel!)),
                 if (showResumeBadge)
                   Positioned(
                     left: 0,
@@ -1070,6 +1089,47 @@ class _PosterCard extends StatelessWidget {
       },
     );
   }
+}
+
+class _PosterBadge extends StatelessWidget {
+  const _PosterBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: label,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F7F7),
+          borderRadius: BorderRadius.only(bottomLeft: Radius.circular(4)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(color: Color(0xFF111111), fontSize: 10, fontWeight: FontWeight.w800, height: 1),
+        ),
+      ),
+    );
+  }
+}
+
+String? _posterBadgeLabel(MediaItem item, MediaType mediaType, BuildContext context) {
+  final now = DateTime.now();
+  final cutoff = now.subtract(const Duration(days: 30));
+  bool isRecent(DateTime? date) => date != null && !date.isAfter(now) && !date.isBefore(cutoff);
+
+  if (mediaType == MediaType.movie) {
+    return isRecent(item.releaseDate) ? HomeTranslations.newMovie.trOf(context) : null;
+  }
+
+  if (isRecent(item.releaseDate)) return HomeTranslations.newSeries.trOf(context);
+  if (isRecent(item.latestSeasonAirDate)) return HomeTranslations.seasonPremiere.trOf(context);
+  if (isRecent(item.latestEpisodeAirDate)) {
+    return item.latestEpisodeNumber == 1 ? HomeTranslations.seasonPremiere.trOf(context) : HomeTranslations.newSeason.trOf(context);
+  }
+  return null;
 }
 
 class _PosterPlaceholder extends StatelessWidget {

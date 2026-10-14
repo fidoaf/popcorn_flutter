@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1]
+
+### Added
+- Web app installation prompt with browser-specific instructions.
+- Home-feed badges for new movies, series, and seasons.
+
+### Changed
+- Enriched and cached TV series release metadata used by the home feed.
+- Improved player close-button placement on narrow screens.
+
 ## [1.7.0]
 
 ### Added

@@ -72,9 +72,9 @@ class _WebUpdateBannerState extends State<WebUpdateBanner> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(onPressed: _forceReload, child: Text(AppTranslations.updateReload.trOf(context))),
+                    // No tooltip: this sits above the Navigator, so there is no Overlay.
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white70, size: 20),
-                      tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                      icon: Icon(Icons.close, color: Colors.white70, size: 20, semanticLabel: MaterialLocalizations.of(context).closeButtonTooltip),
                       onPressed: () => setState(() => _dismissed = true),
                     ),
                   ],

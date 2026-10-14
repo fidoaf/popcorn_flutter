@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -32,6 +33,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   final String _accessToken;
   final Uri? _playerServerUrl;
   final http.Client _client;
+  final Map<String, Future<MediaItem>> _mediaItemCache = {};
 
   @override
   Future<List<MediaItem>> search(String query, MediaType mediaType) async {
@@ -60,7 +62,8 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final results = (decoded['results'] as List<dynamic>?) ?? const <dynamic>[];
-    return results.cast<Map<String, dynamic>>().map(_toMediaItem).toList(growable: false);
+    final items = results.cast<Map<String, dynamic>>().map(_toMediaItem).toList(growable: false);
+    return mediaType == MediaType.tv ? _includeLatestEpisodeMetadata(items) : items;
   }
 
   @override
@@ -88,7 +91,23 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   }
 
   @override
-  Future<MediaItem> mediaItem(int id, MediaType mediaType) async {
+  Future<MediaItem> mediaItem(int id, MediaType mediaType) {
+    final cacheKey = '${mediaType.name}:$id';
+    final cached = _mediaItemCache[cacheKey];
+    if (cached != null) return cached;
+
+    final request = _fetchMediaItem(id, mediaType).then(
+      (item) => item,
+      onError: (Object error, StackTrace stackTrace) {
+        _mediaItemCache.remove(cacheKey);
+        Error.throwWithStackTrace(error, stackTrace);
+      },
+    );
+    _mediaItemCache[cacheKey] = request;
+    return request;
+  }
+
+  Future<MediaItem> _fetchMediaItem(int id, MediaType mediaType) async {
     final uri = Uri.parse('$_baseUrl/${_pathSegment(mediaType)}/$id');
 
     final http.Response response;
@@ -108,6 +127,36 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     return _toMediaItem(decoded);
+  }
+
+  Future<List<MediaItem>> _includeLatestEpisodeMetadata(List<MediaItem> items) async {
+    return Future.wait(
+      items.map((item) async {
+        if (item.latestSeasonAirDate != null || (item.latestEpisodeAirDate != null && item.latestEpisodeNumber == 1)) return item;
+
+        try {
+          final details = await mediaItem(item.id, MediaType.tv);
+          return MediaItem(
+            id: item.id,
+            title: item.title,
+            overview: item.overview,
+            posterUrl: item.posterUrl,
+            releaseDate: item.releaseDate,
+            latestEpisodeAirDate: details.latestEpisodeAirDate ?? item.latestEpisodeAirDate,
+            latestEpisodeNumber: details.latestEpisodeNumber ?? item.latestEpisodeNumber,
+            latestSeasonAirDate: details.latestSeasonAirDate ?? item.latestSeasonAirDate,
+            voteAverage: item.voteAverage,
+          );
+        } on MediaSearchException catch (error) {
+          developer.log(
+            'Could not load latest episode metadata for TV series ${item.id}',
+            name: 'popcorn_flutter.search',
+            error: error,
+          );
+          return item;
+        }
+      }),
+    );
   }
 
   @override
@@ -155,7 +204,8 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final results = (decoded['results'] as List<dynamic>?) ?? const <dynamic>[];
-    return results.cast<Map<String, dynamic>>().map(_toMediaItem).toList(growable: false);
+    final items = results.cast<Map<String, dynamic>>().map(_toMediaItem).toList(growable: false);
+    return mediaType == MediaType.tv ? _includeLatestEpisodeMetadata(items) : items;
   }
 
   @override
@@ -478,12 +528,22 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     // Movies expose `title`/`release_date`, TV series expose `name`/`first_air_date`.
     final title = (json['title'] as String?) ?? (json['name'] as String?) ?? '';
     final releaseDate = (json['release_date'] as String?) ?? (json['first_air_date'] as String?);
+    final latestEpisode = json['last_episode_to_air'] as Map<String, dynamic>?;
+    final seasons = (json['seasons'] as List<dynamic>?) ?? const <dynamic>[];
+    final seasonAirDates = seasons.cast<Map<String, dynamic>>().where((season) {
+      final seasonNumber = (season['season_number'] as num?)?.toInt() ?? 0;
+      return seasonNumber > 0 && _parseDate(season['air_date'] as String?) != null;
+    }).map((season) => _parseDate(season['air_date'] as String?)!);
+    final latestSeasonAirDate = seasonAirDates.isEmpty ? null : seasonAirDates.reduce((first, second) => first.isAfter(second) ? first : second);
     return MediaItem(
       id: json['id'] as int,
       title: title,
       overview: (json['overview'] as String?) ?? '',
       posterUrl: posterPath == null ? null : Uri.parse('$_posterBaseUrl$posterPath'),
       releaseDate: _parseDate(releaseDate),
+      latestEpisodeAirDate: _parseDate(latestEpisode?['air_date'] as String?),
+      latestEpisodeNumber: (latestEpisode?['episode_number'] as num?)?.toInt(),
+      latestSeasonAirDate: latestSeasonAirDate,
       voteAverage: (json['vote_average'] as num?)?.toDouble(),
     );
   }

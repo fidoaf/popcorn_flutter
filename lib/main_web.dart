@@ -13,6 +13,7 @@ import 'package:popcorn_flutter/src/app/update/web_update_checker.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
 import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
+import 'package:popcorn_flutter/src/app/view/web/install_prompt.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
@@ -145,21 +146,24 @@ class _PopcornWebAppState extends State<_PopcornWebApp> with WidgetsBindingObser
       routerConfig: _router!,
       builder: (context, child) => WebUpdateBanner(
         checker: _updateChecker,
-        child: SystemBarsBackground(
-          backgroundColor: _background,
-          child: AuthGate(
-            controller: _services.authController,
-            currentRoute: _location,
-            isPublicRoute: AppRoutes.isPublic,
-            loginBuilder: (context) => Theme(
-              data: _theme,
-              child: MaterialLoginView(
-                controller: _services.authController,
-                onOpenPrivacy: () => _router!.push(AppRoutes.privacy),
-                onOpenTerms: () => _router!.push(AppRoutes.terms),
+        child: WebInstallPrompt(
+          isPwa: _isPwa,
+          child: SystemBarsBackground(
+            backgroundColor: _background,
+            child: AuthGate(
+              controller: _services.authController,
+              currentRoute: _location,
+              isPublicRoute: AppRoutes.isPublic,
+              loginBuilder: (context) => Theme(
+                data: _theme,
+                child: MaterialLoginView(
+                  controller: _services.authController,
+                  onOpenPrivacy: () => _router!.push(AppRoutes.privacy),
+                  onOpenTerms: () => _router!.push(AppRoutes.terms),
+                ),
               ),
+              child: child!,
             ),
-            child: child!,
           ),
         ),
       ),

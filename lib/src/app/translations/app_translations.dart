@@ -20,6 +20,58 @@ class AppTranslations {
 
   static const updateReload = Translation({AppLanguage.en: 'Reload', AppLanguage.es: 'Recargar', AppLanguage.ca: 'Recarregar'});
 
+  static const installAppTitle = Translation({AppLanguage.en: 'Install Popcorn', AppLanguage.es: 'Instala Popcorn', AppLanguage.ca: 'Instal·la Popcorn'});
+
+  static const installAppMessage = Translation({
+    AppLanguage.en: 'For a better experience, add Popcorn to your device for quick access whenever you want.',
+    AppLanguage.es: 'Para una mejor experiencia, añade Popcorn a tu dispositivo y accede rápidamente cuando quieras.',
+    AppLanguage.ca: 'Per a una millor experiència, afegeix Popcorn al teu dispositiu i accedeix-hi ràpidament quan vulguis.',
+  });
+
+  static const installIosInstructionsTitle = Translation({
+    AppLanguage.en: 'How to install on iPhone/iPad:',
+    AppLanguage.es: 'Cómo instalar en iPhone/iPad:',
+    AppLanguage.ca: 'Com instal·lar a l’iPhone/iPad:',
+  });
+
+  static const installIosInstructionShare = Translation({
+    AppLanguage.en: 'Tap the Share button in your browser',
+    AppLanguage.es: 'Toca el botón Compartir del navegador',
+    AppLanguage.ca: 'Toca el botó Compartir del navegador',
+  });
+
+  static const installIosInstructionHome = Translation({
+    AppLanguage.en: 'Select “Add to Home Screen”',
+    AppLanguage.es: 'Selecciona “Añadir a pantalla de inicio”',
+    AppLanguage.ca: 'Selecciona “Afegir a la pantalla d’inici”',
+  });
+
+  static const installIosInstructionAdd = Translation({
+    AppLanguage.en: 'Tap “Add”',
+    AppLanguage.es: 'Toca “Añadir”',
+    AppLanguage.ca: 'Toca “Afegir”',
+  });
+
+  static const installBrowserInstructionsTitle = Translation({
+    AppLanguage.en: 'How to install:',
+    AppLanguage.es: 'Cómo instalar:',
+    AppLanguage.ca: 'Com instal·lar:',
+  });
+
+  static const installBrowserInstructionMenu = Translation({
+    AppLanguage.en: 'Open your browser menu',
+    AppLanguage.es: 'Abre el menú del navegador',
+    AppLanguage.ca: 'Obre el menú del navegador',
+  });
+
+  static const installBrowserInstructionApp = Translation({
+    AppLanguage.en: 'Choose “Install app” or “Add to Home Screen”',
+    AppLanguage.es: 'Elige “Instalar aplicación” o “Añadir a pantalla de inicio”',
+    AppLanguage.ca: 'Tria “Instal·la l’aplicació” o “Afegeix a la pantalla d’inici”',
+  });
+
+  static const installLater = Translation({AppLanguage.en: 'Later', AppLanguage.es: 'Más tarde', AppLanguage.ca: 'Més tard'});
+
   static const unsupportedPlatform = Translation({
     AppLanguage.en: 'Application not permitted on this operating system',
     AppLanguage.es: 'La aplicación no está permitida en este sistema operativo',
