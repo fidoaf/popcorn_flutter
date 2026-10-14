@@ -40,7 +40,7 @@ class WatchProvidersBuilder extends StatelessWidget {
                       message: provider.name,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(4),
-                        onTap: provider.justWatchUrl == null ? null : () => launchUrl(provider.justWatchUrl!),
+                        onTap: provider.justWatchUrl == null ? null : () => launchUrl(provider.justWatchUrl!, webOnlyWindowName: '_self'),
                         child: SizedBox(
                           width: 48,
                           height: 48,
@@ -191,7 +191,7 @@ class PersonNames extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               PersonNameLink(member: members[index], style: style),
-              if (index < members.length - 1) Text(',', style: style),
+              if (index < members.length - 1) Text(', ', style: style),
             ],
           ),
       ],

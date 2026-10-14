@@ -7,11 +7,10 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 
 /// Material share button that opens the share sheet for [item].
 class MaterialShareButton extends StatelessWidget {
-  const MaterialShareButton({super.key, required this.item, required this.type, this.provider, this.iconSize = 24});
+  const MaterialShareButton({super.key, required this.item, required this.type, this.iconSize = 24});
 
   final MediaItem item;
   final MediaType type;
-  final String? provider;
   final double iconSize;
 
   @override
@@ -20,7 +19,7 @@ class MaterialShareButton extends StatelessWidget {
       icon: const Icon(Icons.share),
       iconSize: iconSize,
       tooltip: DetailsTranslations.share.trOf(context),
-      onPressed: () => shareMedia(context, item, type, provider: provider),
+      onPressed: () => shareMedia(context, item, type),
     );
   }
 }

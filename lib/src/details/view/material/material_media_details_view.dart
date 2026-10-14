@@ -242,7 +242,7 @@ class MaterialMediaDetailsView extends StatelessWidget {
             iconSize: 28,
           ),
         ],
-        if (mediaType != null) ...[const SizedBox(width: 8), MaterialShareButton(item: item, type: mediaType!, provider: 'Render', iconSize: 28)],
+        if (mediaType != null) ...[const SizedBox(width: 8), MaterialShareButton(item: item, type: mediaType!, iconSize: 28)],
       ],
     );
   }

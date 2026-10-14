@@ -4,7 +4,7 @@ function escapeHtml(value) {
   })[character]);
 }
 
-function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}) {
+function renderPlayerPage(initialMedia, { providers = [], showForm = true, embedUrl = null } = {}) {
   const selectedType = initialMedia?.type || 'movie';
   const selectedProvider = initialMedia?.providerId || providers[0]?.id || '';
   const selectedLanguage = initialMedia?.lang || 'en';
@@ -26,7 +26,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
   <title>VidSrc Player</title>
   <style>
     html,body{margin:0;height:100%;background:#08090b;color:#f5f5f5;font-family:system-ui,sans-serif}
-    main{min-height:100%;display:flex;flex-direction:column}
+    main{height:100%;display:flex;flex-direction:column}
     header{padding:16px 20px;border-bottom:1px solid #292b30;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
     h1{font-size:16px;margin:0 12px 0 0;white-space:nowrap}
     form{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
@@ -39,8 +39,27 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     form button:hover{background:#ff2631}
     #now-playing{padding:10px 20px 0;color:#aeb3bd;font-size:13px}
     #video-container{position:relative;display:flex;flex:1;min-height:0;background:#000}
+    #provider-frame{border:0;width:100%;height:100%;position:absolute;inset:0;background:#000}
+    #provider-frame[hidden],#playback-settings[hidden]{display:none}
+    #settings-toggle{margin-left:auto;width:36px;height:36px;border:1px solid #ffffff50;border-radius:4px;background:#17191ee8;font-size:22px;text-decoration:none}
+    #settings-toggle[hidden]{display:none}
+    #playback-settings{position:absolute;z-index:5;bottom:12px;right:12px;box-sizing:border-box;width:min(340px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;padding:16px;background:#17191ef5;border:1px solid #41444c;border-radius:6px;box-shadow:0 8px 32px #0008}
+    .settings-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .settings-heading h2{font-size:16px;margin:0}
+    #settings-close{width:36px;height:36px;font-size:24px;text-decoration:none}
+    #playback-settings label{display:grid;gap:6px;margin:12px 0 0;font-size:12px;color:#aeb3bd}
+    #playback-settings select{width:100%;min-height:36px;padding:6px 8px;background:#08090b;color:#f5f5f5;border:1px solid #41444c;border-radius:4px}
+    #playback-settings select:disabled{opacity:.65}
+    #playback-settings select:focus-visible{outline:2px solid #e50914;outline-offset:2px}
+    #provider-note{font-size:12px;line-height:1.5;color:#aeb3bd;margin-bottom:0}
     #video-container[hidden],#video-loading[hidden]{display:none}
     video{width:100%;flex:1;min-height:0;background:#000}
+    #start-playback{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:76px;height:76px;padding:0;border:1px solid #ffffff80;border-radius:50%;background:#e50914;color:#fff;cursor:pointer;box-shadow:0 4px 24px #0008;transition:background-color .15s,transform .15s}
+    #start-playback:hover{background:#ff2631;transform:translate(-50%,-50%) scale(1.06)}
+    #start-playback:focus-visible{outline:3px solid white;outline-offset:4px}
+    .play-icon{width:0;height:0;margin-left:6px;border-top:14px solid transparent;border-bottom:14px solid transparent;border-left:22px solid currentColor}
+    .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    #start-playback[hidden]{display:none}
     #video-loading{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
     #video-loading::after{content:'';width:44px;height:44px;border:4px solid #ffffff40;border-top-color:#fff;border-radius:50%;animation:video-loading-spin .8s linear infinite}
     @keyframes video-loading-spin{to{transform:rotate(360deg)}}
@@ -72,15 +91,23 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     </header>` : ''}
     <div id="now-playing" hidden></div>
     <div id="video-container" hidden>
-      <video id="video" controls playsinline hidden></video>
+      <video id="video" playsinline hidden></video>
+      <iframe id="provider-frame" title="Provider player" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" hidden></iframe>
+      <button id="start-playback" type="button" title="Play" aria-label="Play" hidden><span class="play-icon" aria-hidden="true"></span><span class="visually-hidden">Play</span></button>
       <div id="video-loading" role="status" aria-label="Loading video" hidden></div>
+      <section id="playback-settings" role="dialog" aria-label="Playback settings" hidden>
+        <div class="settings-heading"><h2>Playback settings</h2><button id="settings-close" type="button" title="Close settings" aria-label="Close settings">&times;</button></div>
+        <label for="provider">Provider<select id="provider" disabled>${providerOptions}</select></label><label for="playback-language">Language<select id="playback-language"><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ja">Japanese</option><option value="ko">Korean</option></select></label><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label>
+        <p id="provider-note" hidden>Source and quality are managed in the provider player. Language and subtitle preferences depend on provider support.</p>
+      </section>
     </div>
-    <footer><span id="status">Enter an ID supported by the selected provider.</span> <button id="retry" hidden>Retry</button><label for="provider">Provider<select id="provider" disabled>${providerOptions}</select></label><label for="playback-language">Language<select id="playback-language"><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ja">Japanese</option><option value="ko">Korean</option></select></label><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label></footer>
+    <footer><span id="status">Enter an ID supported by the selected provider.</span> <button id="retry" hidden>Retry</button><button id="settings-toggle" type="button" title="Playback settings" aria-label="Playback settings" aria-controls="playback-settings" aria-expanded="false" hidden>&#9881;</button></footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
   <script>
     const video = document.getElementById('video');
     const videoContainer = document.getElementById('video-container');
+    const startPlaybackButton = document.getElementById('start-playback');
     const videoLoading = document.getElementById('video-loading');
     const status = document.getElementById('status');
     const retry = document.getElementById('retry');
@@ -101,7 +128,24 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     const episodeInput = document.getElementById('episode');
     const episodeFields = document.querySelectorAll('.episode-field');
     const nowPlaying = document.getElementById('now-playing');
+    const providerFrame = document.getElementById('provider-frame');
+    const settingsToggle = document.getElementById('settings-toggle');
+    const settingsPanel = document.getElementById('playback-settings');
+    const settingsClose = document.getElementById('settings-close');
+    const providerNote = document.getElementById('provider-note');
+    const embedUrl = ${JSON.stringify(embedUrl).replace(/</g, '\\u003c')};
     const initialMedia = ${JSON.stringify(playbackMedia)};
+    function showSettings(open) {
+      settingsPanel.hidden = !open;
+      settingsToggle.ariaExpanded = String(open);
+      if (open) settingsClose.focus?.();
+      else settingsToggle.focus?.();
+    }
+    settingsToggle.addEventListener('click', () => showSettings(settingsPanel.hidden));
+    settingsClose.addEventListener('click', () => showSettings(false));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !settingsPanel.hidden) showSettings(false);
+    });
     let hls;
     let subtitleTrack;
     let selectedMedia;
@@ -115,6 +159,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     let activeSource = '';
     let activeSubtitles = preferredSubtitles;
     let restoringPosition = false;
+    let hasUserStartedPlayback = false;
     let lastProgressAt = 0;
     function sessionSnapshot(overrides = {}) {
       return {
@@ -166,7 +211,18 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       if (activeSubtitles != null) query.set('resumeSubtitles', activeSubtitles);
       const parentOrigin = resumeQuery.get('parentOrigin');
       if (parentOrigin) query.set('parentOrigin', parentOrigin);
+      for (const key of ['title', 'year']) {
+        const value = resumeQuery.get(key);
+        if (value) query.set(key, value);
+      }
       return '/player?' + query;
+    }
+    function nowPlayingLabel(media) {
+      const pad = (value) => String(value).padStart(2, '0');
+      const title = (resumeQuery.get('title') || '').trim();
+      const year = (resumeQuery.get('year') || '').trim();
+      const name = title ? title + (/^[0-9]{4}$/.test(year) ? ' ' + year : '') : (media.type === 'movie' ? 'Movie ' : 'TV ') + media.id;
+      return name + (media.type === 'tv' ? ' · S' + pad(media.season) + ' E' + pad(media.episode) : '');
     }
     function mediaQuery(media) {
       const query = new URLSearchParams({
@@ -192,21 +248,23 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       subtitles.replaceChildren(new Option('Off', ''));
       subtitles.disabled = true;
     }
-    async function autoplay(generation) {
-      if (generation !== requestGeneration) return;
+    startPlaybackButton.addEventListener('click', async () => {
+      startPlaybackButton.disabled = true;
+      video.muted = false;
+      video.controls = true;
       try {
-        await video.play();
-        status.textContent = '';
-      } catch (_) {
-        video.muted = true;
-        try {
-          await video.play();
-          status.textContent = 'Playing muted. Unmute to hear audio.';
-        } catch (_) {
-          status.textContent = 'Autoplay was blocked. Press play to start.';
-        }
+        const fullscreen = videoContainer.requestFullscreen?.();
+        const playback = video.play();
+        const [fullscreenResult, playbackResult] = await Promise.allSettled([Promise.resolve(fullscreen), playback]);
+        if (playbackResult.status === 'rejected') throw playbackResult.reason;
+        hasUserStartedPlayback = true;
+        startPlaybackButton.hidden = true;
+        status.textContent = fullscreenResult.status === 'rejected' ? 'Playing with sound; fullscreen is unavailable in this view.' : '';
+      } catch (error) {
+        startPlaybackButton.disabled = false;
+        status.textContent = 'Could not start playback: ' + error.message;
       }
-    }
+    });
     function start(media, sourceId = sourceSelect.value) {
       const generation = ++requestGeneration;
       videoLoading.hidden = false;
@@ -240,7 +298,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
           hls.on(Hls.Events.LEVELS_UPDATED, updateQualityLevels);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             updateQualityLevels();
-            autoplay(generation);
+            status.textContent = 'Ready to play';
           });
           hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
             if (generation !== requestGeneration || Number(quality.value) !== -1) return;
@@ -261,12 +319,17 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
           video.src = '/manifest?' + manifestQuery;
           quality.disabled = true;
           quality.title = 'Automatic quality selection is handled by the browser';
-          video.addEventListener('loadedmetadata', () => autoplay(generation), { once: true });
+          video.addEventListener('loadedmetadata', () => {
+            if (generation === requestGeneration) status.textContent = 'Ready to play';
+          }, { once: true });
         } else {
           throw new Error('This browser does not support HLS playback');
         }
         video.addEventListener('loadeddata', () => {
-          if (generation === requestGeneration) status.textContent = '';
+          if (generation === requestGeneration) {
+            status.textContent = 'Ready to play';
+            if (!hasUserStartedPlayback) startPlaybackButton.hidden = false;
+          }
         }, { once: true });
       } catch (error) {
         fail('Unable to load stream: ' + error.message);
@@ -364,6 +427,14 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
       }
     }
     subtitles.addEventListener('change', () => {
+      if (embedUrl) {
+        selectedMedia = { ...selectedMedia, sub: subtitles.value };
+        activeSubtitles = subtitles.value === '0' ? '' : null;
+        preferredSubtitles = activeSubtitles;
+        reportSession('subtitles');
+        window.location.assign(resumeNavigation(selectedMedia));
+        return;
+      }
       activeSubtitles = subtitles.value ? subtitles.selectedOptions[0].dataset.subtitle : '';
       if (selectedMedia) selectedMedia.sub = subtitles.value ? '1' : '0';
       preferredSubtitles = activeSubtitles;
@@ -382,6 +453,12 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
     });
     retry.addEventListener('click', () => {
       if (!selectedMedia) return;
+      if (embedUrl) {
+        providerFrame.src = embedUrl;
+        retry.hidden = true;
+        status.textContent = '';
+        return;
+      }
       resumePosition = resumePosition || video.currentTime || 0;
       if (hls) { hls.destroy(); hls = null; }
       video.removeAttribute('src');
@@ -395,12 +472,36 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true } = {}
         preferredSubtitles = null;
       }
       selectedMedia = media;
+      hasUserStartedPlayback = false;
+      startPlaybackButton.hidden = true;
+      startPlaybackButton.disabled = false;
+      video.controls = false;
+      video.muted = false;
       providerSelect.value = media.providerId;
       playbackLanguage.value = media.lang;
       providerSelect.disabled = false;
-      nowPlaying.textContent = (media.type === 'movie' ? 'Movie ' : 'TV ') + media.id + (media.type === 'tv' ? ' · S' + media.season + ' E' + media.episode : '');
+      nowPlaying.textContent = nowPlayingLabel(media);
       nowPlaying.hidden = false;
       videoContainer.hidden = false;
+      settingsToggle.hidden = false;
+      providerFrame.hidden = !embedUrl;
+      providerNote.hidden = !embedUrl;
+      if (embedUrl) {
+        video.hidden = true;
+        videoLoading.hidden = true;
+        providerFrame.src = embedUrl;
+        sourceField.hidden = false;
+        sourceSelect.replaceChildren(new Option('Provider default', ''));
+        sourceSelect.disabled = true;
+        sourceSelect.title = 'Use the provider player to change sources';
+        quality.title = 'Quality is managed by the provider player';
+        subtitles.replaceChildren(new Option('On', '1'), new Option('Off', '0'));
+        subtitles.value = media.sub;
+        subtitles.disabled = false;
+        status.textContent = '';
+        reportSession('ready');
+        return;
+      }
       video.hidden = false;
       video.pause();
       video.removeAttribute('src');

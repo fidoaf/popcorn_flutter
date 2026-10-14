@@ -10,6 +10,14 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
 
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+    if (url.pathname === '/watch-providers') {
+      response.setHeader('Access-Control-Allow-Origin', '*');
+      response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      if (request.method === 'OPTIONS') {
+        response.writeHead(204).end();
+        return;
+      }
+    }
     if (request.method !== 'GET') {
       response.writeHead(405).end();
       return;
@@ -21,14 +29,14 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
         response.end('ok');
       } else if (url.pathname === '/') {
         sendHtml(response, renderPlayerPage(initialMedia, { providers: providers.list() }));
+      } else if (url.pathname === '/providers') {
+        sendJson(response, 200, { providers: providers.list(), defaultProvider: providers.defaultProviderId }, { 'Access-Control-Allow-Origin': '*' });
       } else if (url.pathname === '/player') {
         const media = mediaFromQuery(url.searchParams, providers);
         const provider = providers.get(media.providerId);
-        if (typeof provider.embedUrl === 'function' && typeof provider.extract !== 'function') {
-          response.writeHead(302, { Location: provider.embedUrl(media).href, 'Cache-Control': 'no-store' }).end();
-        } else {
-          sendHtml(response, renderPlayerPage(media, { providers: providers.list(), showForm: false }));
-        }
+        const embedUrl = typeof provider.embedUrl === 'function' && typeof provider.extract !== 'function'
+          ? provider.embedUrl(media).href : null;
+        sendHtml(response, renderPlayerPage(media, { providers: providers.list(), showForm: false, embedUrl }));
       } else if (url.pathname === '/watch-providers') {
         const links = await resolveJustWatchProviderLinks({
           type: url.searchParams.get('type'),
@@ -100,6 +108,10 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
       console.error(`Request ${url.pathname} failed: ${error.message}`);
       if (!response.headersSent) {
         const status = error.statusCode || 502;
+        if (url.pathname === '/watch-providers') {
+          sendJson(response, status, { error: status === 400 ? error.message : 'Unable to load JustWatch provider links' });
+          return;
+        }
         response.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
         response.end(status === 400 ? error.message : 'Unable to load stream');
       } else {

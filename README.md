@@ -60,6 +60,14 @@ Display metadata is loaded from the catalog and cached in memory by media type
 and ID. If the catalog is unavailable, entries still retain their resume state
 and display their media ID until a later lookup succeeds.
 
+The server player's gear, at the right end of the bottom status bar, opens provider, source, language, quality,
+and subtitle settings. Redirect-only providers stay embedded inside this shell
+so the provider selector remains available. Their language and subtitle
+preferences are forwarded through the configured embed URL; actual support
+depends on the provider. Source and quality selection remain inside the
+external player when it does not expose a track API. Sites that block framing
+cannot be embedded by this shell.
+
 The hosted player and native player support session capture. Sources and
 subtitles are matched against fresh catalogs instead of reusing expired IDs.
 Unavailable sources fall back to automatic selection. External embedded

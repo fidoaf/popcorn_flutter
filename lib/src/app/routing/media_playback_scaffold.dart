@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
+import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
 import 'package:popcorn_flutter/src/app/routing/app_services.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/player/view/player_close_button.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
 /// Resolves the playable [MediaSource] for a `/watch` route and records the
@@ -24,7 +27,6 @@ class MediaPlaybackScaffold extends StatefulWidget {
     this.item,
     this.season,
     this.episode,
-    this.provider,
   });
 
   final int id;
@@ -32,10 +34,6 @@ class MediaPlaybackScaffold extends StatefulWidget {
   final int? season;
   final int? episode;
   final MediaItem? item;
-
-  /// Optional streaming backend name; when it matches one of the configured
-  /// providers that backend is used, otherwise the active provider is kept.
-  final String? provider;
   final AppServices services;
   final WidgetBuilder loadingBuilder;
   final Widget Function(BuildContext context, MediaSource source, MediaItem item, ValueChanged<Uri> onUrlChanged) builder;
@@ -91,7 +89,7 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
     _season = resolvedSeason;
     _episode = resolvedEpisode;
     _item = item;
-    final resolved = _provider().resolve(item, type, season: resolvedSeason, episode: resolvedEpisode);
+    final resolved = widget.services.mediaSourceProvider.resolve(item, type, season: resolvedSeason, episode: resolvedEpisode);
     final query = Map<String, String>.of(resolved.url.queryParameters);
     if (_initialSession.language != null && query.containsKey('lang')) query['lang'] = _initialSession.language!;
     if (_initialSession.subtitles != null && query.containsKey('sub')) query['sub'] = _initialSession.subtitles!.isEmpty ? '0' : '1';
@@ -101,6 +99,10 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
       if (_initialSession.source != null) query['resumeSource'] = _initialSession.source!;
       if (_initialSession.subtitles != null) query['resumeSubtitles'] = _initialSession.subtitles!;
       if (kIsWeb) query['parentOrigin'] = Uri.base.origin;
+      final title = item.title.trim();
+      if (title.isNotEmpty) query['title'] = title;
+      final year = item.releaseDate?.year;
+      if (year != null) query['year'] = year.toString();
     }
     setState(() {
       _source = MediaSource(
@@ -163,7 +165,7 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
     // season (covering an end-of-season roll-over).
     final candidates = <(int, int)>[(season, episode + 1), (season + 1, 1)];
     for (final (nextSeason, nextEpisode) in candidates) {
-      final expected = _provider().resolve(item, MediaType.tv, season: nextSeason, episode: nextEpisode);
+      final expected = widget.services.mediaSourceProvider.resolve(item, MediaType.tv, season: nextSeason, episode: nextEpisode);
       if (!_matchesSource(url, expected.url)) continue;
       _season = nextSeason;
       _episode = nextEpisode;
@@ -184,25 +186,15 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
     return true;
   }
 
-  /// The provider selected via [MediaPlaybackScaffold.provider] when it matches
-  /// a configured backend, otherwise the active provider.
-  MediaSourceProvider _provider() {
-    final name = widget.provider;
-    final configurable = widget.services.mediaSourceProvider;
-    if (name == null || name.isEmpty) return configurable;
-    for (final provider in configurable.providers) {
-      if (provider.name == name) return provider;
-    }
-    return configurable;
-  }
-
   @override
   Widget build(BuildContext context) {
     final source = _source;
     if (source == null) return widget.loadingBuilder(context);
     return PlaybackSessionScope(
       initial: _initialSession,
-      onChanged: _record,
+      onChanged: (session) {
+        if (identical(source, _source)) _record(session);
+      },
       mediaId: widget.id,
       mediaType: widget.type.name,
       season: _season,
@@ -210,7 +202,32 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          widget.builder(context, source, _item!, _onUrlChanged),
+          KeyedSubtree(
+            key: ObjectKey(source),
+            child: widget.builder(context, source, _item!, (url) {
+              if (identical(source, _source)) _onUrlChanged(url);
+            }),
+          ),
+          if (source.url.path == '/player')
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 12, right: 12),
+                  child: PlayerCloseButton(
+                    onClose: () {
+                      final router = GoRouter.of(context);
+                      if (router.canPop()) {
+                        router.pop();
+                      } else {
+                        router.go(AppRoutes.details(widget.type, widget.id), extra: _item);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
           if (_historySaveError != null)
             Align(
               alignment: Alignment.topCenter,

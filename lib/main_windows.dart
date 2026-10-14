@@ -238,8 +238,8 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
             ),
           ),
         );
-      case WatchRoute(:final type, :final id, :final season, :final episode, :final provider):
-        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null, provider);
+      case WatchRoute(:final type, :final id, :final season, :final episode):
+        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null);
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
         return video == null ? _WindowsHomeView(services: _services, browse: true) : _trailerPage(video);
@@ -279,7 +279,7 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           Positioned(
             top: 8,
             left: 8,
-            child: IconButton(icon: const Icon(FluentIcons.chrome_close), onPressed: () => Navigator.of(context).pop()),
+            child: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
           ),
         ],
       ),
@@ -301,20 +301,19 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
         controller: _services.historyController,
         onMediaSelected: (entry) => context.push(AppRoutes.details(entry.type, entry.item.id), extra: entry.item),
         onMediaPlay: (entry) => context.push(
-          AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode, provider: _services.mediaSourceProvider.name),
+          AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
           extra: entry.item,
         ),
       ),
     ),
   );
 
-  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item, [String? provider]) => MediaPlaybackScaffold(
+  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item) => MediaPlaybackScaffold(
     id: id,
     type: type,
     season: season,
     episode: episode,
     item: item,
-    provider: provider,
     services: _services,
     loadingBuilder: (context) => _playerPage(context, const Center(child: ProgressRing())),
     builder: (context, source, resolved, onUrlChanged) => _playerPage(
@@ -365,9 +364,9 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           favoritesController: _services.favoritesController,
           historyController: _services.historyController,
           mediaType: bundle.type,
-          onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id, provider: _services.mediaSourceProvider.name), extra: playItem),
+          onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id), extra: playItem),
           onResume: (playItem, {season, episode}) => context.push(
-            AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode, provider: _services.mediaSourceProvider.name),
+            AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode),
             extra: playItem,
           ),
           onVideoPlay: (video) => context.push(AppRoutes.trailer, extra: video),
@@ -379,7 +378,6 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
               bundle.item.id,
               season: season.seasonNumber,
               episode: episode.episodeNumber,
-              provider: _services.mediaSourceProvider.name,
             ),
             extra: bundle.item,
           ),
@@ -412,9 +410,9 @@ class _WindowsHomeView extends StatelessWidget {
           initialQuery: initialQuery,
           initialMediaType: initialMediaType,
           onOpenDetails: (media, type) => context.push(AppRoutes.details(type, media.id), extra: media),
-          onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id, provider: services.mediaSourceProvider.name), extra: media),
+          onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id), extra: media),
           onResume: (entry) => context.push(
-            AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode, provider: services.mediaSourceProvider.name),
+            AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
             extra: entry.item,
           ),
           onSeeAllFavorites: () => context.push(AppRoutes.favorites),
@@ -432,7 +430,7 @@ class _WindowsHomeView extends StatelessWidget {
         initialMediaType: initialMediaType,
         onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
         onMediaPlay: (media) =>
-            context.push(AppRoutes.watch(services.searchController.mediaType, media.id, provider: services.mediaSourceProvider.name), extra: media),
+            context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
         onOpenFavorites: () => context.push(AppRoutes.favorites),
         onOpenContinueWatching: () => context.push(AppRoutes.history),
       ),

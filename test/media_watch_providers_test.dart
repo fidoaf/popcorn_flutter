@@ -87,7 +87,11 @@ void main() {
     expect(providers.single.justWatchUrl, Uri.parse(clickoutUrl));
   });
 
-  testWidgets('provider logos render as accessible JustWatch buttons', (tester) async {
+  testWidgets('provider logos launch JustWatch clickouts on a phone-sized viewport', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     const launcherChannel = MethodChannel('plugins.flutter.io/url_launcher');
     final launchedMethods = <MethodCall>[];
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(launcherChannel, (call) async {

@@ -83,6 +83,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   bool _buffering = true;
   double _volume = 1;
   bool _muted = false;
+  bool _hasStartedPlayback = false;
   double? _scrubTarget;
 
   Tracks _tracks = const Tracks();
@@ -170,7 +171,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
     debugPrint('[MediaKitPlayer] candidates: ${candidates.map((c) => c.url).join(', ')}');
     debugPrint('[MediaKitPlayer] loading HLS: ${winner.url}');
     widget.onUrlChanged?.call(winner.url);
-    await _player.open(Media(winner.url.toString(), httpHeaders: winner.headers.isEmpty ? null : winner.headers));
+    await _player.open(Media(winner.url.toString(), httpHeaders: winner.headers.isEmpty ? null : winner.headers), play: false);
     await _prepareResume();
     await _restoreRemoteSubtitles();
     if (!mounted) return;
@@ -292,8 +293,27 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   }
 
   void _togglePlay() {
-    _player.playOrPause();
+    if (!_playing && !_hasStartedPlayback) {
+      _hasStartedPlayback = true;
+      _muted = false;
+      if (_volume == 0) _volume = 1;
+      _player.setVolume(_volume * 100);
+      _enterFullscreen();
+      _player.play();
+    } else {
+      _player.playOrPause();
+    }
     _showControls();
+  }
+
+  Future<void> _enterFullscreen() async {
+    if (_isFullscreen) return;
+    try {
+      await widget.fullscreenController.setFullscreen(true);
+      if (mounted) setState(() => _isFullscreen = true);
+    } catch (error) {
+      debugPrint('[MediaKitPlayer] fullscreen request failed: $error');
+    }
   }
 
   void _seekBy(Duration delta) {

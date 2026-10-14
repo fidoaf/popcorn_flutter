@@ -28,15 +28,10 @@ abstract final class AppRoutes {
   /// `/person/{id}`.
   static String person(int id) => '/person/$id';
 
-  /// `/watch/{movie|tv}/{id}` with optional `?season=&episode=` for TV and an
-  /// optional `?provider=` selecting the streaming backend by name.
-  static String watch(MediaType type, int id, {int? season, int? episode, String? provider}) {
+  /// `/watch/{movie|tv}/{id}` with optional `?season=&episode=` for TV.
+  static String watch(MediaType type, int id, {int? season, int? episode}) {
     final path = '/watch/${type.name}/$id';
-    final query = <String, String>{
-      if (season != null) 'season': '$season',
-      if (episode != null) 'episode': '$episode',
-      if (provider != null && provider.isNotEmpty) 'provider': provider,
-    };
+    final query = <String, String>{if (season != null) 'season': '$season', if (episode != null) 'episode': '$episode'};
     if (query.isEmpty) return path;
     return '$path?${query.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
   }
@@ -75,7 +70,6 @@ abstract final class AppRoutes {
           id: parsed.$2,
           season: int.tryParse(uri.queryParameters['season'] ?? ''),
           episode: int.tryParse(uri.queryParameters['episode'] ?? ''),
-          provider: uri.queryParameters['provider'],
         );
       default:
         return const UnknownRoute();
@@ -164,16 +158,12 @@ class PersonRoute extends AppRouteRequest {
 }
 
 class WatchRoute extends AppRouteRequest {
-  const WatchRoute({required this.type, required this.id, this.season, this.episode, this.provider});
+  const WatchRoute({required this.type, required this.id, this.season, this.episode});
 
   final MediaType type;
   final int id;
   final int? season;
   final int? episode;
-
-  /// Optional name of the streaming backend to play from; falls back to the
-  /// active provider when null or unknown.
-  final String? provider;
 }
 
 class UnknownRoute extends AppRouteRequest {

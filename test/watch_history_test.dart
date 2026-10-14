@@ -12,6 +12,7 @@ import 'package:popcorn_flutter/src/player/domain/media_source.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_resolver.dart';
+import 'package:popcorn_flutter/src/player/view/player_close_button.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
@@ -20,6 +21,21 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
+  testWidgets('player close button works in a non-Material app', (tester) async {
+    var closed = false;
+    await tester.pumpWidget(
+      WidgetsApp(
+        color: const Color(0xFF000000),
+        onGenerateRoute: (_) => PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => Center(child: PlayerCloseButton(onClose: () => closed = true)),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Close'));
+    expect(closed, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('player event scope refreshes when only the media identity changes', (tester) async {
     PlaybackSessionScope? current;
     final saved = <PlaybackSession>[];
@@ -323,7 +339,7 @@ void main() {
 
   test('native hosted playback resolves to a manifest without bridge parameters', () async {
     final source = MediaSource(
-      url: Uri.parse('https://player.example/player?id=42&type=movie&provider=onlypelis&lang=fr&sub=0&resume=120&parentOrigin=https%3A%2F%2Fapp.example'),
+      url: Uri.parse('https://player.example/player?id=42&type=movie&provider=onlypelis&lang=fr&sub=0&resume=120&parentOrigin=https%3A%2F%2Fapp.example&title=Fight+Club&year=1999'),
     );
     final candidates = await StreamResolver.resolve(source);
     expect(candidates.single.url.path, '/manifest');

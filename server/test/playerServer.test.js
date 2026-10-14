@@ -7,6 +7,23 @@ const { RedirectProvider } = require('../src/player/redirectProvider');
 const { renderPlayerPage } = require('../src/player/playerPage');
 const vm = require('node:vm');
 
+test('provider catalog exposes configured choices and default to the app', async (t) => {
+  const providers = new ProviderRegistry([
+    { id: 'direct', label: 'Direct' },
+    new RedirectProvider({ id: 'external', label: 'External', host: 'example.com' }),
+  ], 'external');
+  const server = createPlayerServer({ providers, resourceProxy: {} });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/providers`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), '*');
+  assert.deepEqual(await response.json(), {
+    providers: [{ id: 'external', label: 'External' }, { id: 'direct', label: 'Direct' }],
+    defaultProvider: 'external',
+  });
+});
+
 test('restores a hosted session with fresh track IDs and reports settings, progress and seeks', async () => {
   const media = { providerId: 'vidsrcbuzz', type: 'movie', id: '42', lang: 'es', sub: '1' };
   const sourceKey = JSON.stringify(['Server 1', 'Spanish']);
@@ -306,12 +323,12 @@ test('serves health, form, playback, and subtitles through injected services', a
   assert.equal(await selectedManifest.text(), 'vidsrcbuzz:https://cdn.example/master.m3u8');
 
   const redirect = await fetch(`${base}/player?provider=nxsha&type=tv&id=1399&season=2&episode=3&lang=fr&sub=0`, { redirect: 'manual' });
-  assert.equal(redirect.status, 302);
-  assert.equal(redirect.headers.get('location'), 'https://web.nxsha.app/embed/tv/1399/2/3?lang=fr&sub=0');
+  assert.equal(redirect.status, 200);
+  assert.match(await redirect.text(), /const embedUrl = "https:\/\/web.nxsha.app\/embed\/tv\/1399\/2\/3\?lang=fr&sub=0"/);
 
   const movieRedirect = await fetch(`${base}/player?provider=nxsha&type=movie&id=1248832&lang=en&sub=1`, { redirect: 'manual' });
-  assert.equal(movieRedirect.status, 302);
-  assert.equal(movieRedirect.headers.get('location'), 'https://web.nxsha.app/embed/movie/1248832?lang=en&sub=1');
+  assert.equal(movieRedirect.status, 200);
+  assert.match(await movieRedirect.text(), /const embedUrl = "https:\/\/web.nxsha.app\/embed\/movie\/1248832\?lang=en&sub=1"/);
 
   const tracks = await (await fetch(`${base}/subtitles?provider=vidsrcbuzz&id=tt1375666&lang=fr&sub=0`)).json();
   assert.equal(tracks.length, 1);
@@ -322,7 +339,7 @@ test('serves health, form, playback, and subtitles through injected services', a
   assert.equal(invalid.status, 400);
 });
 
-test('registers configured providers and redirects providers without server extractors', async (t) => {
+test('registers configured providers and retains the settings shell for redirect providers', async (t) => {
   const server = createServer();
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
@@ -342,8 +359,11 @@ test('registers configured providers and redirects providers without server extr
   };
   for (const [providerId, origin] of Object.entries(redirectProviders)) {
     const response = await fetch(`${base}/player?provider=${providerId}&id=1248832`, { redirect: 'manual' });
-    assert.equal(response.status, 302);
-    assert.equal(response.headers.get('location'), `${origin}/embed/movie/1248832?lang=en&sub=1`);
+    assert.equal(response.status, 200);
+    const page = await response.text();
+    assert.ok(page.includes(`const embedUrl = "${origin}/embed/movie/1248832?lang=en&sub=1"`));
+    assert.match(page, /id="settings-toggle"/);
+    assert.match(page, /id="provider-frame"/);
   }
 
   const cinesrcMovie = await fetch(`${base}/player?provider=cinesrc&id=1248832`, { redirect: 'manual' });
@@ -396,6 +416,143 @@ test('builds providers from configurable paths and query parameters', async (t) 
   assert.doesNotMatch(root, /value="render"/);
 
   const redirect = await fetch(`${base}/player?id=42`, { redirect: 'manual' });
-  assert.equal(redirect.status, 302);
-  assert.equal(redirect.headers.get('location'), 'https://embed.example/watch/movie/42?language=en&captions=1&media=42&mode=embed');
+  assert.equal(redirect.status, 200);
+  assert.match(await redirect.text(), /const embedUrl = "https:\/\/embed.example\/watch\/movie\/42\?language=en&captions=1&media=42&mode=embed"/);
+});
+
+test('redirect gear opens settings and preserves media when preferences or providers change', () => {
+  const media = { providerId: 'external', type: 'tv', id: '1399', season: '2', episode: '3', lang: 'fr', sub: '1' };
+  const embedUrl = 'https://embed.example/tv/1399/2/3?lang=fr&sub=1';
+  const page = renderPlayerPage(media, {
+    showForm: false,
+    embedUrl,
+    providers: [{ id: 'external', label: 'External' }, { id: 'vidsrcbuzz', label: 'VidSrc.buzz' }],
+  });
+  const settingsStart = page.indexOf('<section id="playback-settings"');
+  const settingsEnd = page.indexOf('</section>', settingsStart);
+  for (const id of ['provider', 'source', 'playback-language', 'subtitles']) {
+    assert.ok(page.indexOf(`id="${id}"`, settingsStart) < settingsEnd);
+  }
+  const elements = new Map();
+  const documentListeners = new Map();
+  const navigations = [];
+  const messages = [];
+  const document = {
+    querySelectorAll() { return []; },
+    addEventListener(event, callback) { documentListeners.set(event, callback); },
+    getElementById(id) {
+      if (id === 'media-form') return null;
+      if (!elements.has(id)) {
+        const listeners = new Map();
+        elements.set(id, {
+          value: '', hidden: true, disabled: true, options: [], dataset: {},
+          addEventListener(event, callback) { listeners.set(event, callback); },
+          dispatch(event) { listeners.get(event)?.(); },
+          replaceChildren(...options) { this.options = options; this.value = options[0]?.value || ''; },
+          focus() { this.focused = true; },
+        });
+      }
+      return elements.get(id);
+    },
+  };
+  vm.runInNewContext(page.match(/<script>([\s\S]*?)<\/script>/)[1], {
+    document, URLSearchParams,
+    Option: function Option(label, value) { return { textContent: label, value, dataset: {} }; },
+    fetch() { assert.fail('Redirect embeds must not request manifests or track catalogs'); },
+    window: {
+      addEventListener() {},
+      parent: { postMessage(message) { messages.push(message); } },
+      location: { search: '?resume=95&parentOrigin=https%3A%2F%2Fapp.example&title=Game+of+Thrones&year=2011', assign(url) { navigations.push(new URL(url, 'https://player.example')); } },
+    },
+  });
+  assert.equal(elements.get('now-playing').textContent, 'Game of Thrones 2011 · S02 E03');
+  assert.equal(elements.get('provider-frame').src, embedUrl);
+  assert.equal(elements.get('video').hidden, true);
+  assert.equal(elements.get('video-loading').hidden, true);
+  assert.equal(elements.get('source').disabled, true);
+  assert.equal(elements.get('subtitles').disabled, false);
+  const toggle = elements.get('settings-toggle');
+  const panel = elements.get('playback-settings');
+  assert.equal(toggle.hidden, false);
+  toggle.dispatch('click');
+  assert.equal(panel.hidden, false);
+  assert.equal(toggle.ariaExpanded, 'true');
+  assert.equal(elements.get('settings-close').focused, true);
+  documentListeners.get('keydown')({ key: 'Escape' });
+  assert.equal(panel.hidden, true);
+  assert.equal(toggle.focused, true);
+  toggle.dispatch('click');
+  elements.get('settings-close').dispatch('click');
+  assert.equal(panel.hidden, true);
+  elements.get('playback-language').value = 'es';
+  elements.get('playback-language').dispatch('change');
+  assert.equal(navigations.at(-1).searchParams.get('lang'), 'es');
+  elements.get('subtitles').value = '0';
+  elements.get('subtitles').dispatch('change');
+  assert.equal(navigations.at(-1).searchParams.get('sub'), '0');
+  assert.equal(messages.at(-1).session.subtitles, '');
+  elements.get('provider').value = 'vidsrcbuzz';
+  elements.get('provider').dispatch('change');
+  assert.deepEqual(Object.fromEntries(navigations.at(-1).searchParams), {
+    provider: 'vidsrcbuzz', type: 'tv', id: '1399', season: '2', episode: '3', lang: 'es', sub: '0',
+    resume: '95', resumeSubtitles: '', parentOrigin: 'https://app.example', title: 'Game of Thrones', year: '2011',
+  });
+});
+
+test('first play waits for a user gesture, then unmutes, enters fullscreen and starts playback', async () => {
+  const media = { providerId: 'vidsrcbuzz', type: 'movie', id: '42', lang: 'en', sub: '1' };
+  const page = renderPlayerPage(media, { showForm: false });
+  assert.match(page, /id="video" playsinline hidden/);
+  assert.match(page, /id="start-playback" type="button" title="Play" aria-label="Play" hidden><span class="play-icon" aria-hidden="true"><\/span><span class="visually-hidden">Play<\/span><\/button>/);
+  assert.doesNotMatch(page, /id="video" controls/);
+  const elements = new Map();
+  const listeners = new Map();
+  const video = {
+    muted: false,
+    controls: false,
+    hidden: true,
+    readyState: 0,
+    addEventListener(event, callback) {
+      if (!listeners.has(event)) listeners.set(event, []);
+      listeners.get(event).push(callback);
+    },
+    dispatch(event) { for (const callback of listeners.get(event) || []) callback(); },
+    removeAttribute() {}, pause() {}, load() {}, canPlayType() { return true; },
+    play() { this.playCalls = (this.playCalls || 0) + 1; return Promise.resolve(); },
+  };
+  const startButton = {
+    hidden: true,
+    addEventListener(event, callback) { this.onClick = callback; },
+  };
+  let fullscreenCalls = 0;
+  const document = {
+    addEventListener() {}, querySelectorAll() { return []; },
+    getElementById(id) {
+      if (id === 'media-form') return null;
+      if (!elements.has(id)) {
+        elements.set(id, id === 'video' ? video : id === 'start-playback' ? startButton : {
+          value: '', hidden: true, disabled: true, addEventListener() {}, replaceChildren() {}, pause() {}, removeAttribute() {}, load() {}, canPlayType() { return true; },
+        });
+      }
+      return elements.get(id);
+    },
+  };
+  const script = page.match(/<script>([\s\S]*?)<\/script>/)[1];
+  vm.runInNewContext(script, {
+    document, URLSearchParams, Event: class { constructor(type) { this.type = type; } },
+    Option: function Option(label, value) { return { textContent: label, value, dataset: {} }; },
+    fetch: () => new Promise(() => {}),
+    window: { location: { search: '', assign() {} }, parent: { postMessage() {} }, addEventListener() {} },
+  });
+  assert.equal(video.playCalls || 0, 0);
+  assert.equal(video.controls, false);
+  const container = elements.get('video-container');
+  container.requestFullscreen = () => { fullscreenCalls += 1; return Promise.resolve(); };
+  startButton.onClick();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(video.muted, false);
+  assert.equal(video.controls, true);
+  assert.equal(fullscreenCalls, 1);
+  assert.equal(video.playCalls, 1);
+  assert.equal(startButton.hidden, true);
 });

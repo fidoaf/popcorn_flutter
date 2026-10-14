@@ -25,7 +25,7 @@ async function resolveJustWatchProviderLinks({ type, title, year, region, fetchI
 }
 
 async function fetchProviderLinks({ type, title, year, region, fetchImpl }) {
-  const regionPath = region.toLowerCase();
+  const regionPath = region === 'GB' ? 'uk' : region.toLowerCase();
   const searchPath = searchPaths[region] || 'search';
   const searchUrl = new URL(`/${regionPath}/${searchPath}`, JUSTWATCH_ORIGIN);
   searchUrl.searchParams.set('q', year ? `${title} ${year}` : title);
