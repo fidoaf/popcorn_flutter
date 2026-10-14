@@ -11,6 +11,7 @@ class PlaybackSessionScope extends InheritedWidget {
     required this.mediaType,
     this.season,
     this.episode,
+    this.onNextEpisode,
   });
 
   final PlaybackSession initial;
@@ -19,11 +20,12 @@ class PlaybackSessionScope extends InheritedWidget {
   final String mediaType;
   final int? season;
   final int? episode;
+  final VoidCallback? onNextEpisode;
 
   static PlaybackSessionScope? of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<PlaybackSessionScope>();
 
   void accept(dynamic message) {
-    if (message is! Map || message['type'] != 'popcorn:playback') return;
+    if (message is! Map || !['popcorn:playback', 'popcorn:next'].contains(message['type'])) return;
     final media = message['media'];
     final session = message['session'];
     if (media is! Map || session is! Map) return;
@@ -31,6 +33,7 @@ class PlaybackSessionScope extends InheritedWidget {
     if (mediaType == 'tv' && (media['season'].toString() != season.toString() || media['episode'].toString() != episode.toString())) return;
     try {
       onChanged(PlaybackSession.fromJson(Map<String, dynamic>.from(session)));
+      if (message['type'] == 'popcorn:next') onNextEpisode?.call();
     } on TypeError {
       return;
     }
@@ -43,5 +46,6 @@ class PlaybackSessionScope extends InheritedWidget {
       mediaType != oldWidget.mediaType ||
       season != oldWidget.season ||
       episode != oldWidget.episode ||
+      onNextEpisode != oldWidget.onNextEpisode ||
       onChanged != oldWidget.onChanged;
 }

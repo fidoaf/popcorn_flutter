@@ -60,6 +60,10 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     .play-icon{width:0;height:0;margin-left:6px;border-top:14px solid transparent;border-bottom:14px solid transparent;border-left:22px solid currentColor}
     .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     #start-playback[hidden]{display:none}
+    #skip-actions{position:absolute;z-index:3;left:20px;right:20px;bottom:90px;display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;pointer-events:none}
+    #skip-actions button{min-height:44px;padding:10px 18px;border:1px solid #ffffff80;border-radius:6px;background:#17191ee8;color:white;text-decoration:none;font-weight:700;box-shadow:0 4px 16px #0008;pointer-events:auto}
+    #skip-actions button:hover{background:#41444c}
+    #skip-actions button[hidden]{display:none}
     #video-loading{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
     #video-loading::after{content:'';width:44px;height:44px;border:4px solid #ffffff40;border-top-color:#fff;border-radius:50%;animation:video-loading-spin .8s linear infinite}
     @keyframes video-loading-spin{to{transform:rotate(360deg)}}
@@ -95,13 +99,14 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       <iframe id="provider-frame" title="Provider player" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" hidden></iframe>
       <button id="start-playback" type="button" title="Play" aria-label="Play" hidden><span class="play-icon" aria-hidden="true"></span><span class="visually-hidden">Play</span></button>
       <div id="video-loading" role="status" aria-label="Loading video" hidden></div>
+      <div id="skip-actions"><button id="skip-intro" type="button" hidden>Skip intro</button><button id="next-episode" type="button" hidden>Next episode</button></div>
       <section id="playback-settings" role="dialog" aria-label="Playback settings" hidden>
         <div class="settings-heading"><h2>Playback settings</h2><button id="settings-close" type="button" title="Close settings" aria-label="Close settings">&times;</button></div>
         <label for="provider">Provider<select id="provider" disabled>${providerOptions}</select></label><label for="playback-language">Language<select id="playback-language"><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ja">Japanese</option><option value="ko">Korean</option></select></label><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label>
         <p id="provider-note" hidden>Source and quality are managed in the provider player. Language and subtitle preferences depend on provider support.</p>
       </section>
     </div>
-    <footer><span id="status">Enter an ID supported by the selected provider.</span> <button id="retry" hidden>Retry</button><button id="settings-toggle" type="button" title="Playback settings" aria-label="Playback settings" aria-controls="playback-settings" aria-expanded="false" hidden>&#9881;</button></footer>
+    <footer><span id="status">Enter an ID supported by the selected provider.</span><span id="skip-status" role="status"></span> <button id="retry" hidden>Retry</button><button id="settings-toggle" type="button" title="Playback settings" aria-label="Playback settings" aria-controls="playback-settings" aria-expanded="false" hidden>&#9881;</button></footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
   <script>
@@ -109,6 +114,9 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     const videoContainer = document.getElementById('video-container');
     const startPlaybackButton = document.getElementById('start-playback');
     const videoLoading = document.getElementById('video-loading');
+    const skipIntro = document.getElementById('skip-intro');
+    const nextEpisode = document.getElementById('next-episode');
+    const skipStatus = document.getElementById('skip-status');
     const status = document.getElementById('status');
     const retry = document.getElementById('retry');
     const quality = document.getElementById('quality');
@@ -161,6 +169,88 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     let restoringPosition = false;
     let hasUserStartedPlayback = false;
     let lastProgressAt = 0;
+    let skipTimestamps = { intro: [], credits: [] };
+    let timestampGeneration = 0;
+    let timestampMedia = null;
+    let timestampDuration = 0;
+    let introEnd = null;
+    const nextSeason = resumeQuery.get('nextSeason');
+    const nextNumber = resumeQuery.get('nextEpisode');
+    function parseSegments(values) {
+      if (values == null) return [];
+      if (!Array.isArray(values)) throw new Error('Invalid IntroDB segments');
+      return values.map((segment) => {
+        const start = segment?.start_ms;
+        const end = segment?.end_ms;
+        if ((start != null && (!Number.isFinite(start) || start < 0)) ||
+            (end != null && (!Number.isFinite(end) || end < 0)) ||
+            (start == null && end == null) || (end != null && end <= (start ?? 0))) {
+          throw new Error('Invalid IntroDB timestamps');
+        }
+        return { start: (start ?? 0) / 1000, end: end == null ? null : end / 1000 };
+      });
+    }
+    function updateSkipActions() {
+      const position = video.currentTime;
+      const ready = hasUserStartedPlayback && !video.hidden && Number.isFinite(position) && !resumePosition;
+      const contains = (segment) => position >= segment.start && (segment.end == null || position < segment.end);
+      const intro = ready && skipTimestamps.intro.find((segment) => segment.end != null && segment.end <= video.duration && contains(segment));
+      introEnd = intro ? intro.end : null;
+      skipIntro.hidden = introEnd == null;
+      const hasNext = selectedMedia?.type === 'tv' && /^[1-9][0-9]*$/.test(nextSeason || '') && /^[1-9][0-9]*$/.test(nextNumber || '') &&
+        selectedMedia.id === initialMedia?.id && selectedMedia.season === initialMedia?.season && selectedMedia.episode === initialMedia?.episode;
+      nextEpisode.hidden = !(ready && hasNext && skipTimestamps.credits.some(contains));
+    }
+    async function loadSkipTimestamps() {
+      if (!selectedMedia || video.hidden || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      const duration = Math.round(video.duration * 1000);
+      if (timestampMedia === selectedMedia && Math.abs(timestampDuration - duration) < 1000) return;
+      const media = selectedMedia;
+      timestampMedia = media;
+      timestampDuration = duration;
+      const generation = ++timestampGeneration;
+      skipTimestamps = { intro: [], credits: [] };
+      skipStatus.textContent = '';
+      updateSkipActions();
+      try {
+        const query = new URLSearchParams(mediaQuery(media));
+        query.set('duration_ms', String(duration));
+        const response = await fetch('/introdb?' + query);
+        if (!response.ok) throw new Error('IntroDB request failed (' + response.status + ')');
+        const data = await response.json();
+        const timestamps = { intro: parseSegments(data.intro), credits: parseSegments(data.credits) };
+        if (generation !== timestampGeneration || selectedMedia !== media) return;
+        skipTimestamps = timestamps;
+        updateSkipActions();
+      } catch (error) {
+        if (generation !== timestampGeneration) return;
+        skipStatus.textContent = 'Skip controls unavailable: ' + error.message;
+      }
+    }
+    for (const event of ['loadedmetadata', 'durationchange']) video.addEventListener(event, loadSkipTimestamps);
+    for (const event of ['timeupdate', 'seeked', 'playing', 'ended']) video.addEventListener(event, updateSkipActions);
+    skipIntro.addEventListener('click', () => {
+      updateSkipActions();
+      if (introEnd == null) return;
+      video.currentTime = introEnd;
+      updateSkipActions();
+    });
+    nextEpisode.addEventListener('click', () => {
+      updateSkipActions();
+      if (nextEpisode.hidden) return;
+      const message = { type: 'popcorn:next', media: { type: selectedMedia.type, id: selectedMedia.id, season: selectedMedia.season, episode: selectedMedia.episode }, session: sessionSnapshot() };
+      const parentOrigin = resumeQuery.get('parentOrigin');
+      if (window.parent !== window && parentOrigin) {
+        window.parent.postMessage(message, parentOrigin);
+      } else if (window.flutter_inappwebview) {
+        window.flutter_inappwebview.callHandler('popcornPlayback', message);
+      } else {
+        const query = new URLSearchParams(mediaQuery({ ...selectedMedia, season: nextSeason, episode: nextNumber }));
+        if (activeSubtitles != null) query.set('resumeSubtitles', activeSubtitles);
+        if (preferredSource) query.set('resumeSource', preferredSource);
+        window.location.assign('/player?' + query);
+      }
+    });
     function sessionSnapshot(overrides = {}) {
       return {
         provider: selectedMedia.providerId,
@@ -211,7 +301,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       if (activeSubtitles != null) query.set('resumeSubtitles', activeSubtitles);
       const parentOrigin = resumeQuery.get('parentOrigin');
       if (parentOrigin) query.set('parentOrigin', parentOrigin);
-      for (const key of ['title', 'year']) {
+      for (const key of ['title', 'year', 'nextSeason', 'nextEpisode']) {
         const value = resumeQuery.get(key);
         if (value) query.set(key, value);
       }
@@ -258,6 +348,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
         const [fullscreenResult, playbackResult] = await Promise.allSettled([Promise.resolve(fullscreen), playback]);
         if (playbackResult.status === 'rejected') throw playbackResult.reason;
         hasUserStartedPlayback = true;
+        updateSkipActions();
         startPlaybackButton.hidden = true;
         status.textContent = fullscreenResult.status === 'rejected' ? 'Playing with sound; fullscreen is unavailable in this view.' : '';
       } catch (error) {
@@ -266,6 +357,11 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       }
     });
     function start(media, sourceId = sourceSelect.value) {
+      ++timestampGeneration;
+      timestampMedia = null;
+      skipStatus.textContent = '';
+      skipTimestamps = { intro: [], credits: [] };
+      updateSkipActions();
       const generation = ++requestGeneration;
       videoLoading.hidden = false;
       mediaRecoveryAttempted = false;
@@ -466,6 +562,11 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       start(selectedMedia, sourceSelect.value);
     });
     function playMedia(media) {
+      ++timestampGeneration;
+      timestampMedia = null;
+      skipTimestamps = { intro: [], credits: [] };
+      skipIntro.hidden = true;
+      nextEpisode.hidden = true;
       if (selectedMedia && (selectedMedia.id !== media.id || selectedMedia.type !== media.type || selectedMedia.season !== media.season || selectedMedia.episode !== media.episode)) {
         resumePosition = 0;
         preferredSource = '';

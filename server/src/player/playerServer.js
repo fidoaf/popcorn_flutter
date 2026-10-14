@@ -4,6 +4,7 @@ const { renderPlayerPage } = require('./playerPage');
 const { SubtitleRefStore } = require('./subtitleRefStore');
 const { SourceRefStore } = require('./sourceRefStore');
 const { resolveJustWatchProviderLinks } = require('./justWatchProviderLinks');
+const { fetchIntroDb } = require('./introDb');
 
 function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch }) {
   if (!providers || !resourceProxy) throw new TypeError('Player server requires providers and a resource proxy');
@@ -46,6 +47,8 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
           fetchImpl,
         });
         sendJson(response, 200, links, { 'Access-Control-Allow-Origin': '*' });
+      } else if (url.pathname === '/introdb') {
+        sendJson(response, 200, await fetchIntroDb(url.searchParams, fetchImpl));
       } else if (url.pathname === '/favicon.ico') {
         response.writeHead(204).end();
       } else if (url.pathname === '/manifest') {

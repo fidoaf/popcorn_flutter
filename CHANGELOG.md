@@ -5,6 +5,41 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0]
+
+### Added
+- Intro and credits skip controls using IntroDB timestamps.
+- Next-episode playback for TV series.
+- Playback-session resume, including position and provider, source, language, and subtitle preferences.
+
+### Changed
+- Improved web update detection using the version embedded in the running build.
+
+## [1.6.3]
+
+### Added
+- Playback settings for provider, language, source, quality, and subtitles in the hosted player.
+- A close control for the hosted player.
+
+### Changed
+- Improved player startup and playback controls.
+
+## [1.6.1]
+
+### Added
+- JustWatch links to regional streaming providers.
+
+### Changed
+- Improved watch-history synchronization and media detail provider presentation.
+
+## [1.6.0]
+
+### Added
+- Playback-session details to watch history, enabling playback preferences and progress to be restored.
+
+### Changed
+- Improved watch-history loading, updates, and persistence.
+
 ## [1.5.3]
 
 ### Added

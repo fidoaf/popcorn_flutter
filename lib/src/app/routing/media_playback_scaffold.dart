@@ -6,6 +6,7 @@ import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
 import 'package:popcorn_flutter/src/app/routing/app_services.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/next_episode.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/player/view/player_close_button.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
@@ -50,26 +51,48 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
   PlaybackSession _initialSession = const PlaybackSession();
   String? _profileId;
   String? _historySaveError;
+  (int, int)? _nextEpisode;
+  int _generation = 0;
+  Future<void> _lastSave = Future.value();
+  bool _advancing = false;
+
+  @override
+  void didUpdateWidget(MediaPlaybackScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id || oldWidget.type != widget.type || oldWidget.season != widget.season || oldWidget.episode != widget.episode) {
+      _source = null;
+      _nextEpisode = null;
+      _loadItem();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _loadItem();
+  }
+
+  void _loadItem() {
+    final generation = ++_generation;
     final item = widget.item;
+    final id = widget.id;
     if (item != null) {
       _start(item);
     } else {
       widget.services.repository
-          .mediaItem(widget.id, widget.type)
+          .mediaItem(id, widget.type)
           .then((value) {
-            if (mounted) _start(value);
+            if (mounted && generation == _generation) _start(value);
           })
-          .catchError((Object _) {
-            if (mounted) _start(MediaItem(id: widget.id, title: '', overview: ''));
+          .catchError((Object error) {
+            debugPrint('Unable to load playback metadata: $error');
+            if (mounted && generation == _generation) _start(MediaItem(id: id, title: '', overview: ''));
           });
     }
   }
 
   Future<void> _start(MediaItem item) async {
+    final generation = ++_generation;
     final history = widget.services.historyController;
     try {
       await widget.services.profileController.reload();
@@ -78,17 +101,30 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
     } catch (error) {
       debugPrint('Unable to load playback history: $error');
     }
-    if (!mounted) return;
+    if (!mounted || generation != _generation) return;
     _profileId = widget.services.profileController.activeProfileId;
     final type = widget.type;
     final previous = history.entries.where((entry) => entry.matches(type, item.id)).firstOrNull;
     final resolvedSeason = type == MediaType.tv ? (widget.season ?? previous?.season ?? 1) : null;
     final resolvedEpisode = type == MediaType.tv ? (widget.episode ?? previous?.episode ?? 1) : null;
     final sameEpisode = previous?.season == resolvedSeason && previous?.episode == resolvedEpisode;
-    _initialSession = sameEpisode ? previous?.playback ?? const PlaybackSession() : const PlaybackSession();
+    final playback = previous?.playback;
+    _initialSession = sameEpisode
+        ? playback ?? const PlaybackSession()
+        : PlaybackSession(provider: playback?.provider, source: playback?.source, language: playback?.language, subtitles: playback?.subtitles);
     _season = resolvedSeason;
     _episode = resolvedEpisode;
     _item = item;
+    if (type == MediaType.tv) {
+      (int, int)? next;
+      try {
+        next = await findNextEpisode(widget.services.repository, item.id, resolvedSeason!, resolvedEpisode!).timeout(const Duration(seconds: 10));
+      } catch (error) {
+        debugPrint('Unable to resolve next episode: $error');
+      }
+      if (!mounted || generation != _generation) return;
+      _nextEpisode = next;
+    }
     final resolved = widget.services.mediaSourceProvider.resolve(item, type, season: resolvedSeason, episode: resolvedEpisode);
     final query = Map<String, String>.of(resolved.url.queryParameters);
     if (_initialSession.language != null && query.containsKey('lang')) query['lang'] = _initialSession.language!;
@@ -103,6 +139,11 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
       if (title.isNotEmpty) query['title'] = title;
       final year = item.releaseDate?.year;
       if (year != null) query['year'] = year.toString();
+      final next = _nextEpisode;
+      if (next != null) {
+        query['nextSeason'] = '${next.$1}';
+        query['nextEpisode'] = '${next.$2}';
+      }
     }
     setState(() {
       _source = MediaSource(
@@ -131,7 +172,7 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
     final episode = _episode;
     void save() {
       if (_profileId != widget.services.profileController.activeProfileId) return;
-      widget.services.historyController
+      _lastSave = widget.services.historyController
           .record(item, widget.type, season: season, episode: episode, playback: playback)
           .then((_) {
             if (kDebugMode) debugPrint('[WatchHistory] Saved ${widget.type.name} ${item.id} at ${playback.positionSeconds}s');
@@ -199,6 +240,7 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
       mediaType: widget.type.name,
       season: _season,
       episode: _episode,
+      onNextEpisode: _nextEpisode == null ? null : () => _advance(source),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -241,5 +283,20 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
         ],
       ),
     );
+  }
+
+  Future<void> _advance(MediaSource source) async {
+    if (_advancing || !identical(source, _source) || _profileId != widget.services.profileController.activeProfileId) return;
+    _advancing = true;
+    await _lastSave;
+    if (mounted && identical(source, _source) && _profileId == widget.services.profileController.activeProfileId) {
+      final next = _nextEpisode!;
+      setState(() => _source = null);
+      GoRouter.of(context).go(
+        AppRoutes.watch(widget.type, widget.id, season: next.$1, episode: next.$2),
+        extra: _item,
+      );
+    }
+    _advancing = false;
   }
 }

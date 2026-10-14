@@ -29,6 +29,7 @@ function createServer(initialMedia = null, dependencies = {}) {
     providers,
     resourceProxy,
     subtitleRefs: dependencies.subtitleRefs,
+    fetchImpl: dependencies.fetchImpl,
   });
 }
 

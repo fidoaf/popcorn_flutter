@@ -8,7 +8,10 @@
 
 $ErrorActionPreference = 'Stop'
 
-Write-Host 'Building production web (docs/) ...' -ForegroundColor Cyan
-flutter build web -t lib/main_web.dart --base-href /popcorn_flutter/ --output docs --pwa-strategy=none
+# Compiled into the bundle so the update banner can detect a stale cached build.
+$appVersion = ((Select-String -Path pubspec.yaml -Pattern '^version:\s*(\S+)').Matches[0].Groups[1].Value -split '\+')[0]
+
+Write-Host "Building production web $appVersion (docs/) ..." -ForegroundColor Cyan
+flutter build web -t lib/main_web.dart --base-href /popcorn_flutter/ --output docs --pwa-strategy=none --dart-define=APP_VERSION=$appVersion
 
 Write-Host 'Done. Commit docs/ and push to deploy the main site.' -ForegroundColor Green

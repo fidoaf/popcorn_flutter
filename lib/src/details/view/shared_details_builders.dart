@@ -191,7 +191,12 @@ class PersonNames extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               PersonNameLink(member: members[index], style: style),
-              if (index < members.length - 1) Text(', ', style: style),
+              // Trailing whitespace is dropped from text width on web, so pad explicitly.
+              if (index < members.length - 1)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Text(',', style: style),
+                ),
             ],
           ),
       ],

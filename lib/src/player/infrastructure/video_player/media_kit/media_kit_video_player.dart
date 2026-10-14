@@ -10,6 +10,7 @@ import 'package:popcorn_flutter/src/player/domain/media_source.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/domain/video_player.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/intro_db.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/resume_store.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_racer.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_resolver.dart';
@@ -41,6 +42,9 @@ final class MediaKitVideoPlayer extends VideoPlayer {
       onUrlChanged: onUrlChanged,
       initialSession: scope?.initial,
       onSessionChanged: scope?.onChanged,
+      mediaId: scope?.mediaId,
+      season: scope?.season,
+      episode: scope?.episode,
     );
   }
 }
@@ -53,6 +57,9 @@ class _MediaKitPlayer extends StatefulWidget {
     this.onUrlChanged,
     this.initialSession,
     this.onSessionChanged,
+    this.mediaId,
+    this.season,
+    this.episode,
   });
 
   final MediaSource source;
@@ -61,6 +68,9 @@ class _MediaKitPlayer extends StatefulWidget {
   final ValueChanged<Uri>? onUrlChanged;
   final PlaybackSession? initialSession;
   final ValueChanged<PlaybackSession>? onSessionChanged;
+  final int? mediaId;
+  final int? season;
+  final int? episode;
 
   @override
   State<_MediaKitPlayer> createState() => _MediaKitPlayerState();
@@ -99,6 +109,9 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   bool _subtitlesRestored = false;
   String? _activeSource;
   DateTime _lastReported = DateTime.fromMillisecondsSinceEpoch(0);
+  IntroDbTimestamps _timestamps = const IntroDbTimestamps();
+  Duration? _timestampsDuration;
+  int _timestampGeneration = 0;
 
   String get _resumeId => widget.source.url.toString();
 
@@ -126,7 +139,10 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
         _maybeSavePosition(value);
         if (DateTime.now().difference(_lastReported) >= const Duration(seconds: 5)) _reportSession();
       }),
-      stream.duration.listen((value) => setState(() => _duration = value)),
+      stream.duration.listen((value) {
+        setState(() => _duration = value);
+        _loadTimestamps(value);
+      }),
       stream.buffer.listen((value) => setState(() => _buffer = value)),
       stream.playing.listen((value) {
         setState(() => _playing = value);
@@ -154,6 +170,22 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
         }
       }),
     ]);
+  }
+
+  Future<void> _loadTimestamps(Duration duration) async {
+    final id = widget.mediaId;
+    if (id == null || duration <= Duration.zero || (_timestampsDuration != null && (_timestampsDuration! - duration).abs() < const Duration(seconds: 1))) {
+      return;
+    }
+    _timestampsDuration = duration;
+    final generation = ++_timestampGeneration;
+    setState(() => _timestamps = const IntroDbTimestamps());
+    try {
+      final timestamps = await loadIntroDbTimestamps(tmdbId: id, duration: duration, season: widget.season, episode: widget.episode);
+      if (mounted && generation == _timestampGeneration) setState(() => _timestamps = timestamps);
+    } catch (error) {
+      debugPrint('[MediaKitPlayer] Unable to load IntroDB timestamps: $error');
+    }
   }
 
   Future<void> _startPlayback() async {
@@ -379,8 +411,40 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
               if (_buffering && _resumeAt == null) const Center(child: CircularProgressIndicator(color: Colors.white)),
               if (_resumeAt != null) _buildResumeBanner(),
               _buildControls(),
+              if (_resumeAt == null && _hasStartedPlayback) _buildSkipActions(context),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkipActions(BuildContext context) {
+    final intro = _timestamps.introAt(_position, _duration);
+    final onNext = PlaybackSessionScope.of(context)?.onNextEpisode;
+    final showNext = onNext != null && _timestamps.creditsAt(_position);
+    if (intro == null && !showNext) return const SizedBox.shrink();
+    return Positioned(
+      left: 20,
+      right: 20,
+      bottom: 110,
+      child: SafeArea(
+        child: Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            if (intro != null) FilledButton.icon(onPressed: () => _seek(intro.end!), icon: const Icon(Icons.fast_forward), label: const Text('Skip intro')),
+            if (showNext)
+              FilledButton.icon(
+                onPressed: () {
+                  _reportSession();
+                  onNext();
+                },
+                icon: const Icon(Icons.skip_next),
+                label: const Text('Next episode'),
+              ),
+          ],
         ),
       ),
     );

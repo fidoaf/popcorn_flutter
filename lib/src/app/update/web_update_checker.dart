@@ -10,10 +10,16 @@ import 'package:http/http.dart' as http;
 /// The first successful fetch is captured as the baseline; any later value that
 /// differs flips [updateAvailable] to `true` and stops polling.
 class WebUpdateChecker extends ChangeNotifier {
-  WebUpdateChecker({this.pollInterval = const Duration(minutes: 5), http.Client? client}) : _client = client ?? http.Client();
+  WebUpdateChecker({this.pollInterval = const Duration(minutes: 5), http.Client? client, this.runningVersion = const String.fromEnvironment('APP_VERSION')})
+    : _client = client ?? http.Client(),
+      _baseline = runningVersion.isEmpty ? null : runningVersion;
 
   final Duration pollInterval;
   final http.Client _client;
+
+  /// Version compiled into this bundle; empty when the build didn't define it.
+  /// version.json can't be the baseline: a cached old bundle would read the new file.
+  final String runningVersion;
 
   Timer? _timer;
   String? _baseline;
@@ -24,8 +30,8 @@ class WebUpdateChecker extends ChangeNotifier {
 
   /// Captures the current deployed version and begins periodic polling.
   Future<void> start() async {
-    _baseline ??= await _fetchVersion();
     _timer ??= Timer.periodic(pollInterval, (_) => _check());
+    await _check();
   }
 
   /// Forces an immediate check (e.g. when the app is resumed or refocused).
@@ -52,6 +58,7 @@ class WebUpdateChecker extends ChangeNotifier {
       if (response.statusCode != 200) return null;
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final version = json['version']?.toString() ?? '';
+      if (runningVersion.isNotEmpty) return version.isEmpty ? null : version;
       final build = json['build_number']?.toString() ?? '';
       final combined = '$version+$build';
       // Fall back to the raw body if neither field is present.

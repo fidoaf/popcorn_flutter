@@ -75,3 +75,21 @@ players without an event API cannot report their internal settings or position.
 Uploaded local subtitle files are not transferred to other devices. Cloud
 sync requires a network connection; simultaneous sessions use the last
 successful write. Abrupt termination may lose the latest few seconds.
+
+## Skip Intro and Next Episode
+
+The hosted HTML player and media_kit player use the free
+[IntroDB API](https://theintrodb.org/docs) to display floating **Skip intro**
+buttons during known intro segments and **Next episode** buttons during
+credits. Requests include the media ID, season/episode, and actual video
+duration in milliseconds to identify the release. No IntroDB API key is needed.
+The hosted player uses the server's `/introdb` endpoint; deploy the updated
+player server together with the app.
+
+Next episodes are verified against the catalog, including season rollover,
+and unreleased episodes and series finales have no next-episode button.
+Advancing starts the next episode at zero while retaining playback preferences
+and updating watch history. The hosted next-episode action requires the app
+to supply the verified next season/episode. Missing timestamps hide the
+corresponding buttons; API failures are reported without stopping playback.
+External provider iframes without a playback/seek API cannot use these controls.
