@@ -78,6 +78,25 @@ deno check --node-modules-dir=none --no-lock supabase/functions/send-push/index.
 
 ## Local App and Player
 
+### GitHub Pages environment configuration
+
+The Pages workflow replaces the built web configuration with the GitHub Actions
+`ENV_FILE` secret before publishing. Set that secret to the **complete multiline
+contents** of your local `assets/config/app.env`, not just a newly added setting.
+In particular, retain `supabase.url`, `supabase.publishableKey`, and
+`tmdb.accessToken` when adding `playerServer.token` or `push.vapidPublicKey`.
+Only client-safe credentials belong in this file: never include a Supabase
+service-role key or a VAPID private key.
+
+Optional `TEST_ENV_FILE` and `ADMIN_ENV_FILE` secrets replace the entire
+configuration for their respective builds; when unset, they use `ENV_FILE`.
+The workflow rejects missing/empty Supabase settings before uploading the site.
+If the published app reports missing Supabase configuration, correct the
+appropriate secret in GitHub **Settings > Secrets and variables > Actions**,
+then rerun **Deploy static content to Pages**. Changing the secret alone does
+not update the existing deployment. No Flutter rebuild is needed when only
+these runtime configuration values change.
+
 From the project root, start the player server in one terminal:
 
 ```powershell

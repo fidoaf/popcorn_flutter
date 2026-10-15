@@ -66,6 +66,38 @@ jobs:
           else
             printf '%s\n' "$ENV_FILE" > docs/admin/assets/assets/config/app.env
           fi
+      - name: Validate deployed Supabase configuration
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          failed = False
+          for build, secret in [
+              ("docs", "ENV_FILE"),
+              ("docs/test", "TEST_ENV_FILE (or ENV_FILE fallback)"),
+              ("docs/admin", "ADMIN_ENV_FILE (or ENV_FILE fallback)"),
+          ]:
+              root = Path(build)
+              if not (root / "index.html").exists():
+                  continue
+              path = root / "assets/assets/config/app.env"
+              values = {}
+              for line in path.read_text(encoding="utf-8-sig").splitlines():
+                  line = re.sub(r"^export\s+", "", line.strip())
+                  if not line or line.startswith("#") or "=" not in line:
+                      continue
+                  key, value = line.split("=", 1)
+                  values.setdefault(key.strip(), value.strip())
+              for key in ("supabase.url", "supabase.publishableKey"):
+                  value = values.get(key, "").split(" #", 1)[0].strip().strip("'\"").strip()
+                  if not value:
+                      print(f"::error::{secret} must contain a non-empty {key} entry for {build}. Supply the complete app.env, not only playerServer.token.")
+                      failed = True
+          if failed:
+              sys.exit(1)
+          PY
       - name: Preserve published Windows installer
         env:
           REPOSITORY: ${{ github.repository }}
