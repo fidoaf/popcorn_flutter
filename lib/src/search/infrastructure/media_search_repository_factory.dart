@@ -1,4 +1,5 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 import 'package:popcorn_flutter/src/search/infrastructure/tmdb_media_search_repository.dart';
 
@@ -14,6 +15,6 @@ abstract final class MediaSearchRepositoryFactory {
     if (accessToken == null || accessToken.isEmpty) {
       throw StateError('Missing $_accessTokenKey in environment (.env).');
     }
-    return TmdbMediaSearchRepository(accessToken: accessToken, playerServerUrl: Uri.parse(_playerServerUrl));
+    return TmdbMediaSearchRepository(accessToken: accessToken, playerServerUrl: Uri.parse(_playerServerUrl), playerServerToken: PlayerServerConfig.token);
   }
 }

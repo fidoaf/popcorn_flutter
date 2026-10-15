@@ -64,8 +64,8 @@ test('restores a hosted session with fresh track IDs and reports settings, progr
   const navigations = [];
   const windowListeners = new Map();
   let now = 10000;
-  vm.runInNewContext(renderPlayerPage(media, { showForm: false }).match(/<script>([\s\S]*?)<\/script>/)[1], {
-    document, URLSearchParams, Event: class { constructor(type) { this.type = type; } },
+  vm.runInNewContext(renderPlayerPage(media, { showForm: false, session: 'playback-session' }).match(/<script>([\s\S]*?)<\/script>/)[1], {
+    document, URLSearchParams, setTimeout: () => 0, clearTimeout() {}, Event: class { constructor(type) { this.type = type; } },
     Date: { now: () => now },
     Option: function Option(label, value) { return { textContent: label, value, dataset: {} }; },
     fetch: async (url) => ({ ok: true, json: async () => url.startsWith('/sources')
@@ -82,7 +82,8 @@ test('restores a hosted session with fresh track IDs and reports settings, progr
   const video = elements.get('video');
   assert.equal(elements.get('source').value, 'fresh-source');
   assert.equal(elements.get('subtitles').value, 'fresh-subtitle');
-  assert.equal(video.options[0].src, '/subtitle/fresh-subtitle');
+  assert.equal(video.options[0].src, '/subtitle/fresh-subtitle?session=playback-session');
+  assert.match(video.src, /session=playback-session/);
   video.dispatch('loadedmetadata');
   assert.equal(video.currentTime, 120);
   video.dispatch('seeked');
@@ -111,6 +112,7 @@ test('restores a hosted session with fresh track IDs and reports settings, progr
   const languageUrl = new URL(navigations.at(-1), 'https://player.example');
   assert.equal(languageUrl.searchParams.get('resume'), '240');
   assert.equal(languageUrl.searchParams.get('lang'), 'fr');
+  assert.equal(languageUrl.searchParams.get('session'), 'playback-session');
   elements.get('provider').value = 'nxsha';
   elements.get('provider').dispatch('change');
   assert.equal(messages.at(-1).session.provider, 'nxsha');
@@ -140,6 +142,7 @@ test('player provider selector precedes source and switches providers with curre
         const listeners = new Map();
         elements.set(id, {
           value: '',
+          dataset: {},
           disabled: true,
           addEventListener(event, callback) { listeners.set(event, callback); },
           dispatch(event) { listeners.get(event)?.(); },
@@ -157,7 +160,7 @@ test('player provider selector precedes source and switches providers with curre
   const navigations = [];
   const script = page.match(/<script>([\s\S]*?)<\/script>/)[1];
   vm.runInNewContext(script, {
-    document,
+    document, setTimeout: () => 0, clearTimeout() {},
     URLSearchParams,
     Option: function Option() {},
     fetch: () => new Promise(() => {}),
@@ -191,6 +194,7 @@ test('player shows a circular loader while buffering and seeking until video is 
         const listeners = new Map();
         elements.set(id, {
           hidden: id === 'video-loading' || id === 'retry',
+          dataset: {},
           readyState: 2,
           seeking: false,
           addEventListener(event, callback) {
@@ -207,7 +211,7 @@ test('player shows a circular loader while buffering and seeking until video is 
     querySelectorAll() { return []; },
   };
   const script = page.match(/<script>([\s\S]*?)<\/script>/)[1];
-  vm.runInNewContext(script, { document, URLSearchParams, window: { location: {}, addEventListener() {} } });
+  vm.runInNewContext(script, { document, URLSearchParams, setTimeout: () => 0, clearTimeout() {}, window: { location: {}, addEventListener() {} } });
   const video = elements.get('video');
   const loader = elements.get('video-loading');
   assert.equal(loader.hidden, true);
@@ -456,7 +460,7 @@ test('redirect gear opens settings and preserves media when preferences or provi
     },
   };
   vm.runInNewContext(page.match(/<script>([\s\S]*?)<\/script>/)[1], {
-    document, URLSearchParams,
+    document, URLSearchParams, setTimeout: () => 0, clearTimeout() {},
     Option: function Option(label, value) { return { textContent: label, value, dataset: {} }; },
     fetch() { assert.fail('Redirect embeds must not request manifests or track catalogs'); },
     window: {
@@ -502,7 +506,7 @@ test('redirect gear opens settings and preserves media when preferences or provi
 test('first play waits for a user gesture, then unmutes, enters fullscreen and starts playback', async () => {
   const media = { providerId: 'vidsrcbuzz', type: 'movie', id: '42', lang: 'en', sub: '1' };
   const page = renderPlayerPage(media, { showForm: false });
-  assert.match(page, /id="video" playsinline hidden/);
+  assert.match(page, /id="video" playsinline controlslist="nofullscreen" hidden/);
   assert.match(page, /id="start-playback" type="button" title="Play" aria-label="Play" hidden><span class="play-icon" aria-hidden="true"><\/span><span class="visually-hidden">Play<\/span><\/button>/);
   assert.doesNotMatch(page, /id="video" controls/);
   const elements = new Map();
@@ -531,7 +535,7 @@ test('first play waits for a user gesture, then unmutes, enters fullscreen and s
       if (id === 'media-form') return null;
       if (!elements.has(id)) {
         elements.set(id, id === 'video' ? video : id === 'start-playback' ? startButton : {
-          value: '', hidden: true, disabled: true, addEventListener() {}, replaceChildren() {}, pause() {}, removeAttribute() {}, load() {}, canPlayType() { return true; },
+          value: '', dataset: {}, hidden: true, disabled: true, addEventListener() {}, replaceChildren() {}, pause() {}, removeAttribute() {}, load() {}, canPlayType() { return true; },
         });
       }
       return elements.get(id);
@@ -539,7 +543,7 @@ test('first play waits for a user gesture, then unmutes, enters fullscreen and s
   };
   const script = page.match(/<script>([\s\S]*?)<\/script>/)[1];
   vm.runInNewContext(script, {
-    document, URLSearchParams, Event: class { constructor(type) { this.type = type; } },
+    document, URLSearchParams, setTimeout: () => 0, clearTimeout() {}, Event: class { constructor(type) { this.type = type; } },
     Option: function Option(label, value) { return { textContent: label, value, dataset: {} }; },
     fetch: () => new Promise(() => {}),
     window: { location: { search: '', assign() {} }, parent: { postMessage() {} }, addEventListener() {} },

@@ -31,7 +31,8 @@ class ResourceProxy {
         'Content-Type': 'application/vnd.apple.mpegurl',
         'Cache-Control': 'no-store',
       });
-      response.end(this._rewriteManifest(body, upstream.url, providerId));
+      const session = new URL(request.url, 'http://localhost').searchParams.get('session');
+      response.end(this._rewriteManifest(body, upstream.url, providerId, session));
       return;
     }
 
@@ -82,16 +83,17 @@ class ResourceProxy {
     }
   }
 
-  _rewriteManifest(body, manifestUrl, providerId) {
+  _rewriteManifest(body, manifestUrl, providerId, session = null) {
     return body.split('\n').map((line) => {
       if (!line.trim()) return line;
-      if (!line.startsWith('#')) return this._localUrl(line.trim(), manifestUrl, providerId);
-      return line.replace(/URI="([^"]+)"/g, (_, uri) => `URI="${this._localUrl(uri, manifestUrl, providerId)}"`);
+      if (!line.startsWith('#')) return this._localUrl(line.trim(), manifestUrl, providerId, session);
+      return line.replace(/URI="([^"]+)"/g, (_, uri) => `URI="${this._localUrl(uri, manifestUrl, providerId, session)}"`);
     }).join('\n');
   }
 
-  _localUrl(uri, baseUrl, providerId) {
-    return this._register(new URL(uri, baseUrl).href, providerId);
+  _localUrl(uri, baseUrl, providerId, session) {
+    const path = this._register(new URL(uri, baseUrl).href, providerId);
+    return session ? `${path}?session=${encodeURIComponent(session)}` : path;
   }
 
   async _fetchWithRetry(request, url, providerId) {

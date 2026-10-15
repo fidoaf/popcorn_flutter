@@ -5,6 +5,7 @@ import 'package:popcorn_flutter/src/player/infrastructure/media_source/configura
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/json_media_source_provider.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_preferences.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_provider_definition.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
 
 /// Builds the [ConfigurableMediaSourceProvider] used by the app from a JSON
 /// definition, so the available streaming backends (and the default one) can be
@@ -46,15 +47,18 @@ abstract final class MediaSourceProviderFactory {
     String source, {
     MediaSourcePreferences? preferences,
     String playerServerUrl = const String.fromEnvironment('PLAYER_SERVER_URL'),
-  }) => createFromMap(jsonDecode(source) as Map<String, dynamic>, preferences: preferences, playerServerUrl: playerServerUrl);
+    String? playerServerToken,
+  }) => createFromMap(jsonDecode(source) as Map<String, dynamic>, preferences: preferences, playerServerUrl: playerServerUrl, playerServerToken: playerServerToken);
 
   /// Builds the provider from an already-decoded JSON [config] map.
   static ConfigurableMediaSourceProvider createFromMap(
     Map<String, dynamic> config, {
     MediaSourcePreferences? preferences,
     String playerServerUrl = const String.fromEnvironment('PLAYER_SERVER_URL'),
+    String? playerServerToken,
   }) {
     final resolvedPreferences = preferences ?? MediaSourcePreferences();
+    final resolvedToken = playerServerToken ?? PlayerServerConfig.token;
     final serverUrl = playerServerUrl.isEmpty ? null : Uri.parse(playerServerUrl);
     if (serverUrl != null &&
         (!['http', 'https'].contains(serverUrl.scheme) ||
@@ -77,6 +81,12 @@ abstract final class MediaSourceProviderFactory {
             definition['scheme'] = serverUrl.scheme;
             definition['host'] = serverUrl.host;
             definition['port'] = serverUrl.hasPort ? serverUrl.port : null;
+          }
+          if (definition['path'] == '/player' && resolvedToken.isNotEmpty) {
+            final headers = Map<String, dynamic>.from(definition['headers'] as Map? ?? const {});
+            headers.removeWhere((key, _) => key.toLowerCase() == 'authorization');
+            headers['Authorization'] = 'Bearer $resolvedToken';
+            definition['headers'] = headers;
           }
           return JsonMediaSourceProvider(MediaSourceProviderDefinition.fromJson(definition), preferences: resolvedPreferences);
         })

@@ -19,7 +19,7 @@ abstract final class StreamResolver {
 
   static Map<String, String> _mediaQuery(MediaSource source) => {
     for (final entry in source.url.queryParameters.entries)
-      if (['provider', 'id', 'type', 'season', 'episode', 'lang', 'sub'].contains(entry.key)) entry.key: entry.value,
+      if (['provider', 'id', 'type', 'season', 'episode', 'lang', 'sub', 'session'].contains(entry.key)) entry.key: entry.value,
   };
 
   static Future<List<VidSrcSubtitle>> subtitles(MediaSource source) async {
@@ -38,7 +38,9 @@ abstract final class StreamResolver {
         VidSrcSubtitle(
           label: track['label'] as String,
           language: track['language'] as String? ?? '',
-          url: source.url.replace(path: '/subtitle/${Uri.encodeComponent(track['id'] as String)}', query: ''),
+          url: source.url.replace(path: '/subtitle/${Uri.encodeComponent(track['id'] as String)}', queryParameters: {
+            if (source.url.queryParameters['session'] case final session?) 'session': session,
+          }),
         ),
     ];
   }

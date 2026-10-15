@@ -1,0 +1,3 @@
+[functions.send-push]
+# The function validates the bearer token with auth.getUser and checks app_metadata.
+verify_jwt = false

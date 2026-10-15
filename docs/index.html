@@ -75,17 +75,26 @@
     });
   </script>
 
-  <!-- Self-heal stale caches: unregister any old service worker and clear its caches. -->
+  <script src="push_notifications.js"></script>
+
+  <!-- Self-heal stale Flutter caches without removing push subscriptions. -->
   <script>
     (function () {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function (regs) {
-          regs.forEach(function (reg) { reg.unregister(); });
+          regs.forEach(function (reg) {
+            var worker = reg.active || reg.waiting || reg.installing;
+            if (worker && new URL(worker.scriptURL).pathname.endsWith('/flutter_service_worker.js')) {
+              reg.unregister();
+            }
+          });
         });
       }
       if (window.caches && caches.keys) {
         caches.keys().then(function (keys) {
-          keys.forEach(function (key) { caches.delete(key); });
+          keys.forEach(function (key) {
+            if (key.startsWith('flutter-')) caches.delete(key);
+          });
         });
       }
     })();

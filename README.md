@@ -1,6 +1,81 @@
 # popcorn_flutter
 Watch movies and TV series on the go!
 
+## Admin Web Push Notifications
+
+The admin console (`lib/main_admin.dart`, deployed under `/admin/`) has a
+**Push notifications** tab for broadcasting a title, message, and optional app
+URL to all opted-in web/PWA browsers. Sending requires Google sign-in and the
+trusted Supabase `app_metadata.role = "admin"` role. The existing Notes tab is
+unchanged; its table and Realtime configuration are still required to use it.
+
+Before using notifications:
+
+1. Apply
+   [`20261015000001_web_push_subscriptions.sql`](supabase/migrations/20261015000001_web_push_subscriptions.sql)
+   in the Supabase SQL editor. Users can manage only their own subscriptions;
+   only the server-side service role can read the full recipient list.
+2. Generate a VAPID key pair locally, for example with
+   `npx web-push generate-vapid-keys`. Keep the private key secret.
+3. Set Edge Function secrets using the Supabase CLI or dashboard:
+   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a `mailto:` contact),
+   and `PUSH_APP_URL` (the HTTPS production app URL, including its base path
+   and trailing slash, e.g. `https://fidoaf.github.io/popcorn_flutter/`).
+   Supabase supplies `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+4. Deploy with `supabase functions deploy send-push --no-verify-jwt`.
+   The checked-in function configuration disables the gateway JWT check because
+   the function itself verifies the bearer token with `auth.getUser` and checks
+   the trusted admin role. It does **not** allow anonymous sends.
+5. Grant the role to the intended admin in the SQL editor, preserving other
+   metadata (replace the email):
+
+   ```sql
+   update auth.users
+   set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+     || '{"role":"admin"}'::jsonb
+   where email = 'admin@example.com';
+   ```
+
+   Sign out and back in after changing roles. Do not put this role in
+   user-editable `user_metadata`. Add the deployed `/admin/` callback URL to
+   Supabase Auth's allowed redirect URLs and enable Google OAuth.
+6. Add **only the public key** as `push.vapidPublicKey=...` in
+   `assets/config/app.env`, then rebuild/deploy the production and admin web apps
+   using `build_web_all.ps1`. Never put a service-role key or VAPID private key in
+   Flutter assets.
+
+Signed-in users opt in/out with the notifications bell on the web home page.
+HTTPS (or localhost for development), browser permission, and Web Push support
+are required. On iPhone/iPad, install the PWA to the home screen first
+(iOS/iPadOS 16.4+). Permission is never requested automatically. Unsupported
+browsers and native apps do not display the bell.
+
+The dedicated `push_service_worker.js` uses a `push/` scope under each web
+build's base path; it is preserved by startup cache cleanup and receives pushes
+without an open app tab. Clicks open an app URL on the same origin and inside
+the configured app path. Leaving the optional URL blank opens the app; relative
+URLs such as `#/home` are resolved against `PUSH_APP_URL`.
+
+Results distinguish push-service acceptance, failed sends, expired
+subscriptions (automatically deleted on HTTP 404/410), and no subscribers.
+Acceptance does not guarantee that an offline/disabled device displays the
+message. Subscriptions remain active after sign-out; sign in and use the bell
+to disable them, or revoke permission in browser settings. Broadcasts are public
+announcements, not private/account-specific messages. Notification
+payloads are limited to 100 title characters, 1000 message characters, and
+3072 UTF-8 bytes including the URL. Broadcasts run synchronously with bounded
+concurrency; for large audiences, add a background delivery queue before
+exceeding your Edge Function execution limits. A failed/timeout broadcast can
+already have sent some messages, so inspect function logs before retrying.
+
+Focused checks:
+
+```powershell
+flutter test test/push_notification_panel_test.dart
+node --test tool/web_push.test.cjs supabase/functions/send-push/validation_test.ts
+deno check --node-modules-dir=none --no-lock supabase/functions/send-push/index.ts
+```
+
 ## Local App and Player
 
 From the project root, start the player server in one terminal:
@@ -26,6 +101,49 @@ physical device, use your PC's LAN IP and allow access to port 3001 through the
 firewall. Native mobile platforms may also require development-only HTTP
 cleartext permissions. For web testing, use a local HTTP app rather than
 embedding an HTTP player from a deployed HTTPS app.
+
+## Player Server Authorization
+
+In the Render service's **Environment** settings, set `API_TOKENS` to one or
+more comma-separated bearer tokens, then redeploy. Multiple tokens allow a
+new app token to be deployed before removing the old one. `AUTH_TOKEN` is also
+accepted as a single-token fallback. The Render blueprint prompts for
+`API_TOKENS`; do not put real tokens in source control. Use long random values
+(for example, `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`).
+
+Set `playerServer.token=<matching-token>` in the app's environment configuration
+(the existing `ENV_FILE`, `TEST_ENV_FILE`, or `ADMIN_ENV_FILE` GitHub secret
+for the corresponding deployment). Keep local environment files out of source
+control. Alternatively, build or run with
+`--dart-define=PLAYER_SERVER_TOKEN=<matching-token>`; a non-empty build-time
+value overrides the environment-file value. This applies to all Flutter
+targets, including the existing web build scripts and Windows packaging.
+Restart the app after changing its environment file; rebuild native packages
+to distribute an updated file or compile-time value.
+
+Use `--dart-define=PLAYER_SERVER_URL=https://your-service.onrender.com` when
+overriding the configured player host. Restart/rebuild after changing a
+compile-time value.
+
+The app sends `Authorization: Bearer <token>` to `/watch-providers` and to
+`/session`. The latter returns a random playback credential used in URLs
+because browser iframes and native HLS requests cannot consistently attach
+custom headers. Player navigation, manifests, segments, encryption keys,
+and subtitles retain that session; the configured bearer token is not put
+in their URLs or forwarded to upstream providers. Sessions expire after
+30 minutes without a server request and are lost on server restart. Reopen
+playback to obtain a new session after expiry or redeployment. Treat session
+URLs as credentials as well.
+
+All server routes require authorization except `/health`, `/favicon.ico`,
+and CORS preflight (`OPTIONS`). Missing/invalid credentials return HTTP 401.
+Without `API_TOKENS` or `AUTH_TOKEN`, authorization remains disabled for local
+development. Deploy the updated server and app together when enabling it.
+
+**Client tokens are not secrets:** users can extract tokens from distributed
+native apps and web builds. This is a shared server access gate, not per-user
+authentication. Use HTTPS in production and never reuse an administrative or
+third-party API credential for this token.
 
 ## Cross-device Resume
 
@@ -93,3 +211,14 @@ and updating watch history. The hosted next-episode action requires the app
 to supply the verified next season/episode. Missing timestamps hide the
 corresponding buttons; API failures are reported without stopping playback.
 External provider iframes without a playback/seek API cannot use these controls.
+
+The hosted player's **Fullscreen** / **Exit fullscreen** button expands the
+whole player container, keeping Skip intro and Next episode visible and
+clickable above the video controls. During fullscreen playback, Exit fullscreen
+fades after three seconds of inactivity and reappears on pointer movement,
+touch, or keyboard interaction. It remains visible while paused or keyboard-focused;
+the skip buttons are unaffected. The video-only fullscreen shortcut is
+hidden where the browser supports it. media_kit keeps the buttons in its
+fullscreen window too. Browsers limited to native video-only fullscreen
+(such as older iOS versions) cannot display HTML overlays there; use inline
+playback for these buttons on those browsers.

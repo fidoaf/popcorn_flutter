@@ -5,31 +5,39 @@ const { SubtitleRefStore } = require('./subtitleRefStore');
 const { SourceRefStore } = require('./sourceRefStore');
 const { resolveJustWatchProviderLinks } = require('./justWatchProviderLinks');
 const { fetchIntroDb } = require('./introDb');
+const { parseTokens } = require('../config');
+const { PlayerAuth } = require('./playerAuth');
 
-function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch }) {
+function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch, apiTokens = parseTokens(process.env.API_TOKENS || process.env.AUTH_TOKEN), auth = new PlayerAuth(apiTokens) }) {
   if (!providers || !resourceProxy) throw new TypeError('Player server requires providers and a resource proxy');
 
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
-    if (url.pathname === '/watch-providers') {
-      response.setHeader('Access-Control-Allow-Origin', '*');
-      response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-      if (request.method === 'OPTIONS') {
-        response.writeHead(204).end();
-        return;
-      }
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    response.setHeader('Access-Control-Allow-Headers', 'Authorization, Range');
+    response.setHeader('Referrer-Policy', 'no-referrer');
+    if (request.method === 'OPTIONS') {
+      response.writeHead(204).end();
+      return;
     }
     if (request.method !== 'GET') {
       response.writeHead(405).end();
       return;
     }
+    if (!auth.authorize(request, url)) {
+      sendJson(response, 401, { error: 'Unauthorized' }, { 'WWW-Authenticate': 'Bearer' });
+      return;
+    }
 
     try {
-      if (url.pathname === '/health') {
+      if (url.pathname === '/session') {
+        sendJson(response, 200, { session: auth.createSession() });
+      } else if (url.pathname === '/health') {
         response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
         response.end('ok');
       } else if (url.pathname === '/') {
-        sendHtml(response, renderPlayerPage(initialMedia, { providers: providers.list() }));
+        sendHtml(response, renderPlayerPage(initialMedia, { providers: providers.list(), session: auth.pageSession(url) }));
       } else if (url.pathname === '/providers') {
         sendJson(response, 200, { providers: providers.list(), defaultProvider: providers.defaultProviderId }, { 'Access-Control-Allow-Origin': '*' });
       } else if (url.pathname === '/player') {
@@ -37,7 +45,7 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
         const provider = providers.get(media.providerId);
         const embedUrl = typeof provider.embedUrl === 'function' && typeof provider.extract !== 'function'
           ? provider.embedUrl(media).href : null;
-        sendHtml(response, renderPlayerPage(media, { providers: providers.list(), showForm: false, embedUrl }));
+        sendHtml(response, renderPlayerPage(media, { providers: providers.list(), showForm: false, embedUrl, session: auth.pageSession(url) }));
       } else if (url.pathname === '/watch-providers') {
         const links = await resolveJustWatchProviderLinks({
           type: url.searchParams.get('type'),

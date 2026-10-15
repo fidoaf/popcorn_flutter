@@ -4,7 +4,7 @@ function escapeHtml(value) {
   })[character]);
 }
 
-function renderPlayerPage(initialMedia, { providers = [], showForm = true, embedUrl = null } = {}) {
+function renderPlayerPage(initialMedia, { providers = [], showForm = true, embedUrl = null, session = null } = {}) {
   const selectedType = initialMedia?.type || 'movie';
   const selectedProvider = initialMedia?.providerId || providers[0]?.id || '';
   const selectedLanguage = initialMedia?.lang || 'en';
@@ -39,6 +39,12 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     form button:hover{background:#ff2631}
     #now-playing{padding:10px 20px 0;color:#aeb3bd;font-size:13px}
     #video-container{position:relative;display:flex;flex:1;min-height:0;background:#000}
+    #video-container:fullscreen{width:100%;height:100%}
+    #video-container:fullscreen video{height:100%;object-fit:contain}
+    video::-webkit-media-controls-fullscreen-button{display:none}
+    #fullscreen-toggle{position:absolute;z-index:3;top:16px;left:16px;min-height:44px;padding:10px 14px;border:1px solid #ffffff80;border-radius:6px;background:#17191ee8;color:white;text-decoration:none;transition:opacity .2s,visibility .2s}
+    #fullscreen-toggle[data-inactive="true"]{opacity:0;visibility:hidden;pointer-events:none}
+    #fullscreen-toggle[hidden]{display:none}
     #provider-frame{border:0;width:100%;height:100%;position:absolute;inset:0;background:#000}
     #provider-frame[hidden],#playback-settings[hidden]{display:none}
     #settings-toggle{margin-left:auto;width:36px;height:36px;border:1px solid #ffffff50;border-radius:4px;background:#17191ee8;font-size:22px;text-decoration:none}
@@ -95,7 +101,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     </header>` : ''}
     <div id="now-playing" hidden></div>
     <div id="video-container" hidden>
-      <video id="video" playsinline hidden></video>
+      <video id="video" playsinline controlslist="nofullscreen" hidden></video>
+      <button id="fullscreen-toggle" type="button" aria-label="Enter fullscreen" aria-pressed="false" hidden>Fullscreen</button>
       <iframe id="provider-frame" title="Provider player" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" hidden></iframe>
       <button id="start-playback" type="button" title="Play" aria-label="Play" hidden><span class="play-icon" aria-hidden="true"></span><span class="visually-hidden">Play</span></button>
       <div id="video-loading" role="status" aria-label="Loading video" hidden></div>
@@ -112,6 +119,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
   <script>
     const video = document.getElementById('video');
     const videoContainer = document.getElementById('video-container');
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
     const startPlaybackButton = document.getElementById('start-playback');
     const videoLoading = document.getElementById('video-loading');
     const skipIntro = document.getElementById('skip-intro');
@@ -143,6 +151,10 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     const providerNote = document.getElementById('provider-note');
     const embedUrl = ${JSON.stringify(embedUrl).replace(/</g, '\\u003c')};
     const initialMedia = ${JSON.stringify(playbackMedia)};
+    const playbackSession = ${JSON.stringify(session).replace(/</g, '\\u003c')};
+    function authenticatedUrl(path) {
+      return playbackSession ? path + (path.includes('?') ? '&' : '?') + 'session=' + encodeURIComponent(playbackSession) : path;
+    }
     function showSettings(open) {
       settingsPanel.hidden = !open;
       settingsToggle.ariaExpanded = String(open);
@@ -168,6 +180,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     let activeSubtitles = preferredSubtitles;
     let restoringPosition = false;
     let hasUserStartedPlayback = false;
+    let fullscreenHideTimer;
     let lastProgressAt = 0;
     let skipTimestamps = { intro: [], credits: [] };
     let timestampGeneration = 0;
@@ -326,6 +339,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
         query.set('season', media.season);
         query.set('episode', media.episode);
       }
+      if (playbackSession) query.set('session', playbackSession);
       return query.toString();
     }
     function fail(message) {
@@ -338,6 +352,43 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       subtitles.replaceChildren(new Option('Off', ''));
       subtitles.disabled = true;
     }
+    function updateFullscreenControl() {
+      const fullscreen = document.fullscreenElement === videoContainer;
+      fullscreenToggle.hidden = !!embedUrl || !hasUserStartedPlayback || typeof videoContainer.requestFullscreen !== 'function';
+      fullscreenToggle.textContent = fullscreen ? 'Exit fullscreen' : 'Fullscreen';
+      fullscreenToggle.ariaLabel = fullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+      fullscreenToggle.ariaPressed = String(fullscreen);
+      showFullscreenControl();
+      updateSkipActions();
+    }
+    function showFullscreenControl() {
+      clearTimeout(fullscreenHideTimer);
+      fullscreenToggle.dataset.inactive = 'false';
+      if (fullscreenToggle.hidden || document.fullscreenElement !== videoContainer || video.paused || video.ended) return;
+      fullscreenHideTimer = setTimeout(() => {
+        if (document.fullscreenElement === videoContainer && !video.paused && !video.ended && document.activeElement !== fullscreenToggle) {
+          fullscreenToggle.dataset.inactive = 'true';
+        }
+      }, 3000);
+    }
+    for (const event of ['pointermove', 'pointerdown', 'keydown', 'focusin', 'focusout']) {
+      videoContainer.addEventListener(event, showFullscreenControl);
+    }
+    for (const event of ['playing', 'pause', 'ended']) video.addEventListener(event, showFullscreenControl);
+    window.addEventListener('pagehide', () => clearTimeout(fullscreenHideTimer));
+    document.addEventListener('fullscreenchange', updateFullscreenControl);
+    fullscreenToggle.addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement === videoContainer) {
+          await document.exitFullscreen();
+        } else {
+          await videoContainer.requestFullscreen();
+        }
+        updateFullscreenControl();
+      } catch (error) {
+        status.textContent = 'Could not change fullscreen: ' + error.message;
+      }
+    });
     startPlaybackButton.addEventListener('click', async () => {
       startPlaybackButton.disabled = true;
       video.muted = false;
@@ -348,6 +399,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
         const [fullscreenResult, playbackResult] = await Promise.allSettled([Promise.resolve(fullscreen), playback]);
         if (playbackResult.status === 'rejected') throw playbackResult.reason;
         hasUserStartedPlayback = true;
+        updateFullscreenControl();
         updateSkipActions();
         startPlaybackButton.hidden = true;
         status.textContent = fullscreenResult.status === 'rejected' ? 'Playing with sound; fullscreen is unavailable in this view.' : '';
@@ -541,7 +593,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       subtitleTrack.kind = 'subtitles';
       subtitleTrack.label = subtitles.selectedOptions[0].textContent;
       subtitleTrack.srclang = subtitles.selectedOptions[0].dataset.language || 'en';
-      subtitleTrack.src = '/subtitle/' + encodeURIComponent(subtitles.value);
+      subtitleTrack.src = authenticatedUrl('/subtitle/' + encodeURIComponent(subtitles.value));
       subtitleTrack.default = true;
       video.appendChild(subtitleTrack);
       subtitleTrack.track.mode = 'showing';
@@ -574,6 +626,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       }
       selectedMedia = media;
       hasUserStartedPlayback = false;
+      fullscreenToggle.hidden = true;
+      showFullscreenControl();
       startPlaybackButton.hidden = true;
       startPlaybackButton.disabled = false;
       video.controls = false;

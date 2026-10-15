@@ -60,10 +60,12 @@ void main() {
     const clickoutUrl = 'https://click.justwatch.com/a?cx=offer-context&r=https%3A%2F%2Fapp.primevideo.com%2Fdetail%3Fgti%3Dtest';
     final client = MockClient((request) async {
       if (request.url.host == 'player.example') {
+        expect(request.headers['Authorization'], 'Bearer player-token');
         expect(request.url.path, '/watch-providers');
         expect(request.url.queryParameters, {'type': 'movie', 'title': 'Spider-Man: Brand New Day', 'year': '2026', 'region': 'ES'});
         return http.Response(jsonEncode({'10': clickoutUrl}), 200);
       }
+      expect(request.headers['Authorization'], 'Bearer test');
       return http.Response(
         jsonEncode({
           'results': {
@@ -79,7 +81,7 @@ void main() {
       );
     });
     addTearDown(client.close);
-    final repository = TmdbMediaSearchRepository(accessToken: 'test', playerServerUrl: Uri.parse('https://player.example'), client: client);
+    final repository = TmdbMediaSearchRepository(accessToken: 'test', playerServerUrl: Uri.parse('https://player.example'), playerServerToken: 'player-token', client: client);
 
     final providers = await repository.watchProviders(969681, MediaType.movie, region: 'ES', title: 'Spider-Man: Brand New Day', year: 2026);
 

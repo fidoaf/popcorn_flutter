@@ -14,6 +14,7 @@ import 'package:popcorn_flutter/src/app/view/landing_view.dart';
 import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
 import 'package:popcorn_flutter/src/app/view/web/install_prompt.dart';
+import 'package:popcorn_flutter/src/app/view/web/push_notification_button.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
@@ -395,6 +396,7 @@ class _WebHomeViewState extends State<_WebHomeView> {
               ],
             ),
             actions: [
+              const PushNotificationButton(),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: UserIdentityTitle(

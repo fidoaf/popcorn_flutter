@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_provider_factory.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -48,5 +49,31 @@ void main() {
     for (final url in ['localhost:3001', 'ftp://localhost:3001', 'http://localhost:3001/player', 'http://localhost:3001?token=test']) {
       expect(() => MediaSourceProviderFactory.createFromMap(config(), playerServerUrl: url), throwsFormatException);
     }
+  });
+
+  test('bearer token applies only to hosted players without mutating configuration', () {
+    final input = config();
+    final provider = MediaSourceProviderFactory.createFromMap(input, playerServerToken: 'test-player-token');
+    final source = provider.resolve(media, MediaType.movie);
+    expect(source.headers['Authorization'], 'Bearer test-player-token');
+    expect(source.url.queryParameters.containsKey('token'), isFalse);
+    expect(provider.providers.last.resolve(media, MediaType.movie).headers, isEmpty);
+    expect((input['providers'] as List).first.containsKey('headers'), isFalse);
+  });
+
+  test('uses deployment environment token with an explicit override for local testing', () {
+    dotenv.loadFromString(envString: 'playerServer.token=environment-token');
+    addTearDown(dotenv.clean);
+    final provider = MediaSourceProviderFactory.createFromMap(config());
+    expect(provider.resolve(media, MediaType.movie).headers['Authorization'], 'Bearer environment-token');
+    final local = MediaSourceProviderFactory.createFromMap(config(), playerServerToken: '');
+    expect(local.resolve(media, MediaType.movie).headers, isEmpty);
+  });
+
+  test('configured bearer replaces case-insensitive authorization while preserving other headers', () {
+    final input = config();
+    (input['providers'] as List).first['headers'] = {'authorization': 'Bearer old-token', 'Accept': 'text/html'};
+    final provider = MediaSourceProviderFactory.createFromMap(input, playerServerToken: 'new-token');
+    expect(provider.resolve(media, MediaType.movie).headers, {'Accept': 'text/html', 'Authorization': 'Bearer new-token'});
   });
 }

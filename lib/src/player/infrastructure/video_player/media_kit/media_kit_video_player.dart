@@ -113,7 +113,12 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   Duration? _timestampsDuration;
   int _timestampGeneration = 0;
 
-  String get _resumeId => widget.source.url.toString();
+  String get _resumeId {
+    final url = widget.source.url;
+    if (!url.queryParameters.containsKey('session')) return url.toString();
+    final query = {...url.queryParameters}..remove('session');
+    return url.replace(queryParameters: query).toString();
+  }
 
   @override
   void initState() {

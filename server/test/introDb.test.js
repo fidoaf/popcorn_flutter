@@ -55,6 +55,9 @@ function playerHarness({ timestamps = {}, query = {}, embedUrl = null, delayed =
   const elements = new Map();
   const messages = [];
   const requests = [];
+  const documentListeners = new Map();
+  const timers = new Map();
+  let timerId = 0;
   let resolveTimestamps;
   function element() {
     const listeners = new Map();
@@ -70,11 +73,25 @@ function playerHarness({ timestamps = {}, query = {}, embedUrl = null, delayed =
       add(option) { this.options.push(option); },
       appendChild() {}, pause() {}, removeAttribute() {}, load() {},
       canPlayType() { return true; },
-      async play() {}, async requestFullscreen() {},
+      async play() {},
+      async requestFullscreen() {
+        document.fullscreenElement = this;
+        await document.dispatch('fullscreenchange');
+      },
     };
   }
   const document = {
-    addEventListener() {}, querySelectorAll() { return []; },
+    fullscreenElement: null,
+    addEventListener(event, callback) {
+      if (!documentListeners.has(event)) documentListeners.set(event, []);
+      documentListeners.get(event).push(callback);
+    },
+    async dispatch(event) { for (const callback of documentListeners.get(event) || []) await callback(); },
+    async exitFullscreen() {
+      this.fullscreenElement = null;
+      await this.dispatch('fullscreenchange');
+    },
+    querySelectorAll() { return []; },
     getElementById(id) {
       if (id === 'media-form') return null;
       if (!elements.has(id)) elements.set(id, element());
@@ -88,6 +105,12 @@ function playerHarness({ timestamps = {}, query = {}, embedUrl = null, delayed =
   };
   const context = vm.createContext({
     document, window, URLSearchParams, Date,
+    setTimeout(callback, delay) {
+      const id = ++timerId;
+      timers.set(id, { callback, delay });
+      return id;
+    },
+    clearTimeout(id) { timers.delete(id); },
     Option: function Option(label, value) { return { textContent: label, value, dataset: {} }; },
     fetch: async (url) => {
       requests.push(url);
@@ -99,8 +122,126 @@ function playerHarness({ timestamps = {}, query = {}, embedUrl = null, delayed =
     },
   });
   vm.runInContext(renderPlayerPage(media, { showForm: false, embedUrl }).match(/<script>([\s\S]*?)<\/script>/)[1], context);
-  return { elements, messages, requests, context, resolve(data) { resolveTimestamps(data); } };
+  return {
+    elements, messages, requests, context, document, timers,
+    expireTimers() {
+      const pending = Array.from(timers.values());
+      timers.clear();
+      for (const timer of pending) timer.callback();
+    },
+    resolve(data) { resolveTimestamps(data); },
+  };
 }
+
+test('exit fullscreen fades after three seconds and activity restores it without hiding skip actions', async () => {
+  const harness = playerHarness({ timestamps: { intro: [{ start_ms: 0, end_ms: 23000 }] } });
+  const { elements, timers } = harness;
+  const video = elements.get('video');
+  const container = elements.get('video-container');
+  const toggle = elements.get('fullscreen-toggle');
+  await video.dispatch('loadedmetadata');
+  await elements.get('start-playback').dispatch('click');
+  assert.equal(toggle.dataset.inactive, 'false');
+  assert.equal(timers.size, 1);
+  assert.equal(Array.from(timers.values())[0].delay, 3000);
+  harness.expireTimers();
+  assert.equal(toggle.dataset.inactive, 'true');
+  assert.equal(elements.get('skip-intro').hidden, false);
+  for (const event of ['pointermove', 'pointerdown', 'keydown']) {
+    await container.dispatch(event);
+    assert.equal(toggle.dataset.inactive, 'false');
+    assert.equal(timers.size, 1);
+    harness.expireTimers();
+    assert.equal(toggle.dataset.inactive, 'true');
+  }
+});
+
+test('fullscreen control stays visible on pause, keyboard focus and fullscreen exit', async () => {
+  const harness = playerHarness();
+  const { elements, document, timers } = harness;
+  const video = elements.get('video');
+  const toggle = elements.get('fullscreen-toggle');
+  await elements.get('start-playback').dispatch('click');
+  document.activeElement = toggle;
+  await elements.get('video-container').dispatch('focusin');
+  harness.expireTimers();
+  assert.equal(toggle.dataset.inactive, 'false');
+  document.activeElement = video;
+  await elements.get('video-container').dispatch('focusout');
+  harness.expireTimers();
+  assert.equal(toggle.dataset.inactive, 'true');
+  video.paused = true;
+  await video.dispatch('pause');
+  assert.equal(toggle.dataset.inactive, 'false');
+  assert.equal(timers.size, 0);
+  video.paused = false;
+  await video.dispatch('playing');
+  assert.equal(timers.size, 1);
+  await document.exitFullscreen();
+  assert.equal(toggle.dataset.inactive, 'false');
+  assert.equal(timers.size, 0);
+  await elements.get('video-container').dispatch('pointermove');
+  assert.equal(timers.size, 0);
+});
+
+test('fullscreen targets the container and keeps intro and next actions working through exit and re-entry', async () => {
+  const { elements, document, messages } = playerHarness({ timestamps: {
+    intro: [{ start_ms: 10000, end_ms: 23000 }],
+    credits: [{ start_ms: 80000, end_ms: null }],
+  } });
+  const video = elements.get('video');
+  const container = elements.get('video-container');
+  const toggle = elements.get('fullscreen-toggle');
+  assert.equal(toggle.hidden, true);
+  await video.dispatch('loadedmetadata');
+  await elements.get('start-playback').dispatch('click');
+  assert.equal(document.fullscreenElement, container);
+  assert.notEqual(document.fullscreenElement, video);
+  assert.equal(toggle.hidden, false);
+  assert.equal(toggle.ariaPressed, 'true');
+  assert.equal(toggle.ariaLabel, 'Exit fullscreen');
+  video.currentTime = 10;
+  await video.dispatch('timeupdate');
+  assert.equal(elements.get('skip-intro').hidden, false);
+  await elements.get('skip-intro').dispatch('click');
+  assert.equal(video.currentTime, 23);
+  await document.exitFullscreen();
+  assert.equal(toggle.ariaLabel, 'Enter fullscreen');
+  assert.equal(toggle.ariaPressed, 'false');
+  await toggle.dispatch('click');
+  assert.equal(document.fullscreenElement, container);
+  video.currentTime = 80;
+  await video.dispatch('timeupdate');
+  assert.equal(elements.get('next-episode').hidden, false);
+  await elements.get('next-episode').dispatch('click');
+  assert.equal(messages.at(-1).type, 'popcorn:next');
+  await toggle.dispatch('click');
+  assert.equal(document.fullscreenElement, null);
+  assert.equal(toggle.textContent, 'Fullscreen');
+});
+
+test('fullscreen rejection leaves playback and skip actions usable and reports the error', async () => {
+  const { elements, document } = playerHarness({ timestamps: { intro: [{ start_ms: 0, end_ms: 23000 }] } });
+  elements.get('video-container').requestFullscreen = async () => { throw new Error('Permission denied'); };
+  await elements.get('video').dispatch('loadedmetadata');
+  await elements.get('start-playback').dispatch('click');
+  assert.equal(elements.get('start-playback').hidden, true);
+  assert.equal(elements.get('skip-intro').hidden, false);
+  await elements.get('fullscreen-toggle').dispatch('click');
+  assert.match(elements.get('status').textContent, /Could not change fullscreen: Permission denied/);
+  assert.equal(document.fullscreenElement, null);
+  assert.equal(elements.get('skip-intro').hidden, false);
+});
+
+test('fullscreen control stays hidden when container fullscreen is unsupported or playback is embedded', async () => {
+  const { elements } = playerHarness();
+  elements.get('video-container').requestFullscreen = undefined;
+  await elements.get('start-playback').dispatch('click');
+  assert.equal(elements.get('fullscreen-toggle').hidden, true);
+  const embedded = playerHarness({ embedUrl: 'https://example.com/embed' });
+  await embedded.document.dispatch('fullscreenchange');
+  assert.equal(embedded.elements.get('fullscreen-toggle').hidden, true);
+});
 
 test('floating controls honor exact ranges, seek intro end and request next episode with settings', async () => {
   const harness = playerHarness({ timestamps: {

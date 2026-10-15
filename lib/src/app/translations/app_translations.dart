@@ -20,6 +20,35 @@ class AppTranslations {
 
   static const updateReload = Translation({AppLanguage.en: 'Reload', AppLanguage.es: 'Recargar', AppLanguage.ca: 'Recarregar'});
 
+  static const pushTitle = Translation({AppLanguage.en: 'Notifications', AppLanguage.es: 'Notificaciones', AppLanguage.ca: 'Notificacions'});
+  static const pushEnable = Translation({AppLanguage.en: 'Enable', AppLanguage.es: 'Activar', AppLanguage.ca: 'Activa'});
+  static const pushDisable = Translation({AppLanguage.en: 'Disable', AppLanguage.es: 'Desactivar', AppLanguage.ca: 'Desactiva'});
+  static const pushEnableMessage = Translation({
+    AppLanguage.en: 'Receive Popcorn announcements on this browser, even when the app is closed. You can disable them here at any time.',
+    AppLanguage.es: 'Recibe anuncios de Popcorn en este navegador, incluso con la app cerrada. Puedes desactivarlos aquí en cualquier momento.',
+    AppLanguage.ca: 'Rep anuncis de Popcorn en aquest navegador, fins i tot amb l\'app tancada. Els pots desactivar aquí en qualsevol moment.',
+  });
+  static const pushDisableMessage = Translation({
+    AppLanguage.en: 'Disable Popcorn push notifications on this browser?',
+    AppLanguage.es: '¿Desactivar las notificaciones de Popcorn en este navegador?',
+    AppLanguage.ca: 'Vols desactivar les notificacions de Popcorn en aquest navegador?',
+  });
+  static const pushEnabled = Translation({
+    AppLanguage.en: 'Notifications enabled.',
+    AppLanguage.es: 'Notificaciones activadas.',
+    AppLanguage.ca: 'Notificacions activades.',
+  });
+  static const pushDisabled = Translation({
+    AppLanguage.en: 'Notifications disabled.',
+    AppLanguage.es: 'Notificaciones desactivadas.',
+    AppLanguage.ca: 'Notificacions desactivades.',
+  });
+  static const pushError = Translation({
+    AppLanguage.en: 'Could not update notifications:',
+    AppLanguage.es: 'No se pudieron actualizar las notificaciones:',
+    AppLanguage.ca: 'No s\'han pogut actualitzar les notificacions:',
+  });
+
   static const installAppTitle = Translation({AppLanguage.en: 'Install Popcorn', AppLanguage.es: 'Instala Popcorn', AppLanguage.ca: 'Instal·la Popcorn'});
 
   static const installAppMessage = Translation({
@@ -46,11 +75,7 @@ class AppTranslations {
     AppLanguage.ca: 'Selecciona “Afegir a la pantalla d’inici”',
   });
 
-  static const installIosInstructionAdd = Translation({
-    AppLanguage.en: 'Tap “Add”',
-    AppLanguage.es: 'Toca “Añadir”',
-    AppLanguage.ca: 'Toca “Afegir”',
-  });
+  static const installIosInstructionAdd = Translation({AppLanguage.en: 'Tap “Add”', AppLanguage.es: 'Toca “Añadir”', AppLanguage.ca: 'Toca “Afegir”'});
 
   static const installBrowserInstructionsTitle = Translation({
     AppLanguage.en: 'How to install:',

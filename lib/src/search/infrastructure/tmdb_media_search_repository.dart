@@ -18,10 +18,11 @@ import 'package:popcorn_flutter/src/search/domain/media_watch_provider.dart';
 
 /// [MediaSearchRepository] backed by The Movie Database (TMDB) REST API.
 final class TmdbMediaSearchRepository implements MediaSearchRepository {
-  TmdbMediaSearchRepository({required String accessToken, Uri? playerServerUrl, http.Client? client})
+  TmdbMediaSearchRepository({required String accessToken, Uri? playerServerUrl, String playerServerToken = '', http.Client? client})
     // ignore: prefer_initializing_formals -- named parameters cannot be private.
     : _accessToken = accessToken,
       _playerServerUrl = playerServerUrl,
+      _playerServerToken = playerServerToken,
       _client = client ?? http.Client();
 
   static const String _baseUrl = 'https://api.themoviedb.org/3';
@@ -32,6 +33,7 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
 
   final String _accessToken;
   final Uri? _playerServerUrl;
+  final String _playerServerToken;
   final http.Client _client;
   final Map<String, Future<MediaItem>> _mediaItemCache = {};
 
@@ -317,8 +319,11 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     if (year != null) query['year'] = '$year';
     final endpoint = serverUrl.replace(path: '/watch-providers', queryParameters: query);
     try {
-      final response = await _client.get(endpoint).timeout(const Duration(seconds: 20));
-      if (response.statusCode != 200) return const {};
+      final response = await _client.get(endpoint, headers: {if (_playerServerToken.isNotEmpty) 'Authorization': 'Bearer $_playerServerToken'}).timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) {
+        developer.log('Player server request failed: HTTP ${response.statusCode}', name: 'WatchProviders', level: 900);
+        return const {};
+      }
       final decoded = jsonDecode(response.body);
       if (decoded is! Map<String, dynamic>) return const {};
       final links = <int, Uri>{};
