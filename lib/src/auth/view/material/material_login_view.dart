@@ -3,6 +3,7 @@ import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/poster_gallery.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
+import 'package:popcorn_flutter/src/auth/view/email_password_form.dart';
 import 'package:popcorn_flutter/src/auth/view/google_sign_in_button.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
@@ -96,6 +97,10 @@ class _MaterialLoginViewState extends State<MaterialLoginView> {
         ),
         const SizedBox(height: 32),
         GoogleSignInButton(label: AuthTranslations.signInWithGoogle.trOf(context), busy: _busy, onPressed: _signIn),
+        const SizedBox(height: 8),
+        EmailPasswordForm(controller: widget.controller, busy: _busy, onBusyChanged: (busy) {
+          if (mounted) setState(() => _busy = busy);
+        }),
         if (AuthController.guestAccessAllowed) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(

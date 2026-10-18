@@ -1,6 +1,8 @@
 const CHANNELS_URL = 'https://iptv-org.github.io/api/channels.json';
 const STREAMS_URL = 'https://iptv-org.github.io/api/streams.json';
 const LOGOS_URL = 'https://iptv-org.github.io/api/logos.json';
+const AREA_SOURCES = ['feeds', 'regions', 'subdivisions', 'cities'];
+const COUNTRY_NAMES = new Map(['en', 'es', 'ca'].map((language) => [language, new Intl.DisplayNames([language], { type: 'region' })]));
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_CHANNELS = 60;
 
@@ -55,6 +57,35 @@ function indexLogos(logos) {
   return byChannel;
 }
 
+function indexBroadcastAreas(feeds, regions, subdivisions, cities) {
+  const areas = new Map();
+  for (const [prefix, entries] of [['r', regions], ['s', subdivisions], ['ct', cities]]) {
+    for (const entry of entries) {
+      if (typeof entry?.code === 'string' && typeof entry.name === 'string' && entry.name.trim()) {
+        areas.set(`${prefix}/${entry.code}`, entry.name.trim());
+      }
+    }
+  }
+  const byChannel = new Map();
+  for (const feed of feeds) {
+    if (typeof feed?.channel !== 'string' || typeof feed.id !== 'string') continue;
+    let byFeed = byChannel.get(feed.channel);
+    if (!byFeed) {
+      byFeed = new Map();
+      byChannel.set(feed.channel, byFeed);
+    }
+    const codes = Array.isArray(feed.broadcast_area) ? feed.broadcast_area : [];
+    byFeed.set(feed.id, [...new Set(codes.filter((code) => typeof code === 'string' && /^(c|r|s|ct)\/[^/]+$/.test(code)))].map((code) => {
+      const country = code.startsWith('c/') ? code.slice(2) : '';
+      const names = /^[A-Z]{2}$/.test(country)
+        ? Object.fromEntries([...COUNTRY_NAMES].map(([language, names]) => [language, names.of(country)]))
+        : {};
+      return { code, name: names.en ?? areas.get(code) ?? code, names };
+    }));
+  }
+  return byChannel;
+}
+
 class LiveTvCatalog {
   constructor({ fetchImpl = fetch, now = Date.now, ttlMs = CACHE_TTL_MS, maxChannels = MAX_CHANNELS } = {}) {
     this.fetchImpl = fetchImpl;
@@ -77,14 +108,13 @@ class LiveTvCatalog {
 
   async getCatalogue({ country = '', channelId = null, query = '' } = {}) {
     const allChannels = await this._getAllChannels();
-    const displayNames = new Map(['en', 'es', 'ca'].map((language) => [language, new Intl.DisplayNames([language], { type: 'region' })]));
     const countries = [...new Set(allChannels.map((channel) => channel.country))]
       .filter((code) => /^[A-Z]{2}$/.test(code))
       .map((code) => ({
         code,
-        name: displayNames.get('en').of(code),
-        names: Object.fromEntries([...displayNames].map(([language, names]) => [language, names.of(code)])),
-        flag: String.fromCodePoint(...[...code].map((letter) => letter.charCodeAt(0) + 127397)),
+        name: COUNTRY_NAMES.get('en').of(code),
+        names: Object.fromEntries([...COUNTRY_NAMES].map(([language, names]) => [language, names.of(code)])),
+        flag: String.fromCodePoint(...[...(code === 'UK' ? 'GB' : code)].map((letter) => letter.charCodeAt(0) + 127397)),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
     const channels = allChannels
@@ -112,21 +142,28 @@ class LiveTvCatalog {
   }
 
   async _loadChannels() {
-    const [channelsResponse, streamsResponse, logosResponse] = await Promise.all([
+    const [channelsResponse, streamsResponse, logosResponse, ...areaResponses] = await Promise.all([
       this.fetchImpl(CHANNELS_URL, { signal: AbortSignal.timeout(15000) }),
       this.fetchImpl(STREAMS_URL, { signal: AbortSignal.timeout(15000) }),
       this.fetchImpl(LOGOS_URL, { signal: AbortSignal.timeout(15000) }),
+      ...AREA_SOURCES.map((source) => this.fetchImpl(`https://iptv-org.github.io/api/${source}.json`, { signal: AbortSignal.timeout(15000) })),
     ]);
     if (!channelsResponse.ok || !streamsResponse.ok || !logosResponse.ok) {
       throw new Error(`iptv-org catalogue request failed (channels: ${channelsResponse.status}, streams: ${streamsResponse.status}, logos: ${logosResponse.status})`);
     }
+    for (const [index, response] of areaResponses.entries()) {
+      if (!response.ok) throw new Error(`iptv-org catalogue request failed (${AREA_SOURCES[index]}: ${response.status})`);
+    }
 
-    const [channels, streams, logos] = await Promise.all([channelsResponse.json(), streamsResponse.json(), logosResponse.json()]);
-    if (!Array.isArray(channels) || !Array.isArray(streams) || !Array.isArray(logos)) {
+    const [channels, streams, logos, ...areaData] = await Promise.all([
+      channelsResponse.json(), streamsResponse.json(), logosResponse.json(), ...areaResponses.map((response) => response.json()),
+    ]);
+    if (![channels, streams, logos, ...areaData].every(Array.isArray)) {
       throw new TypeError('iptv-org returned an invalid catalogue format');
     }
 
     const logosByChannel = indexLogos(logos);
+    const areasByChannel = indexBroadcastAreas(...areaData);
     const channelById = new Map();
     for (const channel of channels) {
       if (typeof channel?.id !== 'string' || typeof channel.name !== 'string' || !channel.name.trim()) continue;
@@ -134,6 +171,9 @@ class LiveTvCatalog {
         id: channel.id,
         name: channel.name.trim(),
         country: typeof channel.country === 'string' ? channel.country : '',
+        countryNames: typeof channel.country === 'string' && /^[A-Z]{2}$/.test(channel.country)
+          ? Object.fromEntries([...COUNTRY_NAMES].map(([language, names]) => [language, names.of(channel.country)]))
+          : {},
         website: parseHttpUrl(channel.website),
         network: typeof channel.network === 'string' ? channel.network : '',
         languages: Array.isArray(channel.languages) ? channel.languages.filter((value) => typeof value === 'string') : [],
@@ -153,6 +193,8 @@ class LiveTvCatalog {
         feed,
         url,
         headers: normalizeHeaders(stream),
+        isGeoBlocked: Array.isArray(stream.labels) && stream.labels.includes('Geo-blocked'),
+        broadcastAreas: areasByChannel.get(stream.channel)?.get(feed) ?? [],
         logo: logo?.url ?? null,
         logoFormat: logo?.format ?? null,
       });

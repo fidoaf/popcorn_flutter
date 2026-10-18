@@ -140,6 +140,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   void initState() {
     super.initState();
     _session = widget.initialSession ?? const PlaybackSession();
+    _subtitleDelay = Duration(milliseconds: (_session.subtitleDelaySeconds * 1000).round());
     if (!_mediaKitReady) {
       MediaKit.ensureInitialized();
       _mediaKitReady = true;
@@ -199,7 +200,10 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   static const _maxLoadErrorRetries = 3;
 
   void _retryOnLoadError(String message) {
-    if (!message.toLowerCase().contains('flagloaderror')) return;
+    final normalizedMessage = message.toLowerCase();
+    final isLoadFailure =
+        normalizedMessage.contains('flagloaderror') || normalizedMessage.contains('flagloadtimeout') || normalizedMessage.contains('fragloadtimeout');
+    if (!isLoadFailure) return;
     if (_activeMedia == null || _hasLoadedMedia) return;
     if (_loadErrorRetryInProgress) {
       _loadErrorDuringRetry = message;
@@ -295,6 +299,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
           ? _session.subtitles
           : jsonEncode([_selected.subtitle.title ?? '', _selected.subtitle.language ?? '']),
       positionSeconds: (position ?? (_player.state.completed ? Duration.zero : _position)).inMilliseconds / 1000,
+      subtitleDelaySeconds: _subtitleDelay.inMilliseconds / 1000,
     );
     widget.onSessionChanged!(_session);
   }
@@ -886,11 +891,13 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
     try {
       await _player.setSubtitleTrack(SubtitleTrack.data(_shiftVtt(text, _subtitleDelay), title: _externalSubtitleTitle, language: _externalSubtitleLanguage));
       if (!mounted) return;
+      _reportSession();
       updateMenu(() => setError(null));
     } catch (error) {
       debugPrint('[MediaKitPlayer] subtitle timing adjustment failed: $error');
       if (!mounted) return;
       setState(() => _subtitleDelay = previousDelay);
+      _reportSession();
       updateMenu(() => setError('Could not adjust subtitle timing. Try selecting the subtitle again.'));
     }
   }

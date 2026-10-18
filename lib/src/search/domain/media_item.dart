@@ -9,6 +9,8 @@ final class MediaItem {
     this.latestEpisodeAirDate,
     this.latestEpisodeNumber,
     this.latestSeasonAirDate,
+    this.numberOfSeasons,
+    this.releasedSeasonCount,
     this.voteAverage,
   });
 
@@ -20,6 +22,8 @@ final class MediaItem {
   final DateTime? latestEpisodeAirDate;
   final int? latestEpisodeNumber;
   final DateTime? latestSeasonAirDate;
+  final int? numberOfSeasons;
+  final int? releasedSeasonCount;
   final double? voteAverage;
 
   /// Whether the media has been released. Items without a known release date

@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1]
+
+### Added
+- Email and password sign-in alongside Google authentication.
+- Account setting to choose the streaming availability region or use the device region.
+- Saved subtitle timing preferences that are restored with playback sessions.
+
+### Changed
+- Live TV details now show localized country and broadcast-area information, including geo-restriction notices when available.
+- Improved home-feed labels for newly released series and seasons.
+
 ## [1.9.0]
 
 ### Added

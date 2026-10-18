@@ -45,14 +45,33 @@ test('normalizes, filters, sorts, and caches the public channel catalogue', asyn
   assert.equal(first[1].url, 'https://example.com/beta.m3u8');
   assert.deepEqual(first[1].headers, { Referer: 'https://example.com/', 'User-Agent': 'Test player' });
   assert.equal(first[1].logoFormat, 'PNG');
-  assert.equal(calls, 3);
+  assert.equal(calls, 7);
 
   await catalog.getChannels();
-  assert.equal(calls, 3);
+  assert.equal(calls, 7);
 
   now += 1001;
   await catalog.getChannels();
-  assert.equal(calls, 6);
+  assert.equal(calls, 14);
+});
+
+test('uses the GB flag for UK metadata while preserving the UK country filter', async () => {
+  const catalog = new LiveTvCatalog({
+    fetchImpl: async (url) => response(url.endsWith('/channels.json')
+      ? [{ id: 'BBCOne.uk', name: 'BBC One', country: 'UK' }]
+      : url.endsWith('/streams.json')
+        ? [{ channel: 'BBCOne.uk', url: 'https://example.com/bbc.m3u8' }]
+        : []),
+  });
+  const result = await catalog.getCatalogue({ country: 'UK' });
+  assert.equal(result.channels.length, 1);
+  assert.equal(result.channels[0].country, 'UK');
+  assert.deepEqual(result.countries, [{
+    code: 'UK',
+    name: 'United Kingdom',
+    names: { en: 'United Kingdom', es: 'Reino Unido', ca: 'Regne Unit' },
+    flag: '\u{1F1EC}\u{1F1E7}',
+  }]);
 });
 
 test('shares concurrent catalogue loads and reports upstream errors', async () => {
@@ -71,10 +90,88 @@ test('shares concurrent catalogue loads and reports upstream errors', async () =
 
   const first = catalog.getChannels();
   const second = catalog.getChannels();
-  assert.equal(calls, 3);
+  assert.equal(calls, 7);
   release();
   await assert.rejects(first, /iptv-org catalogue request failed/);
   await assert.rejects(second, /iptv-org catalogue request failed/);
+});
+
+test('resolves broadcast areas only for the selected feed without inferring access restrictions', async () => {
+  const data = {
+    channels: [
+      { id: 'Example.fr', name: 'Example TV', country: 'FR' },
+      { id: 'Missing.fr', name: 'Missing feed', country: 'FR' },
+      { id: 'NoFeed.fr', name: 'No feed', country: 'FR' },
+    ],
+    streams: [
+      { channel: 'Example.fr', feed: 'Paris', url: 'https://example.com/live.m3u8' },
+      { channel: 'Missing.fr', feed: 'Missing', url: 'https://example.com/missing.m3u8' },
+      { channel: 'NoFeed.fr', url: 'https://example.com/no-feed.m3u8' },
+    ],
+    feeds: [
+      { channel: 'Example.fr', id: 'Other', broadcast_area: ['c/US'] },
+      { channel: 'Example.fr', id: 'Paris', broadcast_area: ['c/FR', 'r/EUR', 's/FR-IDF', 'ct/FRPAR', 'r/UNKNOWN', 'c/FR', null, 'invalid'] },
+      { channel: 'Missing.fr', id: 'Main', is_main: true, broadcast_area: ['c/US'] },
+      { channel: 'NoFeed.fr', id: 'Main', is_main: true, broadcast_area: ['c/US'] },
+    ],
+    regions: [{ code: 'EUR', name: 'Europe' }],
+    subdivisions: [{ code: 'FR-IDF', name: 'Île-de-France' }],
+    cities: [{ code: 'FRPAR', name: 'Paris' }],
+    logos: [],
+  };
+  const catalog = new LiveTvCatalog({
+    fetchImpl: async (url) => response(data[url.split('/').pop().replace('.json', '')]),
+  });
+  const channel = await catalog.getChannel('Example.fr');
+  assert.deepEqual(channel.broadcastAreas, [
+    { code: 'c/FR', name: 'France', names: { en: 'France', es: 'Francia', ca: 'França' } },
+    { code: 'r/EUR', name: 'Europe', names: {} },
+    { code: 's/FR-IDF', name: 'Île-de-France', names: {} },
+    { code: 'ct/FRPAR', name: 'Paris', names: {} },
+    { code: 'r/UNKNOWN', name: 'r/UNKNOWN', names: {} },
+  ]);
+  assert.equal(channel.isGeoBlocked, false);
+  assert.deepEqual((await catalog.getChannel('Missing.fr')).broadcastAreas, []);
+  assert.deepEqual((await catalog.getChannel('NoFeed.fr')).broadcastAreas, []);
+  assert.deepEqual((await catalog.getCatalogue({ channelId: 'Example.fr' })).channels[0].broadcastAreas, channel.broadcastAreas);
+});
+
+test('reports broadcast metadata failures without caching an incomplete catalogue', async () => {
+  for (const source of ['feeds', 'regions', 'subdivisions', 'cities']) {
+    for (const failure of [response([], 503), response({ invalid: true })]) {
+      const catalog = new LiveTvCatalog({
+        fetchImpl: async (url) => url.endsWith(`/${source}.json`) ? failure : response([]),
+      });
+      await assert.rejects(catalog.getChannels(), /catalogue request failed|invalid catalogue format/);
+      assert.equal(catalog.channels, null);
+    }
+  }
+});
+
+test('reports geoblocking only from the selected stream labels', async () => {
+  for (const [labels, expected] of [
+    [['Geo-blocked', 'Not 24/7'], true],
+    [[], false],
+    [undefined, false],
+    [null, false],
+    ['Geo-blocked', false],
+    [['Not 24/7'], false],
+  ]) {
+    const catalog = new LiveTvCatalog({
+      fetchImpl: async (url) => response(url.endsWith('/channels.json')
+        ? [{ id: 'Example.us', name: 'Example TV', country: 'US' }]
+        : url.endsWith('/streams.json')
+          ? [
+            { channel: 'Example.us', url: 'https://example.com/selected.m3u8', labels },
+            { channel: 'Example.us', url: 'https://example.com/other.m3u8', labels: ['Geo-blocked'] },
+          ]
+          : []),
+    });
+    const { channels } = await catalog.getCatalogue();
+    assert.equal(channels[0].isGeoBlocked, expected);
+    assert.equal(channels[0].url, 'https://example.com/selected.m3u8');
+    assert.equal((await catalog.getChannel('Example.us')).isGeoBlocked, expected);
+  }
 });
 
 test('matches logo URLs by channel and feed, preferring current horizontal white variants', async () => {
@@ -180,7 +277,7 @@ test('country filtering uses the full cache before applying the row limit', asyn
   assert.equal((await catalog.getChannel('Z.fr')).id, 'Z.fr');
   assert.equal((await catalog.getCatalogue({ channelId: 'Z.fr' })).channels[0].id, 'Z.fr');
   assert.equal((await catalog.getCatalogue()).channels.length, 60);
-  assert.equal(calls, 3);
+  assert.equal(calls, 7);
   assert.deepEqual((await catalog.getCatalogue({ query: '  FRENCH  ' })).channels.map((entry) => entry.id), ['Z.fr']);
   assert.deepEqual((await catalog.getCatalogue({ query: 'z.FR' })).channels.map((entry) => entry.id), ['Z.fr']);
   assert.equal((await catalog.getCatalogue({ country: 'US', query: 'French' })).channels.length, 0);

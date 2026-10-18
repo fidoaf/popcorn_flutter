@@ -15,6 +15,97 @@ import 'package:popcorn_flutter/src/live_tv/live_tv_page.dart';
 final channel = LiveTvChannel(id: 'Example.fr', name: 'Example TV', streamUrl: Uri.https('example.com', '/live.m3u8'));
 
 void main() {
+  testWidgets('cards show localized geoblocking only when reported and retain Play', (tester) async {
+    for (final entry in [('en', 'Geo-restricted'), ('es', 'Restricción geográfica'), ('ca', 'Restricció geogràfica')]) {
+      for (final blocked in [true, false]) {
+        final item = LiveTvChannel(
+          id: 'Example.fr',
+          name: 'Example TV',
+          country: 'FR',
+          categories: const ['news'],
+          streamUrl: channel.streamUrl,
+          isGeoBlocked: blocked,
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: Locale(entry.$1),
+            supportedLocales: const [Locale('en'), Locale('es'), Locale('ca')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            home: Scaffold(
+              body: SizedBox(width: 164, height: 142, child: LiveTvChannelCard(channel: item)),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(entry.$2), blocked ? findsOneWidget : findsNothing);
+        expect(find.byIcon(Icons.public_off), blocked ? findsOneWidget : findsNothing);
+        expect(find.byIcon(Icons.play_circle_fill), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+    }
+  });
+
+  testWidgets('details explain reported geographic restrictions without disabling playback', (tester) async {
+    final controller = LiveTvController(serverToken: '', client: MockClient((_) async => http.Response('{"programmes":[]}', 200)));
+    addTearDown(controller.dispose);
+    for (final blocked in [true, false]) {
+      final item = LiveTvChannel(id: channel.id, name: channel.name, streamUrl: channel.streamUrl, isGeoBlocked: blocked);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LiveTvPage(key: ValueKey(blocked), channelId: item.id, channel: item, controller: controller),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('iptv-org reports geographic restrictions for this stream. It may not play in your location.'),
+        blocked ? findsOneWidget : findsNothing,
+      );
+      expect(find.text('Exact geographic restrictions not provided.'), blocked ? findsOneWidget : findsNothing);
+      expect(find.textContaining('Broadcast area:'), findsNothing);
+      expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Play')).onPressed, isNotNull);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('details infer restrictions from localized channel country, not broadcast area', (tester) async {
+    final controller = LiveTvController(serverToken: '', client: MockClient((_) async => http.Response('{"programmes":[]}', 200)));
+    addTearDown(controller.dispose);
+    final item = LiveTvChannel(
+      id: channel.id,
+      name: channel.name,
+      streamUrl: channel.streamUrl,
+      country: 'US',
+      countryNames: const {'en': 'United States', 'es': 'Estados Unidos', 'ca': 'Estats Units'},
+      isGeoBlocked: true,
+      broadcastAreas: const [
+        LiveTvBroadcastArea(code: 'c/FR', name: 'France', names: {'es': 'Francia', 'ca': 'França'}),
+        LiveTvBroadcastArea(code: 'ct/FRPAR', name: 'Paris'),
+      ],
+    );
+    for (final entry in [
+      ('en', 'Broadcast area: France, Paris', 'May be restricted to United States.'),
+      ('es', 'Zona de emisión: Francia, Paris', 'Puede estar restringido a Estados Unidos.'),
+      ('ca', "Zona d'emissió: França, Paris", 'Pot estar restringit a Estats Units.'),
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: Locale(entry.$1),
+          supportedLocales: const [Locale('en'), Locale('es'), Locale('ca')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: LiveTvPage(channelId: item.id, channel: item, controller: controller),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(entry.$2), findsOneWidget);
+      expect(find.text(entry.$3), findsOneWidget);
+      expect(find.text('Exact geographic restrictions not provided.'), findsNothing);
+      if (entry.$1 == 'en') {
+        expect(find.text("Inferred from the channel's country; exact streaming restrictions are not verified."), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('country names and search follow locale changes without resetting the selected country', (tester) async {
     final controller = LiveTvController(
       serverToken: '',

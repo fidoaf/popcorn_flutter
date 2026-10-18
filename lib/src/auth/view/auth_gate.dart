@@ -30,7 +30,10 @@ class AuthGate extends StatelessWidget {
         return Stack(
           children: [
             child,
-            if (showLogin) Positioned.fill(child: loginBuilder(context)),
+            if (showLogin)
+              Positioned.fill(
+                child: Overlay(initialEntries: [OverlayEntry(builder: loginBuilder)]),
+              ),
           ],
         );
       },

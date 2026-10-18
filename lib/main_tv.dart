@@ -24,6 +24,8 @@ import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/profile/view/account_settings_view.dart';
+import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
 import 'src/app/view/material/splash_screen.dart';
@@ -205,8 +207,17 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
         return _legalPage(context, LegalTranslations.privacyPolicy);
       case TermsRoute():
         return _legalPage(context, LegalTranslations.termsOfService);
+      case AccountSettingsRoute():
+        return _accountSettingsPage(context);
     }
   }
+
+  Widget _accountSettingsPage(BuildContext context) => PopcornMaterialSplashScreen(
+    child: Scaffold(
+      appBar: AppBar(title: Text(ProfileTranslations.accountSettings.trOf(context)), actions: const [PopcornAppBarLogo()]),
+      body: const SafeArea(child: AccountSettingsView()),
+    ),
+  );
 
   Widget _legalPage(BuildContext context, LegalDocument document) => PopcornMaterialSplashScreen(
     child: Scaffold(
@@ -454,7 +465,7 @@ class _TvHomeView extends StatelessWidget {
                 initialMediaType: initialMediaType,
                 onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
                 onMediaPlay: (media) =>
-                    context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
+                  context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
                 enableDpadFocus: true,
               ),
       ),

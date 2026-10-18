@@ -24,6 +24,8 @@ import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/profile/view/account_settings_view.dart';
+import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
 void main(List<String> args) async {
@@ -268,8 +270,23 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         return _legalPage(context, LegalTranslations.privacyPolicy);
       case TermsRoute():
         return _legalPage(context, LegalTranslations.termsOfService);
+      case AccountSettingsRoute():
+        return _accountSettingsPage(context);
     }
   }
+
+  Widget _accountSettingsPage(BuildContext context) => PopcornMacosSplashScreen(
+    child: MacosScaffold(
+      toolBar: ToolBar(
+        title: Text(ProfileTranslations.accountSettings.trOf(context)),
+        leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
+        actions: [CustomToolbarItem(inToolbarBuilder: (context) => const PopcornAppBarLogo())],
+      ),
+      children: const [ContentArea(builder: _accountSettingsContent)],
+    ),
+  );
+
+  static Widget _accountSettingsContent(BuildContext context, ScrollController _) => const AccountSettingsView();
 
   Widget _legalPage(BuildContext context, LegalDocument document) => PopcornMacosSplashScreen(
     child: MacosScaffold(
@@ -423,12 +440,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
               onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
               episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
               onPlayEpisode: (season, episode) => context.push(
-                AppRoutes.watch(
-                  bundle.type,
-                  bundle.item.id,
-                  season: season.seasonNumber,
-                  episode: episode.episodeNumber,
-                ),
+                AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
                 extra: bundle.item,
               ),
             ),
@@ -548,10 +560,7 @@ class _MacosHomeView extends StatelessWidget {
                       initialQuery: initialQuery,
                       initialMediaType: initialMediaType,
                       onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
-                      onMediaPlay: (media) => context.push(
-                        AppRoutes.watch(services.searchController.mediaType, media.id),
-                        extra: media,
-                      ),
+                      onMediaPlay: (media) => context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
                     ),
             ),
           ],

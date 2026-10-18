@@ -225,9 +225,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                   item: entry.item,
                   mediaType: entry.type,
                   favoritesController: widget.favoritesController,
-                  badgeLabel: entry.type == MediaType.tv && entry.episode == 1
-                      ? HomeTranslations.seasonPremiere.trOf(context)
-                      : _posterBadgeLabel(entry.item, entry.type, context),
+                  badgeLabel: _posterBadgeLabel(entry.item, entry.type, context),
                   showResumeBadge: true,
                   onTap: () => widget.onOpenDetails(entry.item, entry.type),
                   onResume: () => widget.onResume(entry),
@@ -476,9 +474,7 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
                                 decoration: InputDecoration(
                                   isCollapsed: true,
                                   border: InputBorder.none,
-                                  hintText: widget.active
-                                      ? SearchTranslations.searchPlaceholder.trOf(context)
-                                      : HomeTranslations.search.trOf(context),
+                                  hintText: widget.active ? SearchTranslations.searchPlaceholder.trOf(context) : HomeTranslations.search.trOf(context),
                                   hintStyle: const TextStyle(color: _Palette.textSecondary, fontSize: 15),
                                 ),
                               ),
@@ -544,12 +540,7 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
     if (_liveSearch.channels.isEmpty) return _message(SearchTranslations.emptyResults.trOf(context));
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 200,
-        mainAxisExtent: 142,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-      ),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 200, mainAxisExtent: 142, mainAxisSpacing: 12, crossAxisSpacing: 12),
       itemCount: _liveSearch.channels.length,
       itemBuilder: (context, index) => LiveTvChannelCard(channel: _liveSearch.channels[index]),
     );
@@ -707,7 +698,16 @@ class _SearchResultCard extends StatelessWidget {
                           : const _PosterPlaceholder(),
                     ),
                   ),
-                  if (badgeLabel != null) Positioned(top: 0, right: 0, child: _PosterBadge(label: badgeLabel!)),
+                  if (badgeLabel != null)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      left: 0,
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: _PosterBadge(label: badgeLabel!),
+                      ),
+                    ),
                   Positioned(
                     right: 4,
                     bottom: 4,
@@ -914,14 +914,7 @@ class _HeroButton extends StatelessWidget {
 
 /// A titled horizontal carousel of poster cards.
 class _CarouselRow extends StatelessWidget {
-  const _CarouselRow({
-    required this.title,
-    required this.itemCount,
-    required this.cardBuilder,
-    this.onSeeAll,
-    this.seeAllLabel,
-    this.cardHeight = 188,
-  });
+  const _CarouselRow({required this.title, required this.itemCount, required this.cardBuilder, this.onSeeAll, this.seeAllLabel, this.cardHeight = 188});
 
   final String title;
   final int itemCount;
@@ -1128,7 +1121,16 @@ class _PosterCard extends StatelessWidget {
                   )
                 else
                   const _PosterPlaceholder(),
-                if (badgeLabel != null) Positioned(top: 0, right: 0, child: _PosterBadge(label: badgeLabel!)),
+                if (badgeLabel != null)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    left: 0,
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: _PosterBadge(label: badgeLabel!),
+                    ),
+                  ),
                 if (showResumeBadge)
                   Positioned(
                     left: 0,
@@ -1136,11 +1138,7 @@ class _PosterCard extends StatelessWidget {
                     bottom: 0,
                     child: Container(
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0x00000000), Color(0xCC000000)],
-                        ),
+                        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0xCC000000)]),
                       ),
                       padding: const EdgeInsets.all(8),
                       child: Align(
@@ -1215,6 +1213,10 @@ String? _posterBadgeLabel(MediaItem item, MediaType mediaType, BuildContext cont
   }
 
   if (isRecent(item.releaseDate)) return HomeTranslations.newSeries.trOf(context);
+  final hasOnlyOneReleasedSeason = item.releasedSeasonCount == 1 || (item.releasedSeasonCount == null && item.numberOfSeasons == 1);
+  if (hasOnlyOneReleasedSeason && (isRecent(item.latestSeasonAirDate) || isRecent(item.latestEpisodeAirDate))) {
+    return HomeTranslations.newSeries.trOf(context);
+  }
   if (isRecent(item.latestSeasonAirDate)) return HomeTranslations.seasonPremiere.trOf(context);
   if (isRecent(item.latestEpisodeAirDate)) {
     return item.latestEpisodeNumber == 1 ? HomeTranslations.seasonPremiere.trOf(context) : HomeTranslations.newSeason.trOf(context);
@@ -1457,15 +1459,13 @@ class LiveTvSection extends StatelessWidget {
                             final search = query.trim().toLowerCase();
                             return entries
                                 .where(
-                                  (entry) =>
-                                      entry.value.isEmpty || entry.label.toLowerCase().contains(search) || entry.value.toLowerCase().contains(search),
+                                  (entry) => entry.value.isEmpty || entry.label.toLowerCase().contains(search) || entry.value.toLowerCase().contains(search),
                                 )
                                 .toList();
                           },
                           dropdownMenuEntries: [
                             DropdownMenuEntry(value: '', label: HomeTranslations.allCountries.trOf(context)),
-                            for (final country in countries)
-                              DropdownMenuEntry(value: country.code, label: '${country.flag}  ${country.localizedName(locale)}'),
+                            for (final country in countries) DropdownMenuEntry(value: country.code, label: '${country.flag}  ${country.localizedName(locale)}'),
                           ],
                           onSelected: (value) {
                             if (value != null) {
@@ -1646,6 +1646,24 @@ class LiveTvChannelCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: _Palette.textSecondary, fontSize: 11),
+              ),
+            if (channel.isGeoBlocked)
+              Tooltip(
+                message: HomeTranslations.geoRestrictedInfo.trOf(context),
+                child: Row(
+                  children: [
+                    const Icon(Icons.public_off, size: 12, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        HomeTranslations.geoRestricted.trOf(context),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.amber, fontSize: 10),
+                      ),
+                    ),
+                  ],
+                ),
               ),
           ],
         ),

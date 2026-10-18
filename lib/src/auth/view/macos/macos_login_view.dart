@@ -3,6 +3,7 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
+import 'package:popcorn_flutter/src/auth/view/email_password_form.dart';
 import 'package:popcorn_flutter/src/auth/view/google_sign_in_button.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
@@ -53,53 +54,69 @@ class _MacosLoginViewState extends State<MacosLoginView> {
     return MacosScaffold(
       children: [
         ContentArea(
-          builder: (context, _) => Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 360),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(CupertinoIcons.film, size: 64, color: theme.primaryColor),
-                    const SizedBox(height: 16),
-                    Text(AppTranslations.appTitle.trOf(context), style: theme.typography.largeTitle),
-                    const SizedBox(height: 8),
-                    Text(AuthTranslations.signInSubtitle.trOf(context), textAlign: TextAlign.center, style: theme.typography.body),
-                    const SizedBox(height: 32),
-                    GoogleSignInButton(label: AuthTranslations.signInWithGoogle.trOf(context), busy: _busy, onPressed: _signIn),
-                    if (AuthController.guestAccessAllowed) ...[
-                      const SizedBox(height: 12),
-                      PushButton(
-                        controlSize: ControlSize.large,
-                        secondary: true,
-                        onPressed: _busy ? null : widget.controller.continueAsGuest,
-                        child: Text(AuthTranslations.continueAsGuest.trOf(context)),
-                      ),
-                    ],
-                    if (_error != null) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: theme.typography.body.copyWith(color: MacosColors.systemRedColor),
-                      ),
-                    ],
-                    if (widget.onOpenPrivacy != null || widget.onOpenTerms != null) ...[
-                      const SizedBox(height: 32),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 8,
+          builder: (context, _) => LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 360),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (widget.onOpenPrivacy != null)
-                            _MacosLinkButton(label: LegalTranslations.privacyLink.trOf(context), onPressed: widget.onOpenPrivacy!),
-                          if (widget.onOpenPrivacy != null && widget.onOpenTerms != null) Text('·', style: theme.typography.body),
-                          if (widget.onOpenTerms != null) _MacosLinkButton(label: LegalTranslations.termsLink.trOf(context), onPressed: widget.onOpenTerms!),
+                          Icon(CupertinoIcons.film, size: 64, color: theme.primaryColor),
+                          const SizedBox(height: 16),
+                          Text(AppTranslations.appTitle.trOf(context), style: theme.typography.largeTitle),
+                          const SizedBox(height: 8),
+                          Text(AuthTranslations.signInSubtitle.trOf(context), textAlign: TextAlign.center, style: theme.typography.body),
+                          const SizedBox(height: 32),
+                          GoogleSignInButton(label: AuthTranslations.signInWithGoogle.trOf(context), busy: _busy, onPressed: _signIn),
+                          const SizedBox(height: 8),
+                          EmailPasswordForm(
+                            controller: widget.controller,
+                            busy: _busy,
+                            onBusyChanged: (busy) {
+                              if (mounted) setState(() => _busy = busy);
+                            },
+                          ),
+                          if (AuthController.guestAccessAllowed) ...[
+                            const SizedBox(height: 12),
+                            PushButton(
+                              controlSize: ControlSize.large,
+                              secondary: true,
+                              onPressed: _busy ? null : widget.controller.continueAsGuest,
+                              child: Text(AuthTranslations.continueAsGuest.trOf(context)),
+                            ),
+                          ],
+                          if (_error != null) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              _error!,
+                              textAlign: TextAlign.center,
+                              style: theme.typography.body.copyWith(color: MacosColors.systemRedColor),
+                            ),
+                          ],
+                          if (widget.onOpenPrivacy != null || widget.onOpenTerms != null) ...[
+                            const SizedBox(height: 32),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              children: [
+                                if (widget.onOpenPrivacy != null)
+                                  _MacosLinkButton(label: LegalTranslations.privacyLink.trOf(context), onPressed: widget.onOpenPrivacy!),
+                                if (widget.onOpenPrivacy != null && widget.onOpenTerms != null) Text('·', style: theme.typography.body),
+                                if (widget.onOpenTerms != null)
+                                  _MacosLinkButton(label: LegalTranslations.termsLink.trOf(context), onPressed: widget.onOpenTerms!),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -44,7 +44,42 @@ class HomeTranslations {
   });
 
   static const liveTv = Translation({AppLanguage.en: 'Live TV', AppLanguage.es: 'TV en directo', AppLanguage.ca: 'TV en directe'});
+  static const geoRestricted = Translation({
+    AppLanguage.en: 'Geo-restricted',
+    AppLanguage.es: 'Restricción geográfica',
+    AppLanguage.ca: 'Restricció geogràfica',
+  });
+  static const geoRestrictedInfo = Translation({
+    AppLanguage.en: 'iptv-org reports geographic restrictions for this stream. It may not play in your location.',
+    AppLanguage.es: 'iptv-org indica restricciones geográficas para esta emisión. Puede que no se reproduzca en tu ubicación.',
+    AppLanguage.ca: 'iptv-org indica restriccions geogràfiques per a aquesta emissió. Pot ser que no es reprodueixi a la teva ubicació.',
+  });
   static const allCountries = Translation({AppLanguage.en: 'All countries', AppLanguage.es: 'Todos los países', AppLanguage.ca: 'Tots els països'});
+  static const broadcastArea = Translation({
+    AppLanguage.en: 'Broadcast area',
+    AppLanguage.es: 'Zona de emisión',
+    AppLanguage.ca: "Zona d'emissió",
+  });
+  static const broadcastAreaInfo = Translation({
+    AppLanguage.en: 'Intended broadcast area, not confirmed streaming availability.',
+    AppLanguage.es: 'Zona de emisión prevista, no disponibilidad confirmada de la transmisión.',
+    AppLanguage.ca: "Zona d'emissió prevista, no disponibilitat confirmada de la transmissió.",
+  });
+  static const exactGeoRestrictionsUnknown = Translation({
+    AppLanguage.en: 'Exact geographic restrictions not provided.',
+    AppLanguage.es: 'No se especifican las restricciones geográficas exactas.',
+    AppLanguage.ca: "No s'especifiquen les restriccions geogràfiques exactes.",
+  });
+  static const geoRestrictedCountry = Translation({
+    AppLanguage.en: 'May be restricted to {country}.',
+    AppLanguage.es: 'Puede estar restringido a {country}.',
+    AppLanguage.ca: 'Pot estar restringit a {country}.',
+  });
+  static const geoRestrictedCountryInfo = Translation({
+    AppLanguage.en: "Inferred from the channel's country; exact streaming restrictions are not verified.",
+    AppLanguage.es: 'Inferido del país del canal; las restricciones exactas de la transmisión no están verificadas.',
+    AppLanguage.ca: 'Inferit del país del canal; les restriccions exactes de la transmissió no estan verificades.',
+  });
   static const country = Translation({AppLanguage.en: 'Country', AppLanguage.es: 'País', AppLanguage.ca: 'País'});
   static const epg = Translation({AppLanguage.en: 'Programme guide', AppLanguage.es: 'Guía de programación', AppLanguage.ca: 'Guia de programació'});
   static const epgEmpty = Translation({

@@ -112,7 +112,13 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
     final playback = previous?.playback;
     _initialSession = sameEpisode
         ? playback ?? const PlaybackSession()
-        : PlaybackSession(provider: playback?.provider, source: playback?.source, language: playback?.language, subtitles: playback?.subtitles);
+        : PlaybackSession(
+            provider: playback?.provider,
+            source: playback?.source,
+            language: playback?.language,
+            subtitles: playback?.subtitles,
+            subtitleDelaySeconds: playback?.subtitleDelaySeconds ?? 0,
+          );
     _season = resolvedSeason;
     _episode = resolvedEpisode;
     _item = item;
@@ -135,6 +141,7 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
       query['resume'] = _initialSession.positionSeconds.toString();
       if (_initialSession.source != null) query['resumeSource'] = _initialSession.source!;
       if (_initialSession.subtitles != null) query['resumeSubtitles'] = _initialSession.subtitles!;
+      query['resumeSubtitleDelay'] = _initialSession.subtitleDelaySeconds.toString();
       if (kIsWeb) query['parentOrigin'] = Uri.base.origin;
       final title = item.title.trim();
       if (title.isNotEmpty) query['title'] = title;

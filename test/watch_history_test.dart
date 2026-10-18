@@ -228,27 +228,38 @@ void main() {
         }
         expect(request.method, 'GET');
         expect(request.url.queryParameters['profile_id'], 'eq.profile-1');
+        expect(request.url.queryParameters['select'], contains('subtitle_delay_seconds'));
         return http.Response(jsonEncode([saved]), 200, headers: {'content-type': 'application/json'}, request: request);
       }),
     );
     addTearDown(client.dispose);
     final repository = SupabaseWatchHistoryRepository(profileRepository: _Profiles(), mediaRepository: _Catalog(), client: client);
     for (final subtitles in ['', null, '["Spanish","es"]']) {
-      final playback = PlaybackSession(provider: 'vidsrcbuzz', source: '["Server 1","Spanish"]', language: 'es', subtitles: subtitles, positionSeconds: 123.5);
-      await repository.upsert(
-        WatchHistoryEntry(
-          item: const MediaItem(id: 42, title: 'Movie', overview: ''),
-          type: MediaType.movie,
-          watchedAt: DateTime.utc(2026),
-          playback: playback,
-        ),
-      );
-      expect(saved!['playback_provider'], playback.provider);
-      expect(saved!['playback_source'], playback.source);
-      expect(saved!['audio_language'], playback.language);
-      expect(saved!['subtitle_selection'], subtitles);
-      expect(saved!['position_seconds'], 123.5);
-      expect((await repository.load()).single.playback.toJson(), playback.toJson());
+      for (final delay in [-2.5, 0.0, 1.5]) {
+        final playback = PlaybackSession(
+          provider: 'vidsrcbuzz',
+          source: '["Server 1","Spanish"]',
+          language: 'es',
+          subtitles: subtitles,
+          subtitleDelaySeconds: delay,
+          positionSeconds: 123.5,
+        );
+        await repository.upsert(
+          WatchHistoryEntry(
+            item: const MediaItem(id: 42, title: 'Movie', overview: ''),
+            type: MediaType.movie,
+            watchedAt: DateTime.utc(2026),
+            playback: playback,
+          ),
+        );
+        expect(saved!['playback_provider'], playback.provider);
+        expect(saved!['playback_source'], playback.source);
+        expect(saved!['audio_language'], playback.language);
+        expect(saved!['subtitle_selection'], subtitles);
+        expect(saved!['subtitle_delay_seconds'], delay);
+        expect(saved!['position_seconds'], 123.5);
+        expect((await repository.load()).single.playback.toJson(), playback.toJson());
+      }
     }
     await repository.upsert(
       WatchHistoryEntry(
@@ -258,20 +269,99 @@ void main() {
       ),
     );
     expect(saved!['position_seconds'], 0);
+    expect(saved!['subtitle_delay_seconds'], 0);
     expect((await repository.load()).single.playback.toJson(), const PlaybackSession().toJson());
   });
 
   test('watch history preserves the playback session across serialization', () {
+    final latestEpisodeAirDate = DateTime.utc(2026, 10, 1);
     final entry = WatchHistoryEntry(
-      item: const MediaItem(id: 42, title: 'Movie', overview: ''),
-      type: MediaType.movie,
+      item: MediaItem(
+        id: 42,
+        title: 'Series',
+        overview: '',
+        latestEpisodeAirDate: latestEpisodeAirDate,
+        latestEpisodeNumber: 2,
+        latestSeasonAirDate: latestEpisodeAirDate,
+        numberOfSeasons: 2,
+        releasedSeasonCount: 1,
+      ),
+      type: MediaType.tv,
       watchedAt: DateTime.utc(2026),
-      playback: const PlaybackSession(provider: 'vidsrcbuzz', source: 'Server 1', language: 'es', subtitles: 'Spanish', positionSeconds: 123.5),
+      playback: const PlaybackSession(
+        provider: 'vidsrcbuzz',
+        source: 'Server 1',
+        language: 'es',
+        subtitles: 'Spanish',
+        subtitleDelaySeconds: -1.5,
+        positionSeconds: 123.5,
+      ),
     );
     final restored = WatchHistoryEntry.fromJson(entry.toJson());
     expect(restored.playback.toJson(), entry.playback.toJson());
+    expect(restored.item.latestEpisodeAirDate, latestEpisodeAirDate);
+    expect(restored.item.latestEpisodeNumber, 2);
+    expect(restored.item.latestSeasonAirDate, latestEpisodeAirDate);
+    expect(restored.item.numberOfSeasons, 2);
+    expect(restored.item.releasedSeasonCount, 1);
     final legacy = entry.toJson()..remove('playback');
     expect(WatchHistoryEntry.fromJson(legacy).playback.positionSeconds, 0);
+    expect(WatchHistoryEntry.fromJson(legacy).playback.subtitleDelaySeconds, 0);
+  });
+
+  test('subtitle offsets preserve signed fractions and default legacy or nonfinite values to zero', () {
+    for (final delay in [-2.5, 0.0, 1.5]) {
+      final session = PlaybackSession.fromJson({'language': 'es', 'subtitleDelaySeconds': delay});
+      expect(session.subtitleDelaySeconds, delay);
+      expect(PlaybackSession.fromJson(session.toJson()).subtitleDelaySeconds, delay);
+      expect(session.language, 'es');
+    }
+    for (final delay in [null, double.nan, double.infinity, double.negativeInfinity]) {
+      expect(PlaybackSession.fromJson({'subtitleDelaySeconds': delay}).subtitleDelaySeconds, 0);
+    }
+    expect(PlaybackSession.fromJson({}).subtitleDelaySeconds, 0);
+  });
+
+  test('hosted subtitle timing events save the offset with language and selection', () async {
+    Map<String, dynamic>? saved;
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'test-key',
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+      httpClient: MockClient((request) async {
+        saved = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        return http.Response('', 201, request: request);
+      }),
+    );
+    addTearDown(client.dispose);
+    final repository = SupabaseWatchHistoryRepository(profileRepository: _Profiles(), mediaRepository: _Catalog(), client: client);
+    Future<void>? write;
+    final scope = PlaybackSessionScope(
+      initial: const PlaybackSession(),
+      mediaId: 42,
+      mediaType: 'movie',
+      onChanged: (session) => write = repository.upsert(
+        WatchHistoryEntry(
+          item: const MediaItem(id: 42, title: 'Movie', overview: ''),
+          type: MediaType.movie,
+          watchedAt: DateTime.utc(2026),
+          playback: session,
+        ),
+      ),
+      child: const SizedBox(),
+    );
+    scope.accept({
+      'type': 'popcorn:playback',
+      'event': 'subtitle-delay',
+      'media': {'type': 'movie', 'id': '42'},
+      'session': {'language': 'es', 'subtitles': '["Spanish","es"]', 'subtitleDelaySeconds': -0.5, 'positionSeconds': 120},
+    });
+    expect(write, isNotNull);
+    await write;
+    expect(saved!['audio_language'], 'es');
+    expect(saved!['subtitle_selection'], '["Spanish","es"]');
+    expect(saved!['subtitle_delay_seconds'], -0.5);
+    expect(saved!['position_seconds'], 120);
   });
 
   test('invalid playback positions are discarded', () {
@@ -328,7 +418,14 @@ void main() {
     await firstDevice.record(
       const MediaItem(id: 42, title: 'Movie', overview: ''),
       MediaType.movie,
-      playback: const PlaybackSession(provider: 'onlypelis', source: 'Server 1', language: 'fr', subtitles: '', positionSeconds: 455),
+      playback: const PlaybackSession(
+        provider: 'onlypelis',
+        source: 'Server 1',
+        language: 'fr',
+        subtitles: '',
+        subtitleDelaySeconds: 2.5,
+        positionSeconds: 455,
+      ),
     );
     final secondDevice = WatchHistoryController(repository: repository);
     await secondDevice.ready;
@@ -339,7 +436,9 @@ void main() {
 
   test('native hosted playback resolves to a manifest without bridge parameters', () async {
     final source = MediaSource(
-      url: Uri.parse('https://player.example/player?id=42&type=movie&provider=onlypelis&lang=fr&sub=0&resume=120&parentOrigin=https%3A%2F%2Fapp.example&title=Fight+Club&year=1999'),
+      url: Uri.parse(
+        'https://player.example/player?id=42&type=movie&provider=onlypelis&lang=fr&sub=0&resume=120&parentOrigin=https%3A%2F%2Fapp.example&title=Fight+Club&year=1999',
+      ),
     );
     final candidates = await StreamResolver.resolve(source);
     expect(candidates.single.url.path, '/manifest');

@@ -18,11 +18,9 @@ import 'package:popcorn_flutter/src/search/domain/media_watch_provider.dart';
 
 /// [MediaSearchRepository] backed by The Movie Database (TMDB) REST API.
 final class TmdbMediaSearchRepository implements MediaSearchRepository {
-  TmdbMediaSearchRepository({required String accessToken, Uri? playerServerUrl, String playerServerToken = '', http.Client? client})
+  TmdbMediaSearchRepository({required String accessToken, this._playerServerUrl, this._playerServerToken = '', http.Client? client})
     // ignore: prefer_initializing_formals -- named parameters cannot be private.
     : _accessToken = accessToken,
-      _playerServerUrl = playerServerUrl,
-      _playerServerToken = playerServerToken,
       _client = client ?? http.Client();
 
   static const String _baseUrl = 'https://api.themoviedb.org/3';
@@ -134,7 +132,10 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
   Future<List<MediaItem>> _includeLatestEpisodeMetadata(List<MediaItem> items) async {
     return Future.wait(
       items.map((item) async {
-        if (item.latestSeasonAirDate != null || (item.latestEpisodeAirDate != null && item.latestEpisodeNumber == 1)) return item;
+        if (item.releasedSeasonCount != null &&
+            (item.latestSeasonAirDate != null || (item.latestEpisodeAirDate != null && item.latestEpisodeNumber != null))) {
+          return item;
+        }
 
         try {
           final details = await mediaItem(item.id, MediaType.tv);
@@ -147,14 +148,12 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
             latestEpisodeAirDate: details.latestEpisodeAirDate ?? item.latestEpisodeAirDate,
             latestEpisodeNumber: details.latestEpisodeNumber ?? item.latestEpisodeNumber,
             latestSeasonAirDate: details.latestSeasonAirDate ?? item.latestSeasonAirDate,
+            numberOfSeasons: details.numberOfSeasons ?? item.numberOfSeasons,
+            releasedSeasonCount: details.releasedSeasonCount ?? item.releasedSeasonCount,
             voteAverage: item.voteAverage,
           );
         } on MediaSearchException catch (error) {
-          developer.log(
-            'Could not load latest episode metadata for TV series ${item.id}',
-            name: 'popcorn_flutter.search',
-            error: error,
-          );
+          developer.log('Could not load latest episode metadata for TV series ${item.id}', name: 'popcorn_flutter.search', error: error);
           return item;
         }
       }),
@@ -319,7 +318,9 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     if (year != null) query['year'] = '$year';
     final endpoint = serverUrl.replace(path: '/watch-providers', queryParameters: query);
     try {
-      final response = await _client.get(endpoint, headers: {if (_playerServerToken.isNotEmpty) 'Authorization': 'Bearer $_playerServerToken'}).timeout(const Duration(seconds: 20));
+      final response = await _client
+          .get(endpoint, headers: {if (_playerServerToken.isNotEmpty) 'Authorization': 'Bearer $_playerServerToken'})
+          .timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) {
         developer.log('Player server request failed: HTTP ${response.statusCode}', name: 'WatchProviders', level: 900);
         return const {};
@@ -535,11 +536,23 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
     final releaseDate = (json['release_date'] as String?) ?? (json['first_air_date'] as String?);
     final latestEpisode = json['last_episode_to_air'] as Map<String, dynamic>?;
     final seasons = (json['seasons'] as List<dynamic>?) ?? const <dynamic>[];
-    final seasonAirDates = seasons.cast<Map<String, dynamic>>().where((season) {
-      final seasonNumber = (season['season_number'] as num?)?.toInt() ?? 0;
-      return seasonNumber > 0 && _parseDate(season['air_date'] as String?) != null;
-    }).map((season) => _parseDate(season['air_date'] as String?)!);
+    final seasonAirDates = seasons
+        .cast<Map<String, dynamic>>()
+        .where((season) {
+          final seasonNumber = (season['season_number'] as num?)?.toInt() ?? 0;
+          final airDate = _parseDate(season['air_date'] as String?);
+          return seasonNumber > 0 && airDate != null && !airDate.isAfter(DateTime.now());
+        })
+        .map((season) => _parseDate(season['air_date'] as String?)!);
     final latestSeasonAirDate = seasonAirDates.isEmpty ? null : seasonAirDates.reduce((first, second) => first.isAfter(second) ? first : second);
+    final releasedSeasonCount = seasons
+        .cast<Map<String, dynamic>>()
+        .where((season) {
+          final seasonNumber = (season['season_number'] as num?)?.toInt() ?? 0;
+          final airDate = _parseDate(season['air_date'] as String?);
+          return seasonNumber > 0 && airDate != null && !airDate.isAfter(DateTime.now());
+        })
+        .length;
     return MediaItem(
       id: json['id'] as int,
       title: title,
@@ -549,6 +562,10 @@ final class TmdbMediaSearchRepository implements MediaSearchRepository {
       latestEpisodeAirDate: _parseDate(latestEpisode?['air_date'] as String?),
       latestEpisodeNumber: (latestEpisode?['episode_number'] as num?)?.toInt(),
       latestSeasonAirDate: latestSeasonAirDate,
+      numberOfSeasons:
+          (json['number_of_seasons'] as num?)?.toInt() ??
+          seasons.cast<Map<String, dynamic>>().where((season) => ((season['season_number'] as num?)?.toInt() ?? 0) > 0).length,
+      releasedSeasonCount: seasons.isEmpty ? null : releasedSeasonCount,
       voteAverage: (json['vote_average'] as num?)?.toDouble(),
     );
   }

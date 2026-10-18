@@ -32,4 +32,20 @@ class ProfileTranslations {
   static const create = Translation({AppLanguage.en: 'Create', AppLanguage.es: 'Crear', AppLanguage.ca: 'Crea'});
 
   static const signOut = Translation({AppLanguage.en: 'Sign out', AppLanguage.es: 'Cerrar sesión', AppLanguage.ca: 'Tanca la sessió'});
+
+  static const accountSettings = Translation({
+    AppLanguage.en: 'Account settings',
+    AppLanguage.es: 'Ajustes de la cuenta',
+    AppLanguage.ca: 'Configuració del compte',
+  });
+
+  static const countryOrRegion = Translation({AppLanguage.en: 'Country or region', AppLanguage.es: 'País o región', AppLanguage.ca: 'País o regió'});
+
+  static const deviceRegion = Translation({AppLanguage.en: 'Device region', AppLanguage.es: 'Región del dispositivo', AppLanguage.ca: 'Regió del dispositiu'});
+
+  static const useDeviceRegion = Translation({
+    AppLanguage.en: 'Use device region',
+    AppLanguage.es: 'Usar región del dispositivo',
+    AppLanguage.ca: 'Utilitzar la regió del dispositiu',
+  });
 }

@@ -100,6 +100,7 @@ void main() {
 
   test('TMDB TV trending and search results load latest episode metadata', () async {
     final latestEpisodeAirDate = DateTime.now().subtract(const Duration(days: 7));
+    final futureSeasonAirDate = DateTime.now().add(const Duration(days: 90));
     var detailRequests = 0;
     final client = MockClient((request) async {
       switch (request.url.path) {
@@ -123,8 +124,10 @@ void main() {
               'last_episode_to_air': {'air_date': latestEpisodeAirDate.toIso8601String(), 'episode_number': 2},
               'seasons': [
                 {'season_number': 0, 'air_date': latestEpisodeAirDate.toIso8601String()},
-                {'season_number': 3, 'air_date': latestEpisodeAirDate.toIso8601String()},
+                {'season_number': 1, 'air_date': latestEpisodeAirDate.toIso8601String()},
+                {'season_number': 2, 'air_date': futureSeasonAirDate.toIso8601String()},
               ],
+              'number_of_seasons': 2,
             }),
             200,
           );
@@ -142,7 +145,10 @@ void main() {
     expect(trendingItem.latestEpisodeAirDate, latestEpisodeAirDate);
     expect(trendingItem.latestEpisodeNumber, 2);
     expect(trendingItem.latestSeasonAirDate, latestEpisodeAirDate);
+    expect(trendingItem.numberOfSeasons, 2);
+    expect(trendingItem.releasedSeasonCount, 1);
     expect(searchItem.latestSeasonAirDate, latestEpisodeAirDate);
+    expect(searchItem.releasedSeasonCount, 1);
     expect(detailRequests, 1);
   });
 
@@ -211,6 +217,8 @@ void main() {
             releaseDate: now.subtract(const Duration(days: 365)),
             latestEpisodeAirDate: now.subtract(const Duration(days: 7)),
             latestEpisodeNumber: 1,
+            numberOfSeasons: 2,
+            releasedSeasonCount: 2,
           ),
           MediaItem(
             id: 4,
@@ -221,12 +229,24 @@ void main() {
             latestEpisodeNumber: 2,
           ),
           MediaItem(
+            id: 9,
+            title: 'New Single-Season Series',
+            overview: '',
+            releaseDate: now.subtract(const Duration(days: 365)),
+            latestEpisodeAirDate: now.subtract(const Duration(days: 7)),
+            latestEpisodeNumber: 2,
+            numberOfSeasons: 1,
+            releasedSeasonCount: 1,
+          ),
+          MediaItem(
             id: 8,
             title: 'New Season Episode Two',
             overview: '',
             releaseDate: now.subtract(const Duration(days: 365)),
             latestEpisodeAirDate: now.subtract(const Duration(days: 7)),
             latestEpisodeNumber: 2,
+            numberOfSeasons: 2,
+            releasedSeasonCount: 2,
           ),
         ],
       ),
@@ -258,7 +278,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('Trending TV Series'), 200, scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
 
-    expect(find.text('NEW SERIES'), findsOneWidget);
+    expect(find.text('NEW SERIES'), findsNWidgets(2));
     expect(find.text('SEASON PREMIERE'), findsOneWidget);
     expect(find.text('NEW SEASON'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -276,7 +296,24 @@ void main() {
     final favorites = FavoritesController(repository: _EmptyFavorites());
     final history = WatchHistoryController(
       repository: _EmptyHistory(
-        entries: [WatchHistoryEntry(item: _series, type: MediaType.tv, season: 2, episode: 1, watchedAt: now)],
+        entries: [
+          WatchHistoryEntry(
+            item: MediaItem(
+              id: _series.id,
+              title: _series.title,
+              overview: '',
+              latestEpisodeAirDate: now.subtract(const Duration(days: 7)),
+              latestEpisodeNumber: 1,
+              latestSeasonAirDate: now.subtract(const Duration(days: 7)),
+              numberOfSeasons: 2,
+              releasedSeasonCount: 2,
+            ),
+            type: MediaType.tv,
+            season: 2,
+            episode: 1,
+            watchedAt: now,
+          ),
+        ],
       ),
     );
     final search = MediaSearchController(repository: _Repository((id, type) async => []));

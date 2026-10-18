@@ -6,8 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Wraps Supabase authentication and exposes the current sign-in state.
 ///
-/// Google OAuth is the only supported sign-in method. Listeners are notified
-/// whenever the session changes (sign-in, sign-out, token refresh).
+/// Supports email/password authentication and Google OAuth. Listeners are
+/// notified whenever the session changes (sign-in, sign-out, token refresh).
 class AuthController extends ChangeNotifier {
   AuthController({SupabaseClient? client}) : _client = client ?? Supabase.instance.client {
     _subscription = _client.auth.onAuthStateChange.listen((_) => notifyListeners(), onError: _onAuthStreamError);
@@ -90,6 +90,11 @@ class AuthController extends ChangeNotifier {
       redirectTo: kIsWeb ? _webRedirect() : _nativeRedirect,
       authScreenLaunchMode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
     );
+  }
+
+  /// Signs in an existing user with email and password.
+  Future<void> signInWithEmail(String email, String password) async {
+    await _client.auth.signInWithPassword(email: email.trim(), password: password);
   }
 
   // Current page URL without query/fragment so OAuth returns to the same origin

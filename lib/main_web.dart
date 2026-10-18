@@ -13,7 +13,6 @@ import 'package:popcorn_flutter/src/app/update/web_update_checker.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
 import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
 import 'package:popcorn_flutter/src/app/view/unsupported_platform_view.dart';
-import 'package:popcorn_flutter/src/app/view/web/install_prompt.dart';
 import 'package:popcorn_flutter/src/app/view/web/push_notification_button.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/details/details.dart';
@@ -24,6 +23,8 @@ import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/profile/view/account_settings_view.dart';
+import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 import 'package:web/web.dart' as web;
 
@@ -206,6 +207,8 @@ class _PopcornWebAppState extends State<_PopcornWebApp> with WidgetsBindingObser
         return _legalPage(context, LegalTranslations.privacyPolicy);
       case TermsRoute():
         return _legalPage(context, LegalTranslations.termsOfService);
+      case AccountSettingsRoute():
+        return _scaffoldPage(context, ProfileTranslations.accountSettings.trOf(context), const AccountSettingsView());
     }
   }
 
@@ -320,12 +323,7 @@ class _PopcornWebAppState extends State<_PopcornWebApp> with WidgetsBindingObser
               onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
               episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
               onPlayEpisode: (season, episode) => context.push(
-                AppRoutes.watch(
-                  bundle.type,
-                  bundle.item.id,
-                  season: season.seasonNumber,
-                  episode: episode.episodeNumber,
-                ),
+                AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
                 extra: bundle.item,
               ),
             ),
@@ -431,8 +429,7 @@ class _WebHomeViewState extends State<_WebHomeView> {
                     initialQuery: widget.initialQuery,
                     initialMediaType: widget.initialMediaType,
                     onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
-                    onMediaPlay: (media) =>
-                        context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
+                    onMediaPlay: (media) => context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
                   ),
           ),
         ),

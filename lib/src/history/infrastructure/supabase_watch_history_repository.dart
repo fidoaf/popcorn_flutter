@@ -33,7 +33,9 @@ class SupabaseWatchHistoryRepository implements WatchHistoryRepository {
     await _pending;
     final rows = await _client
         .from(_table)
-        .select('media_type,media_id,season,episode,watched_at,playback_provider,playback_source,audio_language,subtitle_selection,position_seconds')
+        .select(
+          'media_type,media_id,season,episode,watched_at,playback_provider,playback_source,audio_language,subtitle_selection,subtitle_delay_seconds,position_seconds',
+        )
         .eq('profile_id', profile.id)
         .order('watched_at', ascending: false);
     return Future.wait(rows.map(_fromRow));
@@ -74,6 +76,7 @@ class SupabaseWatchHistoryRepository implements WatchHistoryRepository {
     'playback_source': entry.playback.source,
     'audio_language': entry.playback.language,
     'subtitle_selection': entry.playback.subtitles,
+    'subtitle_delay_seconds': entry.playback.subtitleDelaySeconds,
     'position_seconds': entry.playback.positionSeconds,
     'watched_at': entry.watchedAt.toIso8601String(),
   };
@@ -103,6 +106,7 @@ class SupabaseWatchHistoryRepository implements WatchHistoryRepository {
         'source': row['playback_source'],
         'language': row['audio_language'],
         'subtitles': row['subtitle_selection'],
+        'subtitleDelaySeconds': row['subtitle_delay_seconds'],
         'positionSeconds': row['position_seconds'],
       }),
       type: type,

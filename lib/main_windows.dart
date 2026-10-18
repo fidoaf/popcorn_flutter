@@ -24,6 +24,8 @@ import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/profile/view/account_settings_view.dart';
+import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
@@ -247,8 +249,23 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
         return _legalPage(context, LegalTranslations.privacyPolicy);
       case TermsRoute():
         return _legalPage(context, LegalTranslations.termsOfService);
+      case AccountSettingsRoute():
+        return _accountSettingsPage(context);
     }
   }
+
+  Widget _accountSettingsPage(BuildContext context) => _PopOnEscape(
+    child: PopcornFluentSplashScreen(
+      child: ScaffoldPage(
+        header: PageHeader(
+          leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+          title: Text(ProfileTranslations.accountSettings.trOf(context)),
+          commandBar: const PopcornAppBarLogo(),
+        ),
+        content: const AccountSettingsView(),
+      ),
+    ),
+  );
 
   Widget _legalPage(BuildContext context, LegalDocument document) => _PopOnEscape(
     child: PopcornFluentSplashScreen(
@@ -373,12 +390,7 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
           episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
           onPlayEpisode: (season, episode) => context.push(
-            AppRoutes.watch(
-              bundle.type,
-              bundle.item.id,
-              season: season.seasonNumber,
-              episode: episode.episodeNumber,
-            ),
+            AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
             extra: bundle.item,
           ),
         ),
@@ -429,8 +441,7 @@ class _WindowsHomeView extends StatelessWidget {
         initialQuery: initialQuery,
         initialMediaType: initialMediaType,
         onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
-        onMediaPlay: (media) =>
-            context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
+        onMediaPlay: (media) => context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
         onOpenFavorites: () => context.push(AppRoutes.favorites),
         onOpenContinueWatching: () => context.push(AppRoutes.history),
       ),

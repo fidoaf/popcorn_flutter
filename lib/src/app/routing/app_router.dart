@@ -89,6 +89,7 @@ GoRouter createAppRouter({
       route('/history'),
       route('/privacy'),
       route('/terms'),
+      route('/account-settings'),
       route('/trailer'),
       route('/search/:type'),
       route('/details/:type/:id'),

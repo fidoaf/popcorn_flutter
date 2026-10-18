@@ -44,6 +44,11 @@ final class WatchHistoryEntry {
     'overview': item.overview,
     'posterUrl': item.posterUrl?.toString(),
     'releaseDate': item.releaseDate?.toIso8601String(),
+    'latestEpisodeAirDate': item.latestEpisodeAirDate?.toIso8601String(),
+    'latestEpisodeNumber': item.latestEpisodeNumber,
+    'latestSeasonAirDate': item.latestSeasonAirDate?.toIso8601String(),
+    'numberOfSeasons': item.numberOfSeasons,
+    'releasedSeasonCount': item.releasedSeasonCount,
     'voteAverage': item.voteAverage,
     'season': season,
     'episode': episode,
@@ -54,6 +59,8 @@ final class WatchHistoryEntry {
   factory WatchHistoryEntry.fromJson(Map<String, dynamic> json) {
     final posterUrl = json['posterUrl'] as String?;
     final releaseDate = json['releaseDate'] as String?;
+    final latestEpisodeAirDate = json['latestEpisodeAirDate'] as String?;
+    final latestSeasonAirDate = json['latestSeasonAirDate'] as String?;
     final watchedAt = json['watchedAt'] as String?;
     return WatchHistoryEntry(
       playback: PlaybackSession.fromJson(Map<String, dynamic>.from(json['playback'] as Map? ?? const {})),
@@ -67,6 +74,11 @@ final class WatchHistoryEntry {
         overview: json['overview'] as String,
         posterUrl: posterUrl == null ? null : Uri.tryParse(posterUrl),
         releaseDate: releaseDate == null ? null : DateTime.tryParse(releaseDate),
+        latestEpisodeAirDate: latestEpisodeAirDate == null ? null : DateTime.tryParse(latestEpisodeAirDate),
+        latestEpisodeNumber: (json['latestEpisodeNumber'] as num?)?.toInt(),
+        latestSeasonAirDate: latestSeasonAirDate == null ? null : DateTime.tryParse(latestSeasonAirDate),
+        numberOfSeasons: (json['numberOfSeasons'] as num?)?.toInt(),
+        releasedSeasonCount: (json['releasedSeasonCount'] as num?)?.toInt(),
         voteAverage: (json['voteAverage'] as num?)?.toDouble(),
       ),
     );

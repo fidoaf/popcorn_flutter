@@ -2,6 +2,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/auth/view/auth_translations.dart';
+import 'package:popcorn_flutter/src/auth/view/email_password_form.dart';
 import 'package:popcorn_flutter/src/auth/view/google_sign_in_button.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
@@ -50,54 +51,70 @@ class _FluentLoginViewState extends State<FluentLoginView> {
   Widget build(BuildContext context) {
     final theme = FluentTheme.of(context);
     return ScaffoldPage(
-      content: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(FluentIcons.my_movies_t_v, size: 64, color: theme.accentColor),
-                const SizedBox(height: 16),
-                Text(AppTranslations.appTitle.trOf(context), style: theme.typography.title),
-                const SizedBox(height: 8),
-                Text(AuthTranslations.signInSubtitle.trOf(context), textAlign: TextAlign.center, style: theme.typography.body),
-                const SizedBox(height: 32),
-                GoogleSignInButton(label: AuthTranslations.signInWithGoogle.trOf(context), busy: _busy, onPressed: _signIn),
-                if (AuthController.guestAccessAllowed) ...[
-                  const SizedBox(height: 12),
-                  Button(
-                    onPressed: _busy ? null : widget.controller.continueAsGuest,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [const Icon(FluentIcons.contact), const SizedBox(width: 8), Text(AuthTranslations.continueAsGuest.trOf(context))],
-                    ),
-                  ),
-                ],
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ],
-                if (widget.onOpenPrivacy != null || widget.onOpenTerms != null) ...[
-                  const SizedBox(height: 32),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 4,
+      content: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (widget.onOpenPrivacy != null)
-                        HyperlinkButton(onPressed: widget.onOpenPrivacy, child: Text(LegalTranslations.privacyLink.trOf(context))),
-                      if (widget.onOpenPrivacy != null && widget.onOpenTerms != null) Text('·', style: theme.typography.body),
-                      if (widget.onOpenTerms != null) HyperlinkButton(onPressed: widget.onOpenTerms, child: Text(LegalTranslations.termsLink.trOf(context))),
+                      Icon(FluentIcons.my_movies_t_v, size: 64, color: theme.accentColor),
+                      const SizedBox(height: 16),
+                      Text(AppTranslations.appTitle.trOf(context), style: theme.typography.title),
+                      const SizedBox(height: 8),
+                      Text(AuthTranslations.signInSubtitle.trOf(context), textAlign: TextAlign.center, style: theme.typography.body),
+                      const SizedBox(height: 32),
+                      GoogleSignInButton(label: AuthTranslations.signInWithGoogle.trOf(context), busy: _busy, onPressed: _signIn),
+                      const SizedBox(height: 8),
+                      EmailPasswordForm(
+                        controller: widget.controller,
+                        busy: _busy,
+                        onBusyChanged: (busy) {
+                          if (mounted) setState(() => _busy = busy);
+                        },
+                      ),
+                      if (AuthController.guestAccessAllowed) ...[
+                        const SizedBox(height: 12),
+                        Button(
+                          onPressed: _busy ? null : widget.controller.continueAsGuest,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [const Icon(FluentIcons.contact), const SizedBox(width: 8), Text(AuthTranslations.continueAsGuest.trOf(context))],
+                          ),
+                        ),
+                      ],
+                      if (_error != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _error!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ],
+                      if (widget.onOpenPrivacy != null || widget.onOpenTerms != null) ...[
+                        const SizedBox(height: 32),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          children: [
+                            if (widget.onOpenPrivacy != null)
+                              HyperlinkButton(onPressed: widget.onOpenPrivacy, child: Text(LegalTranslations.privacyLink.trOf(context))),
+                            if (widget.onOpenPrivacy != null && widget.onOpenTerms != null) Text('·', style: theme.typography.body),
+                            if (widget.onOpenTerms != null)
+                              HyperlinkButton(onPressed: widget.onOpenTerms, child: Text(LegalTranslations.termsLink.trOf(context))),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
-                ],
-              ],
+                ),
+              ),
             ),
           ),
         ),

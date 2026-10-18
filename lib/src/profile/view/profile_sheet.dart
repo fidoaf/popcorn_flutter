@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
 import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile.dart';
@@ -12,20 +14,31 @@ import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 
 /// Opens the profile switcher: pick a profile, add one, edit the active one, or
 /// sign out.
-Future<void> showProfileSheet(BuildContext context, {required ProfileController profileController, required AuthController authController}) {
-  return showModalBottomSheet<void>(
+Future<void> showProfileSheet(BuildContext context, {required ProfileController profileController, required AuthController authController}) async {
+  final router = GoRouter.of(context);
+  var openAccountSettings = false;
+  await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (sheetContext) => _ProfileSheet(profileController: profileController, authController: authController),
+    builder: (sheetContext) => _ProfileSheet(
+      profileController: profileController,
+      authController: authController,
+      onOpenAccountSettings: () {
+        openAccountSettings = true;
+        Navigator.of(sheetContext).pop();
+      },
+    ),
   );
+  if (openAccountSettings && context.mounted) await router.push<void>(AppRoutes.accountSettings);
 }
 
 class _ProfileSheet extends StatefulWidget {
-  const _ProfileSheet({required this.profileController, required this.authController});
+  const _ProfileSheet({required this.profileController, required this.authController, required this.onOpenAccountSettings});
 
   final ProfileController profileController;
   final AuthController authController;
+  final VoidCallback onOpenAccountSettings;
 
   @override
   State<_ProfileSheet> createState() => _ProfileSheetState();
@@ -80,6 +93,14 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                   leading: const CircleAvatar(radius: 18, child: Icon(Icons.add)),
                   title: Text(ProfileTranslations.addProfile.trOf(context)),
                   onTap: switching ? null : () => showProfileEditDialog(context, profileController: profileController),
+                ),
+                const Divider(height: 8),
+                ListTile(
+                  enabled: !switching,
+                  leading: const Icon(Icons.settings_outlined),
+                  title: Text(ProfileTranslations.accountSettings.trOf(context)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: switching ? null : widget.onOpenAccountSettings,
                 ),
                 const Divider(height: 8),
                 ListTile(

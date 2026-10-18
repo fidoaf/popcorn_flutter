@@ -38,7 +38,8 @@ Before using notifications:
 
    Sign out and back in after changing roles. Do not put this role in
    user-editable `user_metadata`. Add the deployed `/admin/` callback URL to
-   Supabase Auth's allowed redirect URLs and enable Google OAuth.
+   Supabase Auth's allowed redirect URLs and enable Email authentication and
+   Google OAuth.
 6. Add **only the public key** as `push.vapidPublicKey=...` in
    `assets/config/app.env`, then rebuild/deploy the production and admin web apps
    using `build_web_all.ps1`. Never put a service-role key or VAPID private key in
@@ -159,6 +160,20 @@ iptv-org's `logos.json` URL field, matched to the stream's channel and feed
 (falling back to a channel-wide logo). Within each match, current logos are
 preferred, then horizontal and white variants for the dark cards. The app
 renders SVG and raster logo URLs.
+When iptv-org labels the selected stream as `Geo-blocked`, channel cards show
+a localized geographic-restriction warning and details explain that playback
+may be unavailable in your location. This is upstream metadata, not a check
+of your location; playback remains available to try. Missing labels do not
+guarantee worldwide availability.
+Details also show the selected feed's published broadcast area from
+`feeds.json`, resolving countries, regions, subdivisions, and cities using
+iptv-org metadata. Country names follow the app language; other place names
+use their published names (unrecognized area codes are shown as-is).
+Broadcast areas are not treated as streaming allowlists. For geo-blocked streams,
+details show "May be restricted to [channel country]" using a localized country
+name, explicitly marked as inferred rather than verified. If the channel has
+no country, details state that exact geographic restrictions are not provided.
+No area is inferred from the channel's country or a different feed.
 The channel card opens `/live-tv/{channelId}` for details; its separate Play
 button opens `/live-tv/{channelId}/watch` directly. The Live TV header's country
 selector shows country flags and names in the app's language (English,
@@ -230,12 +245,20 @@ player server. The existing profile-scoped RLS policies and unique key on
 needed. History writes update one title rather than replacing the entire list.
 
 Playback settings use individual columns: `playback_provider`, `playback_source`,
-`audio_language`, `subtitle_selection`, and `position_seconds`. Position is a
+`audio_language`, `subtitle_selection`, `subtitle_delay_seconds`, and `position_seconds`. Position is a
 nonnegative, finite number of seconds. A null subtitle selection means no saved
 choice; an empty string means subtitles are off. The follow-up migration copies
 existing JSONB snapshots into these columns and drops the `playback` column.
 Skip migrations that have already been applied. Older app versions that write
 removed columns must be upgraded as well.
+
+Apply [`20261018000001_watch_history_subtitle_delay.sql`](supabase/migrations/20261018000001_watch_history_subtitle_delay.sql)
+before deploying subtitle timing persistence. The signed offset is saved with
+the language and subtitle selection for each profile and title, including
+half-second adjustments. Positive values delay subtitles; negative values
+advance them. Existing entries default to zero. Both the native and hosted
+players restore the offset on resume and carry it forward with language
+preferences when moving to another episode.
 
 History stores only ownership, media identity, episode, playback settings,
 position, and timestamp. The resume-only migration removes `title`, `overview`,

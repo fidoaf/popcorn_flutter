@@ -97,6 +97,51 @@ class _LiveTvPageState extends State<LiveTvPage> {
         const SizedBox(height: 8),
         Text([channel.country, channel.network, channel.feed, ...channel.categories, ...channel.languages].where((value) => value.isNotEmpty).join(' · ')),
         if (channel.website != null) Padding(padding: const EdgeInsets.only(top: 8), child: SelectableText(channel.website.toString())),
+        if (channel.broadcastAreas.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${HomeTranslations.broadcastArea.trOf(context)}: '
+                  '${channel.broadcastAreas.map((area) => area.localizedName(Localizations.localeOf(context))).join(', ')}',
+                ),
+                Text(HomeTranslations.broadcastAreaInfo.trOf(context), style: const TextStyle(color: Colors.white70)),
+              ],
+            ),
+          ),
+        if (channel.isGeoBlocked)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.public_off, color: Colors.amber),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        channel.country.isNotEmpty
+                            ? HomeTranslations.geoRestrictedCountry
+                                  .trOf(context)
+                                  .replaceAll('{country}', channel.localizedCountry(Localizations.localeOf(context)))
+                            : HomeTranslations.geoRestrictedInfo.trOf(context),
+                        style: const TextStyle(color: Colors.amber),
+                      ),
+                      Text(
+                        (channel.country.isNotEmpty ? HomeTranslations.geoRestrictedCountryInfo : HomeTranslations.exactGeoRestrictionsUnknown)
+                            .trOf(context),
+                        style: const TextStyle(color: Colors.amber),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 20),
         Align(
           alignment: Alignment.centerLeft,

@@ -119,6 +119,12 @@ class _SessionIframeState extends State<_SessionIframe> {
   @override
   void dispose() {
     web.window.removeEventListener('message', _listener);
+    if (web.document.fullscreenElement != null) {
+      web.document.exitFullscreen().toDart.catchError((Object error) {
+        debugPrint('[VideoPlayer] Could not exit fullscreen: $error');
+        return null;
+      });
+    }
     super.dispose();
   }
 }

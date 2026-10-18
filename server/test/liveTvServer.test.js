@@ -22,8 +22,12 @@ test('active server authenticates Live TV, handles CORS, and serves a cached cat
     return new Response(JSON.stringify(input.endsWith('/channels.json')
       ? [{ id: 'Example.us', name: 'Example TV', country: 'US' }]
       : input.endsWith('/streams.json')
-        ? [{ channel: 'Example.us', url: 'https://example.com/live.m3u8' }]
-        : [{ channel: 'Example.us', feed: null, in_use: true, format: 'SVG', url: 'https://example.com/logo.svg' }]));
+        ? [{ channel: 'Example.us', feed: 'Main', url: 'https://example.com/live.m3u8', labels: ['Geo-blocked'] }]
+        : input.endsWith('/feeds.json')
+          ? [{ channel: 'Example.us', id: 'Main', broadcast_area: ['c/US'] }]
+          : input.endsWith('/logos.json')
+            ? [{ channel: 'Example.us', feed: null, in_use: true, format: 'SVG', url: 'https://example.com/logo.svg' }]
+            : []));
   });
   for (const headers of [{}, { Authorization: 'Bearer invalid-token' }]) {
     const response = await fetch(url, { headers });
@@ -52,8 +56,13 @@ test('active server authenticates Live TV, handles CORS, and serves a cached cat
     assert.equal(channels[0].url, 'https://example.com/live.m3u8');
     assert.equal(channels[0].logo, 'https://example.com/logo.svg');
     assert.equal(channels[0].logoFormat, 'SVG');
+    assert.equal(channels[0].isGeoBlocked, true);
+    assert.deepEqual(channels[0].countryNames, { en: 'United States', es: 'Estados Unidos', ca: 'Estats Units' });
+    assert.deepEqual(channels[0].broadcastAreas, [{
+      code: 'c/US', name: 'United States', names: { en: 'United States', es: 'Estados Unidos', ca: 'Estats Units' },
+    }]);
   }
-  assert.equal(upstreamCalls.length, 3);
+  assert.equal(upstreamCalls.length, 7);
 });
 
 test('active server reports catalogue failures as JSON and allows retry', async (t) => {

@@ -15,6 +15,7 @@ abstract final class AppRoutes {
   static const String trailer = '/trailer';
   static const String privacy = '/privacy';
   static const String terms = '/terms';
+  static const String accountSettings = '/account-settings';
 
   static String liveTvDetails(String id) => '/live-tv/${Uri.encodeComponent(id)}';
   static String liveTvWatch(String id) => '${liveTvDetails(id)}/watch';
@@ -57,6 +58,8 @@ abstract final class AppRoutes {
         return const PrivacyRoute();
       case 'terms':
         return const TermsRoute();
+      case 'account-settings':
+        return const AccountSettingsRoute();
       case 'search':
         return SearchRoute(query: uri.queryParameters['q'] ?? '', type: _parseType(segments.length > 1 ? segments[1] : null));
       case 'details':
@@ -138,6 +141,10 @@ class PrivacyRoute extends AppRouteRequest {
 
 class TermsRoute extends AppRouteRequest {
   const TermsRoute();
+}
+
+class AccountSettingsRoute extends AppRouteRequest {
+  const AccountSettingsRoute();
 }
 
 class SearchRoute extends AppRouteRequest {

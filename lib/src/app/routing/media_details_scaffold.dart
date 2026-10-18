@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:popcorn_flutter/src/search/domain/media_region_preference.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
 /// The resolved data handed to a platform detail builder.
@@ -82,13 +82,12 @@ class _MediaDetailsScaffoldState extends State<MediaDetailsScaffold> {
     _details = widget.repository.details(item.id, widget.type);
     _videos = widget.repository.videos(item.id, widget.type);
     _related = widget.repository.related(item.id, widget.type);
-    _providers = widget.repository.watchProviders(
-      item.id,
-      widget.type,
-      region: PlatformDispatcher.instance.locale.countryCode ?? 'US',
-      title: item.title,
-      year: item.releaseDate?.year,
-    );
+    _providers = _loadProviders(item);
+  }
+
+  Future<List<MediaWatchProvider>> _loadProviders(MediaItem item) async {
+    final region = await MediaRegionPreference.currentRegion();
+    return widget.repository.watchProviders(item.id, widget.type, region: region, title: item.title, year: item.releaseDate?.year);
   }
 
   @override
