@@ -242,6 +242,7 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
       season: _season,
       episode: _episode,
       onNextEpisode: _nextEpisode == null ? null : () => _advance(source),
+      nextSeason: _nextEpisode?.$1,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -293,10 +294,12 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
     if (mounted && identical(source, _source) && _profileId == widget.services.profileController.activeProfileId) {
       final next = _nextEpisode!;
       setState(() => _source = null);
-      GoRouter.of(context).go(
-        AppRoutes.watch(widget.type, widget.id, season: next.$1, episode: next.$2),
-        extra: _item,
-      );
+      Router.neglect(context, () {
+        GoRouter.of(context).replace(
+          AppRoutes.watch(widget.type, widget.id, season: next.$1, episode: next.$2),
+          extra: _item,
+        );
+      });
     }
     _advancing = false;
   }

@@ -89,6 +89,12 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   Duration _buffer = Duration.zero;
+  Media? _activeMedia;
+  int _loadErrorRetries = 0;
+  bool _loadErrorRetryInProgress = false;
+  bool _loadErrorRetryExhaustionLogged = false;
+  bool _hasLoadedMedia = false;
+  String? _loadErrorDuringRetry;
   bool _playing = false;
   bool _buffering = true;
   double _volume = 1;
@@ -107,6 +113,16 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   bool _restoringSession = true;
   bool _audioRestored = false;
   bool _subtitlesRestored = false;
+  String? _externalSubtitleText;
+  String? _externalSubtitleTitle;
+  String? _externalSubtitleLanguage;
+  Duration _subtitleDelay = Duration.zero;
+  String get _formattedSubtitleDelay {
+    final seconds = _subtitleDelay.inMilliseconds / 1000;
+    final decimals = seconds == seconds.truncateToDouble() ? 0 : 1;
+    return '${seconds > 0 ? '+' : ''}${seconds.toStringAsFixed(decimals)} s';
+  }
+
   String? _activeSource;
   DateTime _lastReported = DateTime.fromMillisecondsSinceEpoch(0);
   IntroDbTimestamps _timestamps = const IntroDbTimestamps();
@@ -146,11 +162,13 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
       }),
       stream.duration.listen((value) {
         setState(() => _duration = value);
+        if (value > Duration.zero) _hasLoadedMedia = true;
         _loadTimestamps(value);
       }),
       stream.buffer.listen((value) => setState(() => _buffer = value)),
       stream.playing.listen((value) {
         setState(() => _playing = value);
+        if (value) _hasLoadedMedia = true;
         if (!value) _reportSession();
       }),
       stream.buffering.listen((value) => setState(() => _buffering = value)),
@@ -174,7 +192,52 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
           _reportSession(position: Duration.zero);
         }
       }),
+      stream.error.listen(_retryOnLoadError),
     ]);
+  }
+
+  static const _maxLoadErrorRetries = 3;
+
+  void _retryOnLoadError(String message) {
+    if (!message.toLowerCase().contains('flagloaderror')) return;
+    if (_activeMedia == null || _hasLoadedMedia) return;
+    if (_loadErrorRetryInProgress) {
+      _loadErrorDuringRetry = message;
+      return;
+    }
+    if (_loadErrorRetries >= _maxLoadErrorRetries) {
+      if (!_loadErrorRetryExhaustionLogged) {
+        _loadErrorRetryExhaustionLogged = true;
+        debugPrint('[MediaKitPlayer] load failed after $_maxLoadErrorRetries retries: $message');
+      }
+      return;
+    }
+
+    final retry = ++_loadErrorRetries;
+    _loadErrorRetryInProgress = true;
+    debugPrint('[MediaKitPlayer] retrying load ($retry/$_maxLoadErrorRetries): $message');
+    unawaited(_retryMediaLoad(retry));
+  }
+
+  Future<void> _retryMediaLoad(int retry) async {
+    await Future<void>.delayed(Duration(seconds: retry));
+    final media = _activeMedia;
+    if (!mounted || media == null || _hasLoadedMedia) {
+      _loadErrorRetryInProgress = false;
+      return;
+    }
+
+    try {
+      await _player.open(media, play: _hasStartedPlayback);
+      if (_position > Duration.zero) await _player.seek(_position);
+    } catch (error) {
+      debugPrint('[MediaKitPlayer] load retry $_loadErrorRetries failed: $error');
+    } finally {
+      _loadErrorRetryInProgress = false;
+      final errorDuringRetry = _loadErrorDuringRetry;
+      _loadErrorDuringRetry = null;
+      if (mounted && !_hasLoadedMedia && errorDuringRetry != null) _retryOnLoadError(errorDuringRetry);
+    }
   }
 
   Future<void> _loadTimestamps(Duration duration) async {
@@ -208,7 +271,9 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
     debugPrint('[MediaKitPlayer] candidates: ${candidates.map((c) => c.url).join(', ')}');
     debugPrint('[MediaKitPlayer] loading HLS: ${winner.url}');
     widget.onUrlChanged?.call(winner.url);
-    await _player.open(Media(winner.url.toString(), httpHeaders: winner.headers.isEmpty ? null : winner.headers), play: false);
+    final media = Media(winner.url.toString(), httpHeaders: winner.headers.isEmpty ? null : winner.headers);
+    _activeMedia = media;
+    await _player.open(media, play: false);
     await _prepareResume();
     await _restoreRemoteSubtitles();
     if (!mounted) return;
@@ -267,7 +332,10 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
       final text = await StreamResolver.subtitleText(widget.source, selected);
       if (!mounted) return;
       _subtitlesRestored = true;
-      await _player.setSubtitleTrack(SubtitleTrack.data(_toVtt(text), title: selected.label, language: selected.language));
+      _externalSubtitleText = _toVtt(text);
+      _externalSubtitleTitle = selected.label;
+      _externalSubtitleLanguage = selected.language;
+      await _player.setSubtitleTrack(SubtitleTrack.data(_shiftVtt(_externalSubtitleText!, _subtitleDelay), title: selected.label, language: selected.language));
     } catch (error) {
       debugPrint('[MediaKitPlayer] subtitle restore failed: $error');
     }
@@ -426,8 +494,9 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
 
   Widget _buildSkipActions(BuildContext context) {
     final intro = _timestamps.introAt(_position, _duration);
-    final onNext = PlaybackSessionScope.of(context)?.onNextEpisode;
-    final showNext = onNext != null && _timestamps.creditsAt(_position);
+    final scope = PlaybackSessionScope.of(context);
+    final onNext = scope?.onNextEpisode;
+    final showNext = onNext != null && _timestamps.nextEpisodeAt(_position, _duration);
     if (intro == null && !showNext) return const SizedBox.shrink();
     return Positioned(
       left: 20,
@@ -447,7 +516,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
                   onNext();
                 },
                 icon: const Icon(Icons.skip_next),
-                label: const Text('Next episode'),
+                label: Text(scope!.nextEpisodeLabel),
               ),
           ],
         ),
@@ -708,8 +777,49 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
                       ),
                     ],
                   ),
+                  _menuHeader('Subtitle timing'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        TextButton(
+                          onPressed: _externalSubtitleText == null
+                              ? null
+                              : () => _changeSubtitleDelay(const Duration(milliseconds: -500), updateMenu, (message) => subtitleError = message),
+                          child: const Text('-0.5 s'),
+                        ),
+                        Expanded(
+                          child: Text(
+                            _formattedSubtitleDelay,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _externalSubtitleText == null
+                              ? null
+                              : () => _changeSubtitleDelay(const Duration(milliseconds: 500), updateMenu, (message) => subtitleError = message),
+                          child: const Text('+0.5 s'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_externalSubtitleText == null)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Choose a downloaded or uploaded subtitle track to adjust its timing.',
+                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ),
+                    ),
                   for (final track in subtitleTracks)
                     _menuTile(track.id == 'no' ? 'Off' : _trackLabel(track.title, track.language, track.id), _selected.subtitle.id == track.id, () {
+                      _externalSubtitleText = null;
+                      _externalSubtitleTitle = null;
+                      _externalSubtitleLanguage = null;
                       _player.setSubtitleTrack(track);
                       Navigator.pop(context);
                     }),
@@ -725,7 +835,12 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
                               try {
                                 final text = await StreamResolver.subtitleText(widget.source, subtitle);
                                 if (!mounted || !context.mounted) return;
-                                await _player.setSubtitleTrack(SubtitleTrack.data(_toVtt(text), title: subtitle.label, language: subtitle.language));
+                                _externalSubtitleText = _toVtt(text);
+                                _externalSubtitleTitle = subtitle.label;
+                                _externalSubtitleLanguage = subtitle.language;
+                                await _player.setSubtitleTrack(
+                                  SubtitleTrack.data(_shiftVtt(_externalSubtitleText!, _subtitleDelay), title: subtitle.label, language: subtitle.language),
+                                );
                                 if (context.mounted) Navigator.pop(context);
                               } catch (error) {
                                 debugPrint('[MediaKitPlayer] subtitle failed: $error');
@@ -757,8 +872,27 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file == null) return;
     final raw = await file.readAsString();
-    final vtt = _toVtt(raw);
-    await _player.setSubtitleTrack(SubtitleTrack.data(vtt, title: file.name));
+    _externalSubtitleText = _toVtt(raw);
+    _externalSubtitleTitle = file.name;
+    _externalSubtitleLanguage = null;
+    await _player.setSubtitleTrack(SubtitleTrack.data(_shiftVtt(_externalSubtitleText!, _subtitleDelay), title: file.name));
+  }
+
+  Future<void> _changeSubtitleDelay(Duration change, void Function(void Function()) updateMenu, void Function(String?) setError) async {
+    final text = _externalSubtitleText;
+    if (text == null) return;
+    final previousDelay = _subtitleDelay;
+    setState(() => _subtitleDelay += change);
+    try {
+      await _player.setSubtitleTrack(SubtitleTrack.data(_shiftVtt(text, _subtitleDelay), title: _externalSubtitleTitle, language: _externalSubtitleLanguage));
+      if (!mounted) return;
+      updateMenu(() => setError(null));
+    } catch (error) {
+      debugPrint('[MediaKitPlayer] subtitle timing adjustment failed: $error');
+      if (!mounted) return;
+      setState(() => _subtitleDelay = previousDelay);
+      updateMenu(() => setError('Could not adjust subtitle timing. Try selecting the subtitle again.'));
+    }
   }
 
   /// Converts SRT to WebVTT, leaving existing VTT untouched, mirroring the
@@ -768,6 +902,35 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
     if (text.trimLeft().startsWith('WEBVTT')) return text;
     text = text.replaceAllMapped(RegExp(r'(\d{2}:\d{2}:\d{2}),(\d{3})'), (m) => '${m[1]}.${m[2]}');
     return 'WEBVTT\n\n${text.trimLeft()}';
+  }
+
+  static String _shiftVtt(String input, Duration delay) {
+    final milliseconds = delay.inMilliseconds;
+    if (milliseconds == 0) return input;
+    final cueTiming = RegExp(r'^((?:\d{2,}:)?\d{2}:\d{2}\.\d{3}) --> ((?:\d{2,}:)?\d{2}:\d{2}\.\d{3})(.*)$', multiLine: true);
+    return input.replaceAllMapped(cueTiming, (match) {
+      final start = _vttTimeToMilliseconds(match[1]!) + milliseconds;
+      final end = _vttTimeToMilliseconds(match[2]!) + milliseconds;
+      return '${_vttTimeFromMilliseconds(start < 0 ? 0 : start)} --> ${_vttTimeFromMilliseconds(end < 0 ? 0 : end)}${match[3]}';
+    });
+  }
+
+  static int _vttTimeToMilliseconds(String value) {
+    final parts = value.split(':');
+    final seconds = parts.removeLast().split('.');
+    final second = int.parse(seconds[0]);
+    final millisecond = int.parse(seconds[1]);
+    final minutes = int.parse(parts.removeLast());
+    final hours = parts.isEmpty ? 0 : int.parse(parts.single);
+    return ((hours * 60 + minutes) * 60 + second) * 1000 + millisecond;
+  }
+
+  static String _vttTimeFromMilliseconds(int value) {
+    final hours = value ~/ 3600000;
+    final minutes = value ~/ 60000 % 60;
+    final seconds = value ~/ 1000 % 60;
+    final milliseconds = value % 1000;
+    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}.${milliseconds.toString().padLeft(3, '0')}';
   }
 
   Widget _menuHeader(String text) => Padding(

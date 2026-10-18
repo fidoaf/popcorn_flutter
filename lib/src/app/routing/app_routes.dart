@@ -16,6 +16,9 @@ abstract final class AppRoutes {
   static const String privacy = '/privacy';
   static const String terms = '/terms';
 
+  static String liveTvDetails(String id) => '/live-tv/${Uri.encodeComponent(id)}';
+  static String liveTvWatch(String id) => '${liveTvDetails(id)}/watch';
+
   static String homeSearch(String query, {MediaType type = MediaType.movie}) =>
       query.trim().isEmpty ? home : Uri(path: home, queryParameters: {'q': query.trim(), 'type': type.name}).toString();
 

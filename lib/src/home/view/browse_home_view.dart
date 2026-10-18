@@ -11,6 +11,8 @@ import 'package:popcorn_flutter/src/history/domain/watch_history_entry.dart';
 import 'package:popcorn_flutter/src/history/view/watch_history_controller.dart';
 import 'package:popcorn_flutter/src/home/view/home_feed_controller.dart';
 import 'package:popcorn_flutter/src/home/view/home_translations.dart';
+import 'package:popcorn_flutter/src/live_tv/live_tv.dart';
+import 'package:popcorn_flutter/src/live_tv/live_tv_logo.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
@@ -93,10 +95,12 @@ class BrowseHomeView extends StatefulWidget {
 
 class _BrowseHomeViewState extends State<BrowseHomeView> {
   bool _searchActive = false;
+  late final LiveTvController _liveTvController;
 
   @override
   void initState() {
     super.initState();
+    _liveTvController = LiveTvController()..load();
     widget.searchController.addListener(_syncSearchUrl);
     final query = widget.initialQuery?.trim() ?? '';
     if (query.isEmpty) {
@@ -128,6 +132,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
   @override
   void dispose() {
     widget.searchController.removeListener(_syncSearchUrl);
+    _liveTvController.dispose();
     super.dispose();
   }
 
@@ -164,7 +169,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
               left: 0,
               right: 0,
               bottom: _searchActive ? 0 : null,
-              child: _SearchOverlay(
+              child: HomeSearchOverlay(
                 active: _searchActive,
                 onActivate: _openSearch,
                 controller: widget.searchController,
@@ -291,6 +296,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                 );
               },
             ),
+          SliverToBoxAdapter(child: LiveTvSection(controller: _liveTvController)),
           const SliverToBoxAdapter(
             child: Padding(padding: EdgeInsets.fromLTRB(16, 24, 16, 20), child: AppVersionFooter()),
           ),
@@ -301,8 +307,9 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
 }
 
 /// A persistent search input that expands to show the selector and results.
-class _SearchOverlay extends StatefulWidget {
-  const _SearchOverlay({
+class HomeSearchOverlay extends StatefulWidget {
+  const HomeSearchOverlay({
+    super.key,
     required this.active,
     required this.onActivate,
     required this.controller,
@@ -311,6 +318,7 @@ class _SearchOverlay extends StatefulWidget {
     required this.onOpenDetails,
     required this.onPlay,
     this.enableDpadFocus = false,
+    this.liveTvController,
   });
 
   final bool active;
@@ -321,19 +329,23 @@ class _SearchOverlay extends StatefulWidget {
   final ValueChanged<MediaItem> onOpenDetails;
   final ValueChanged<MediaItem> onPlay;
   final bool enableDpadFocus;
+  final LiveTvController? liveTvController;
 
   @override
-  State<_SearchOverlay> createState() => _SearchOverlayState();
+  State<HomeSearchOverlay> createState() => _SearchOverlayState();
 }
 
-class _SearchOverlayState extends State<_SearchOverlay> {
+class _SearchOverlayState extends State<HomeSearchOverlay> {
   final TextEditingController _queryController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   Timer? _debounce;
+  bool _liveTv = false;
+  late final LiveTvController _liveSearch;
 
   @override
   void initState() {
     super.initState();
+    _liveSearch = widget.liveTvController ?? LiveTvController();
     _queryController.text = widget.controller.query;
     _focusNode.addListener(_onFocusChanged);
     if (widget.active) {
@@ -348,18 +360,20 @@ class _SearchOverlayState extends State<_SearchOverlay> {
   }
 
   @override
-  void didUpdateWidget(covariant _SearchOverlay oldWidget) {
+  void didUpdateWidget(covariant HomeSearchOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.active && !widget.active) {
       _debounce?.cancel();
       _focusNode.unfocus();
       _queryController.clear();
+      _liveTv = false;
     }
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    if (widget.liveTvController == null) _liveSearch.dispose();
     _queryController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -368,18 +382,41 @@ class _SearchOverlayState extends State<_SearchOverlay> {
   // Debounce keystrokes so we don't fire a request on every character.
   void _onChanged(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () => widget.controller.search(value));
+    _debounce = Timer(const Duration(milliseconds: 300), () => _search(value));
+  }
+
+  void _search(String query) {
+    if (_liveTv) {
+      _liveSearch.search(query);
+    } else {
+      widget.controller.search(query);
+    }
+  }
+
+  void _selectType(MediaType? type) {
+    _debounce?.cancel();
+    setState(() => _liveTv = type == null);
+    if (type == null) {
+      widget.controller.clear();
+    } else {
+      widget.controller.setMediaType(type);
+    }
+    _search(_queryController.text);
   }
 
   void _submit() {
     _debounce?.cancel();
-    widget.controller.search(_queryController.text);
+    _search(_queryController.text);
   }
 
   void _clear() {
     _debounce?.cancel();
     _queryController.clear();
-    widget.controller.clear();
+    if (_liveTv) {
+      _liveSearch.search('');
+    } else {
+      widget.controller.clear();
+    }
     _focusNode.requestFocus();
     setState(() {});
   }
@@ -439,7 +476,9 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                                 decoration: InputDecoration(
                                   isCollapsed: true,
                                   border: InputBorder.none,
-                                  hintText: widget.active ? SearchTranslations.searchPlaceholder.trOf(context) : HomeTranslations.search.trOf(context),
+                                  hintText: widget.active
+                                      ? SearchTranslations.searchPlaceholder.trOf(context)
+                                      : HomeTranslations.search.trOf(context),
                                   hintStyle: const TextStyle(color: _Palette.textSecondary, fontSize: 15),
                                 ),
                               ),
@@ -462,10 +501,13 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                   ],
                 ),
               ),
-              if (widget.active) _MediaTypeToggle(controller: widget.controller),
+              if (widget.active) _MediaTypeToggle(controller: widget.controller, liveTv: _liveTv, onSelected: _selectType),
               if (widget.active)
                 Expanded(
-                  child: ListenableBuilder(listenable: widget.controller, builder: (context, _) => _buildResults(context)),
+                  child: ListenableBuilder(
+                    listenable: Listenable.merge([widget.controller, _liveSearch]),
+                    builder: (context, _) => _liveTv ? _buildLiveResults(context) : _buildResults(context),
+                  ),
                 ),
             ],
           ),
@@ -488,6 +530,29 @@ class _SearchOverlayState extends State<_SearchOverlay> {
       MediaSearchSuccess(:final items) when items.isEmpty => _message(SearchTranslations.emptyResults.trOf(context)),
       MediaSearchSuccess(:final items) => _grid(context, items),
     };
+  }
+
+  Widget _buildLiveResults(BuildContext context) {
+    if (_liveSearch.isLoading) return const Center(child: CircularProgressIndicator(color: _Palette.accent));
+    if (_liveSearch.hasError) {
+      return _LiveTvMessage(
+        text: HomeTranslations.liveTvUnavailable.trOf(context),
+        actionLabel: HomeTranslations.retry.trOf(context),
+        onAction: () => _search(_queryController.text),
+      );
+    }
+    if (_liveSearch.channels.isEmpty) return _message(SearchTranslations.emptyResults.trOf(context));
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
+        mainAxisExtent: 142,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+      ),
+      itemCount: _liveSearch.channels.length,
+      itemBuilder: (context, index) => LiveTvChannelCard(channel: _liveSearch.channels[index]),
+    );
   }
 
   Widget _message(String text) => Center(
@@ -543,9 +608,11 @@ class _SearchOverlayState extends State<_SearchOverlay> {
 
 /// The movie/TV switch shown above the search results.
 class _MediaTypeToggle extends StatelessWidget {
-  const _MediaTypeToggle({required this.controller});
+  const _MediaTypeToggle({required this.controller, required this.liveTv, required this.onSelected});
 
   final MediaSearchController controller;
+  final bool liveTv;
+  final ValueChanged<MediaType?> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -553,21 +620,27 @@ class _MediaTypeToggle extends StatelessWidget {
       listenable: controller,
       builder: (context, _) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-        child: Row(
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 8,
           children: [
             _chip(context, MediaType.movie, SearchTranslations.mediaMovies.trOf(context)),
-            const SizedBox(width: 10),
             _chip(context, MediaType.tv, SearchTranslations.mediaTvSeries.trOf(context)),
+            _chip(context, null, HomeTranslations.liveTv.trOf(context)),
           ],
         ),
       ),
     );
   }
 
-  Widget _chip(BuildContext context, MediaType type, String label) {
-    final selected = controller.mediaType == type;
+  Widget _chip(BuildContext context, MediaType? type, String label) {
+    final selected = type == null ? liveTv : !liveTv && controller.mediaType == type;
+    return Semantics(selected: selected, button: true, child: _buildChip(type, label, selected));
+  }
+
+  Widget _buildChip(MediaType? type, String label, bool selected) {
     return _Pressable(
-      onTap: () => controller.setMediaType(type),
+      onTap: () => onSelected(type),
       borderRadius: 18,
       builder: (focused, hovered) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -841,7 +914,14 @@ class _HeroButton extends StatelessWidget {
 
 /// A titled horizontal carousel of poster cards.
 class _CarouselRow extends StatelessWidget {
-  const _CarouselRow({required this.title, required this.itemCount, required this.cardBuilder, this.onSeeAll, this.seeAllLabel, this.cardHeight = 188});
+  const _CarouselRow({
+    required this.title,
+    required this.itemCount,
+    required this.cardBuilder,
+    this.onSeeAll,
+    this.seeAllLabel,
+    this.cardHeight = 188,
+  });
 
   final String title;
   final int itemCount;
@@ -1056,7 +1136,11 @@ class _PosterCard extends StatelessWidget {
                     bottom: 0,
                     child: Container(
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0xCC000000)]),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0x00000000), Color(0xCC000000)],
+                        ),
                       ),
                       padding: const EdgeInsets.all(8),
                       child: Align(
@@ -1106,9 +1190,15 @@ class _PosterBadge extends StatelessWidget {
           color: Color(0xFFF7F7F7),
           borderRadius: BorderRadius.only(bottomLeft: Radius.circular(4)),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(color: Color(0xFF111111), fontSize: 10, fontWeight: FontWeight.w800, height: 1),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Text(
+            label,
+            maxLines: 1,
+            softWrap: false,
+            style: const TextStyle(color: Color(0xFF111111), fontSize: 10, fontWeight: FontWeight.w800, height: 1),
+          ),
         ),
       ),
     );
@@ -1312,6 +1402,251 @@ class _SearchGridSkeleton extends StatelessWidget {
             _SkeletonBox(height: 10, radius: 3),
             SizedBox(height: 4),
             _SkeletonBox(width: 70, height: 10, radius: 3),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LiveTvSection extends StatelessWidget {
+  const LiveTvSection({super.key, required this.controller});
+
+  final LiveTvController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final channels = controller.channels;
+        final locale = Localizations.localeOf(context);
+        final countries = controller.countries.toList()..sort((first, second) => first.localizedName(locale).compareTo(second.localizedName(locale)));
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 2),
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    HomeTranslations.liveTv.trOf(context),
+                    style: const TextStyle(color: _Palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(
+                    width: 240,
+                    child: Semantics(
+                      label: HomeTranslations.country.trOf(context),
+                      child: Theme(
+                        data: ThemeData.dark().copyWith(
+                          colorScheme: const ColorScheme.dark(primary: _Palette.accent, surface: _Palette.surface),
+                        ),
+                        child: DropdownMenu<String>(
+                          key: ValueKey(locale.toLanguageTag()),
+                          width: 240,
+                          menuHeight: 300,
+                          initialSelection: controller.selectedCountry ?? '',
+                          enableFilter: true,
+                          requestFocusOnTap: true,
+                          enabled: controller.countries.isNotEmpty,
+                          textStyle: const TextStyle(color: _Palette.textPrimary, fontSize: 14),
+                          filterCallback: (entries, query) {
+                            final search = query.trim().toLowerCase();
+                            return entries
+                                .where(
+                                  (entry) =>
+                                      entry.value.isEmpty || entry.label.toLowerCase().contains(search) || entry.value.toLowerCase().contains(search),
+                                )
+                                .toList();
+                          },
+                          dropdownMenuEntries: [
+                            DropdownMenuEntry(value: '', label: HomeTranslations.allCountries.trOf(context)),
+                            for (final country in countries)
+                              DropdownMenuEntry(value: country.code, label: '${country.flag}  ${country.localizedName(locale)}'),
+                          ],
+                          onSelected: (value) {
+                            if (value != null) {
+                              controller.selectCountry(value.isEmpty ? null : value);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Text(HomeTranslations.liveTvAttribution.trOf(context), style: const TextStyle(color: _Palette.textSecondary, fontSize: 12)),
+            ),
+            if (controller.isLoading)
+              SizedBox(
+                height: 88,
+                child: Center(
+                  child: CircularProgressIndicator(color: _Palette.accent, semanticsLabel: HomeTranslations.liveTvLoading.trOf(context)),
+                ),
+              )
+            else if (controller.hasError)
+              _LiveTvMessage(
+                text: HomeTranslations.liveTvUnavailable.trOf(context),
+                actionLabel: HomeTranslations.retry.trOf(context),
+                onAction: controller.load,
+              )
+            else if (channels.isEmpty)
+              _LiveTvMessage(text: HomeTranslations.noLiveChannels.trOf(context))
+            else
+              SizedBox(
+                height: 142,
+                child: ListView.separated(
+                  key: ValueKey(controller.selectedCountry),
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: channels.length,
+                  separatorBuilder: (context, _) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) => LiveTvChannelCard(channel: channels[index]),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LiveTvMessage extends StatelessWidget {
+  const _LiveTvMessage({required this.text, this.actionLabel, this.onAction});
+
+  final String text;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(text, style: const TextStyle(color: _Palette.textSecondary, fontSize: 14)),
+          ),
+          if (actionLabel != null && onAction != null)
+            _Pressable(
+              onTap: onAction,
+              borderRadius: 18,
+              builder: (focused, hovered) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: hovered || focused ? _Palette.accent : _Palette.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+                ),
+                child: Text(
+                  actionLabel!,
+                  style: const TextStyle(color: _Palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class LiveTvChannelCard extends StatelessWidget {
+  const LiveTvChannelCard({super.key, required this.channel});
+
+  final LiveTvChannel channel;
+
+  void _play(BuildContext context) {
+    context.push(AppRoutes.liveTvWatch(channel.id), extra: channel);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = channel.categories.isNotEmpty ? channel.categories.take(2).join(' · ') : channel.country;
+    return _Pressable(
+      onTap: () => context.push(AppRoutes.liveTvDetails(channel.id), extra: channel),
+      borderRadius: 8,
+      builder: (focused, hovered) => AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: 164,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _Palette.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: focused
+                ? _Palette.focus
+                : hovered
+                ? _Palette.accent
+                : Colors.transparent,
+            width: focused ? 2.5 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(child: LiveTvLogo(channel: channel)),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    child: Semantics(
+                      label: '${HomeTranslations.play.trOf(context)} ${channel.name}',
+                      button: true,
+                      child: Tooltip(
+                        message: HomeTranslations.play.trOf(context),
+                        child: _Pressable(
+                          onTap: () => _play(context),
+                          borderRadius: 20,
+                          builder: (focused, hovered) => Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: hovered ? _Palette.accent : const Color(0xCC000000),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+                            ),
+                            child: const Icon(Icons.play_circle_fill, color: _Palette.textPrimary, size: 28),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(color: const Color(0xFFE53935), borderRadius: BorderRadius.circular(4)),
+                      child: Text(
+                        HomeTranslations.liveLabel.trOf(context),
+                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, height: 1),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              channel.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: _Palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            if (subtitle.isNotEmpty)
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: _Palette.textSecondary, fontSize: 11),
+              ),
           ],
         ),
       ),

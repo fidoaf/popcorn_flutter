@@ -12,6 +12,7 @@ class PlaybackSessionScope extends InheritedWidget {
     this.season,
     this.episode,
     this.onNextEpisode,
+    this.nextSeason,
   });
 
   final PlaybackSession initial;
@@ -21,6 +22,9 @@ class PlaybackSessionScope extends InheritedWidget {
   final int? season;
   final int? episode;
   final VoidCallback? onNextEpisode;
+  final int? nextSeason;
+
+  String get nextEpisodeLabel => season != null && nextSeason != null && nextSeason! > season! ? 'Next season' : 'Next episode';
 
   static PlaybackSessionScope? of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<PlaybackSessionScope>();
 
@@ -46,6 +50,7 @@ class PlaybackSessionScope extends InheritedWidget {
       mediaType != oldWidget.mediaType ||
       season != oldWidget.season ||
       episode != oldWidget.episode ||
+      nextSeason != oldWidget.nextSeason ||
       onNextEpisode != oldWidget.onNextEpisode ||
       onChanged != oldWidget.onChanged;
 }

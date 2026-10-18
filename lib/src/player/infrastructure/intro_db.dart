@@ -44,10 +44,12 @@ final class IntroDbTimestamps {
     return IntroDbTimestamps(intros: segments('intro'), credits: segments('credits'));
   }
 
-  SkipSegment? introAt(Duration position, Duration duration) =>
-      intros.where((segment) => segment.end != null && segment.end! <= duration && segment.contains(position)).firstOrNull;
+  SkipSegment? introAt(Duration position, Duration duration) => intros.where((segment) => segment.end != null && segment.end! <= duration && segment.contains(position)).firstOrNull;
 
   bool creditsAt(Duration position) => credits.any((segment) => segment.contains(position));
+
+  bool nextEpisodeAt(Duration position, Duration duration) =>
+      creditsAt(position) || (credits.isEmpty && duration > Duration.zero && position >= Duration.zero && position <= duration && duration - position <= const Duration(seconds: 20));
 }
 
 Future<IntroDbTimestamps> loadIntroDbTimestamps({required int tmdbId, required Duration duration, int? season, int? episode, http.Client? client}) async {

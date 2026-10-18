@@ -9,7 +9,7 @@ const moduleLog = createLogger('controllers');
 // Request handlers. Each method owns one endpoint and delegates the real work to
 // injected services, so this layer stays thin and free of business logic.
 class Controllers {
-  constructor({ config, auth, scraper, streamProxy, limiter, streamCache, reverseProxy }) {
+  constructor({ config, auth, scraper, streamProxy, limiter, streamCache, reverseProxy, liveTvCatalog }) {
     this.config = config;
     this.auth = auth;
     this.scraper = scraper;
@@ -17,7 +17,40 @@ class Controllers {
     this.limiter = limiter;
     this.streamCache = streamCache;
     this.reverseProxy = reverseProxy;
+    this.liveTvCatalog = liveTvCatalog;
     this.inFlightManifestLoads = new Map();
+  }
+
+  async liveTv(req, res, url) {
+    const log = req.log || moduleLog;
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+      'Access-Control-Max-Age': '86400',
+    };
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, corsHeaders);
+      res.end();
+      return;
+    }
+    if (req.method !== 'GET') {
+      sendJson(res, 405, { ok: false, error: 'method_not_allowed' }, { ...corsHeaders, Allow: 'GET, OPTIONS' });
+      return;
+    }
+
+    try {
+      const catalogue = await this.liveTvCatalog.getCatalogue({
+        country: url?.searchParams.get('country') || '',
+        channelId: url?.searchParams.get('channel') ?? null,
+        query: url?.searchParams.get('q') || '',
+      });
+      sendJson(res, 200, catalogue, { ...corsHeaders, 'Cache-Control': 'public, max-age=3600' });
+    } catch (error) {
+      log.error('live TV catalogue unavailable', { error });
+      sendJson(res, 502, { ok: false, error: 'live_tv_unavailable' }, corsHeaders);
+    }
   }
 
   health(req, res) {

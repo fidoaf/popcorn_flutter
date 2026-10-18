@@ -57,6 +57,11 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     #playback-settings select{width:100%;min-height:36px;padding:6px 8px;background:#08090b;color:#f5f5f5;border:1px solid #41444c;border-radius:4px}
     #playback-settings select:disabled{opacity:.65}
     #playback-settings select:focus-visible{outline:2px solid #e50914;outline-offset:2px}
+    .subtitle-delay{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;color:#aeb3bd;font-size:12px}
+    .subtitle-delay-controls{display:flex;align-items:center;gap:8px}
+    .subtitle-delay-controls button{min-width:44px;min-height:36px;padding:6px;background:#08090b;border:1px solid #41444c;border-radius:4px;text-decoration:none}
+    .subtitle-delay-controls button:disabled{opacity:.5;cursor:not-allowed}
+    #subtitle-delay-value{min-width:48px;text-align:center;color:#f5f5f5}
     #provider-note{font-size:12px;line-height:1.5;color:#aeb3bd;margin-bottom:0}
     #video-container[hidden],#video-loading[hidden]{display:none}
     video{width:100%;flex:1;min-height:0;background:#000}
@@ -110,6 +115,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       <section id="playback-settings" role="dialog" aria-label="Playback settings" hidden>
         <div class="settings-heading"><h2>Playback settings</h2><button id="settings-close" type="button" title="Close settings" aria-label="Close settings">&times;</button></div>
         <label for="provider">Provider<select id="provider" disabled>${providerOptions}</select></label><label for="playback-language">Language<select id="playback-language"><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ja">Japanese</option><option value="ko">Korean</option></select></label><label id="source-field" for="source">Source<select id="source" disabled><option value="">Auto</option></select></label><label for="quality">Quality<select id="quality" disabled><option value="-1">Auto</option></select></label><label for="subtitles">Subtitles<select id="subtitles" disabled><option value="">Off</option></select></label>
+        <div class="subtitle-delay"><span>Subtitle timing</span><div class="subtitle-delay-controls"><button id="subtitle-delay-decrease" type="button" aria-label="Decrease subtitle timing by half a second">-0.5 s</button><output id="subtitle-delay-value" aria-live="polite">0 s</output><button id="subtitle-delay-increase" type="button" aria-label="Increase subtitle timing by half a second">+0.5 s</button></div></div>
+        <p id="subtitle-delay-note" hidden></p>
         <p id="provider-note" hidden>Source and quality are managed in the provider player. Language and subtitle preferences depend on provider support.</p>
       </section>
     </div>
@@ -149,9 +156,16 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     const settingsPanel = document.getElementById('playback-settings');
     const settingsClose = document.getElementById('settings-close');
     const providerNote = document.getElementById('provider-note');
+    const subtitleDelayDecrease = document.getElementById('subtitle-delay-decrease');
+    const subtitleDelayIncrease = document.getElementById('subtitle-delay-increase');
+    const subtitleDelayValue = document.getElementById('subtitle-delay-value');
+    const subtitleDelayNote = document.getElementById('subtitle-delay-note');
     const embedUrl = ${JSON.stringify(embedUrl).replace(/</g, '\\u003c')};
     const initialMedia = ${JSON.stringify(playbackMedia)};
     const playbackSession = ${JSON.stringify(session).replace(/</g, '\\u003c')};
+    const resumeQuery = new URLSearchParams(window.location.search);
+    const requestedSubtitleDelay = Number(resumeQuery.get('resumeSubtitleDelay') || 0);
+    let subtitleDelaySeconds = Number.isFinite(requestedSubtitleDelay) ? requestedSubtitleDelay : 0;
     function authenticatedUrl(path) {
       return playbackSession ? path + (path.includes('?') ? '&' : '?') + 'session=' + encodeURIComponent(playbackSession) : path;
     }
@@ -163,6 +177,53 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     }
     settingsToggle.addEventListener('click', () => showSettings(settingsPanel.hidden));
     settingsClose.addEventListener('click', () => showSettings(false));
+    const subtitleTracksWithDelay = new WeakSet();
+    function updateSubtitleDelayDisplay() {
+      const delay = Math.round(subtitleDelaySeconds * 100) / 100;
+      subtitleDelayValue.textContent = (delay > 0 ? '+' : '') + delay + ' s';
+    }
+    function shiftSubtitleCueTimes(track, seconds) {
+      if (!track.cues) return;
+      for (const cue of track.cues) {
+        const start = Math.max(0, cue.startTime + seconds);
+        const end = Math.max(start, cue.endTime + seconds);
+        if (seconds >= 0) {
+          cue.endTime = end;
+          cue.startTime = start;
+        } else {
+          cue.startTime = start;
+          cue.endTime = end;
+        }
+      }
+    }
+    function shiftSubtitleCues(track, seconds) {
+      if (!track || subtitleTracksWithDelay.has(track) || !track.cues) return;
+      shiftSubtitleCueTimes(track, seconds);
+      subtitleTracksWithDelay.add(track);
+    }
+    function adjustSubtitleDelay(seconds) {
+      subtitleDelaySeconds += seconds;
+      updateSubtitleDelayDisplay();
+      if (video.textTracks) {
+        for (const track of video.textTracks) {
+          if (subtitleTracksWithDelay.has(track)) {
+            shiftSubtitleCueTimes(track, seconds);
+          } else {
+            shiftSubtitleCues(track, subtitleDelaySeconds);
+          }
+        }
+      }
+      reportSession('subtitle-delay');
+    }
+    updateSubtitleDelayDisplay();
+    subtitleDelayDecrease.addEventListener('click', () => adjustSubtitleDelay(-0.5));
+    subtitleDelayIncrease.addEventListener('click', () => adjustSubtitleDelay(0.5));
+    if (embedUrl) {
+      subtitleDelayDecrease.disabled = true;
+      subtitleDelayIncrease.disabled = true;
+      subtitleDelayNote.textContent = 'Subtitle timing is controlled by the provider player.';
+      subtitleDelayNote.hidden = false;
+    }
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && !settingsPanel.hidden) showSettings(false);
     });
@@ -171,7 +232,6 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     let selectedMedia;
     let requestGeneration = 0;
     let mediaRecoveryAttempted = false;
-    const resumeQuery = new URLSearchParams(window.location.search);
     const requestedPosition = Number(resumeQuery.get('resume') || 0);
     let resumePosition = Number.isFinite(requestedPosition) ? Math.max(0, requestedPosition) : 0;
     let preferredSource = resumeQuery.get('resumeSource') || '';
@@ -212,7 +272,10 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       skipIntro.hidden = introEnd == null;
       const hasNext = selectedMedia?.type === 'tv' && /^[1-9][0-9]*$/.test(nextSeason || '') && /^[1-9][0-9]*$/.test(nextNumber || '') &&
         selectedMedia.id === initialMedia?.id && selectedMedia.season === initialMedia?.season && selectedMedia.episode === initialMedia?.episode;
-      nextEpisode.hidden = !(ready && hasNext && skipTimestamps.credits.some(contains));
+      const nearEnd = skipTimestamps.credits.length === 0 && Number.isFinite(video.duration) && video.duration > 0 &&
+        position >= 0 && position <= video.duration && video.duration - position <= 20;
+      nextEpisode.textContent = hasNext && Number(nextSeason) > Number(selectedMedia.season) ? 'Next season' : 'Next episode';
+      nextEpisode.hidden = !(ready && hasNext && (skipTimestamps.credits.some(contains) || nearEnd));
     }
     async function loadSkipTimestamps() {
       if (!selectedMedia || video.hidden || !Number.isFinite(video.duration) || video.duration <= 0) return;
@@ -261,7 +324,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
         const query = new URLSearchParams(mediaQuery({ ...selectedMedia, season: nextSeason, episode: nextNumber }));
         if (activeSubtitles != null) query.set('resumeSubtitles', activeSubtitles);
         if (preferredSource) query.set('resumeSource', preferredSource);
-        window.location.assign('/player?' + query);
+        query.set('resumeSubtitleDelay', String(subtitleDelaySeconds));
+        window.location.replace('/player?' + query);
       }
     });
     function sessionSnapshot(overrides = {}) {
@@ -270,6 +334,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
         source: activeSource,
         language: selectedMedia.lang,
         subtitles: activeSubtitles,
+        subtitleDelaySeconds,
         positionSeconds: video.ended ? 0 : resumePosition || (Number.isFinite(video.currentTime) ? video.currentTime : 0),
         ...overrides,
       };
@@ -312,6 +377,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       if (session.positionSeconds > 0) query.set('resume', session.positionSeconds);
       if (preferredSource) query.set('resumeSource', preferredSource);
       if (activeSubtitles != null) query.set('resumeSubtitles', activeSubtitles);
+      query.set('resumeSubtitleDelay', String(subtitleDelaySeconds));
       const parentOrigin = resumeQuery.get('parentOrigin');
       if (parentOrigin) query.set('parentOrigin', parentOrigin);
       for (const key of ['title', 'year', 'nextSeason', 'nextEpisode']) {
@@ -361,12 +427,16 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       showFullscreenControl();
       updateSkipActions();
     }
-    function showFullscreenControl() {
+    let fullscreenPointerFocus = false;
+    function showFullscreenControl(event) {
+      if (event?.type === 'focusout' && fullscreenToggle.dataset.inactive === 'true') return;
+      if (event?.type === 'pointerdown') fullscreenPointerFocus = true;
+      if (event?.type === 'keydown') fullscreenPointerFocus = false;
       clearTimeout(fullscreenHideTimer);
       fullscreenToggle.dataset.inactive = 'false';
       if (fullscreenToggle.hidden || document.fullscreenElement !== videoContainer || video.paused || video.ended) return;
       fullscreenHideTimer = setTimeout(() => {
-        if (document.fullscreenElement === videoContainer && !video.paused && !video.ended && document.activeElement !== fullscreenToggle) {
+        if (document.fullscreenElement === videoContainer && !video.paused && !video.ended && (document.activeElement !== fullscreenToggle || fullscreenPointerFocus)) {
           fullscreenToggle.dataset.inactive = 'true';
         }
       }, 3000);
@@ -596,8 +666,14 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       subtitleTrack.src = authenticatedUrl('/subtitle/' + encodeURIComponent(subtitles.value));
       subtitleTrack.default = true;
       video.appendChild(subtitleTrack);
-      subtitleTrack.track.mode = 'showing';
-      subtitleTrack.addEventListener('load', () => { subtitleTrack.track.mode = 'showing'; });
+      const selectedTrack = subtitleTrack;
+      const showSubtitles = () => {
+        if (!selectedTrack.track) return;
+        selectedTrack.track.mode = 'showing';
+        shiftSubtitleCues(selectedTrack.track, subtitleDelaySeconds);
+      };
+      selectedTrack.addEventListener('load', showSubtitles);
+      showSubtitles();
     });
     retry.addEventListener('click', () => {
       if (!selectedMedia) return;

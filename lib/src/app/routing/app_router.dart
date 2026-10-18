@@ -1,6 +1,8 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
+import 'package:popcorn_flutter/src/live_tv/live_tv_channel.dart';
+import 'package:popcorn_flutter/src/live_tv/live_tv_page.dart';
 
 /// Builds the platform-specific [Page] for a resolved [AppRouteRequest].
 ///
@@ -49,10 +51,19 @@ GoRouter createAppRouter({
       request is WatchRoute ||
       request is FavoritesRoute ||
       request is HistoryRoute ||
-      request is TrailerRoute;
+      request is TrailerRoute ||
+      Uri.parse(initialLocation).path.startsWith('/live-tv/');
   var wasSignedIn = isSignedIn();
 
   GoRoute route(String path) => GoRoute(path: path, pageBuilder: (context, state) => pageBuilder(context, state, AppRoutes.parse(state.uri.toString())));
+
+  GoRoute liveTvRoute(String path, {bool watch = false}) => GoRoute(
+    path: path,
+    pageBuilder: (context, state) => MaterialPage<void>(
+      key: state.pageKey,
+      child: LiveTvPage(channelId: state.pathParameters['id']!, channel: state.extra is LiveTvChannel ? state.extra as LiveTvChannel : null, watch: watch),
+    ),
+  );
 
   final router = GoRouter(
     navigatorKey: navigatorKey,
@@ -83,6 +94,8 @@ GoRouter createAppRouter({
       route('/details/:type/:id'),
       route('/person/:id'),
       route('/watch/:type/:id'),
+      liveTvRoute('/live-tv/:id'),
+      liveTvRoute('/live-tv/:id/watch', watch: true),
     ],
   );
 

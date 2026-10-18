@@ -97,7 +97,14 @@ then rerun **Deploy static content to Pages**. Changing the secret alone does
 not update the existing deployment. No Flutter rebuild is needed when only
 these runtime configuration values change.
 
-From the project root, start the player server in one terminal:
+In VS Code select **Popcorn Web + Local Server** in **Run and
+Debug** and press **F5** to launch both processes. This uses the local-only
+development token `dev-token` on both sides, with the server on port 3000 and
+the web app on port 8080. The app's compile-time token overrides any token in
+its environment file. Stopping the compound session stops both processes.
+Do not use this development token for a deployed server.
+
+Alternatively, from the project root, start the player server in one terminal:
 
 ```powershell
 npm --prefix server start
@@ -110,8 +117,9 @@ flutter run -d chrome -t lib/main_web.dart --web-port 8080 --dart-define=PLAYER_
 ```
 
 The app is available at http://localhost:8080 and embeds the local player server.
-The launch option overrides only hosted `/player` providers; omitting it keeps
-the production configuration unchanged. Restart the app when changing the
+The launch option overrides hosted `/player` providers and the server used for
+Live TV and watch-provider lookups; omitting it keeps the production
+configuration unchanged. Restart the app when changing the
 option. History still uses the configured Supabase database, so apply the
 playback column migration and sign in to test resume persistence.
 
@@ -143,6 +151,45 @@ to distribute an updated file or compile-time value.
 Use `--dart-define=PLAYER_SERVER_URL=https://your-service.onrender.com` when
 overriding the configured player host. Restart/rebuild after changing a
 compile-time value.
+
+Live TV uses `GET /live-tv` on this same player server. The server fetches and
+caches the iptv-org catalogue for six hours, and the app sends the configured
+player-server bearer token with catalogue requests. Channel logos come from
+iptv-org's `logos.json` URL field, matched to the stream's channel and feed
+(falling back to a channel-wide logo). Within each match, current logos are
+preferred, then horizontal and white variants for the dark cards. The app
+renders SVG and raster logo URLs.
+The channel card opens `/live-tv/{channelId}` for details; its separate Play
+button opens `/live-tv/{channelId}/watch` directly. The Live TV header's country
+selector shows country flags and names in the app's language (English,
+Spanish, or Catalan) and supports case-insensitive searching
+by country name or two-letter code. Typing only filters the menu; choosing an
+entry applies the channel filter. It starts with no country selected
+("All countries"); selecting a country filters the server's full cached
+catalogue before the 60-channel row limit. Choosing "All countries" clears the
+filter. Available countries come from channels with streams, not just the
+initial row.
+Home search also offers a **Live TV** choice chip alongside Movies and TV
+Series. Channel names and IDs are searched case-insensitively across the full
+catalogue via `/live-tv?q=...`, before the 60-result limit. Search uses its own
+state, independent of the home row's country selection. Channel results retain
+separate Details and Play actions.
+Details include an EPG at the bottom, loaded via the authenticated `/live-tv/epg?channel={channelId}`
+endpoint. EPG data comes from [IPTV-EPG Guides](https://iptv-epg.org/guides).
+The server discovers the site's published country-specific XMLTV links and
+selects the channel's country guide, cached for 15 minutes. It matches an exact
+channel/feed XMLTV ID first, then a channel ID, then a unique display name
+(ignoring the guide's country prefix). Ambiguous name matches are not merged.
+The country guide directory is cached for six hours.
+Country guides are parsed incrementally, retaining up to 100 current/upcoming
+programmes per XMLTV channel rather than caching the entire XML document.
+Programme times use the viewer's local timezone. Channels without a published
+guide or current listings show an explicit unavailable message; source failures
+show a retry action.
+Restart the Node server
+after updating its code. If `/live-tv` returns 401, ensure the app's
+`playerServer.token` or `PLAYER_SERVER_TOKEN` matches a token in the server's
+`API_TOKENS`; no authentication exemption is required.
 
 The app sends `Authorization: Bearer <token>` to `/watch-providers` and to
 `/session`. The latter returns a random playback credential used in URLs
@@ -218,17 +265,24 @@ successful write. Abrupt termination may lose the latest few seconds.
 The hosted HTML player and media_kit player use the free
 [IntroDB API](https://theintrodb.org/docs) to display floating **Skip intro**
 buttons during known intro segments and **Next episode** buttons during
-credits. Requests include the media ID, season/episode, and actual video
+credits. If credits timestamps are unavailable, Next episode appears during the
+last 20 seconds of a TV episode, provided a released next episode exists.
+Requests include the media ID, season/episode, and actual video
 duration in milliseconds to identify the release. No IntroDB API key is needed.
 The hosted player uses the server's `/introdb` endpoint; deploy the updated
 player server together with the app.
 
 Next episodes are verified against the catalog, including season rollover,
 and unreleased episodes and series finales have no next-episode button.
+The button reads **Next season** when the target is in a later season, and
+**Next episode** when it is in the current season.
+Advancing replaces the current watch route, including its browser history
+entry, so Back returns directly to the page that opened playback.
 Advancing starts the next episode at zero while retaining playback preferences
 and updating watch history. The hosted next-episode action requires the app
-to supply the verified next season/episode. Missing timestamps hide the
-corresponding buttons; API failures are reported without stopping playback.
+to supply the verified next season/episode. Missing intro timestamps hide
+Skip intro; missing credits use the last-20-second fallback. API failures are
+reported without stopping playback.
 External provider iframes without a playback/seek API cannot use these controls.
 
 The hosted player's **Fullscreen** / **Exit fullscreen** button expands the

@@ -8,6 +8,7 @@ const { StreamScraper } = require('./streamScraper');
 const { StreamProxy } = require('./streamProxy');
 const { ReverseProxy } = require('./reverseProxy');
 const { Controllers } = require('./controllers');
+const { LiveTvCatalog } = require('./liveTvCatalog');
 const { Router } = require('./router');
 const { createLogger } = require('./logger');
 
@@ -34,6 +35,7 @@ function createApp(env = process.env) {
   const streamProxy = new StreamProxy();
   const streamCache = new Map();
   const reverseProxy = new ReverseProxy({ maxRedirects: config.maxRedirects });
+  const liveTvCatalog = new LiveTvCatalog();
 
   const controllers = new Controllers({
     config,
@@ -43,10 +45,12 @@ function createApp(env = process.env) {
     limiter,
     streamCache,
     reverseProxy,
+    liveTvCatalog,
   });
 
   const router = new Router({ auth })
     .register('/health', (req, res) => controllers.health(req, res))
+    .register('/live-tv', (req, res, url) => controllers.liveTv(req, res, url))
     .register('/favicon.ico', (req, res) => controllers.favicon(req, res))
     .register('/proxy-demo', (req, res) => controllers.demo(req, res))
     .register('/proxy-stream', (req, res, url) => controllers.proxyStream(req, res, url))

@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0]
+
+### Added
+- Live TV channel browsing with country filters, search, programme guides, and playback.
+- Fullscreen playback controls for skipping intros and moving to the next episode.
+- Subtitle timing adjustment and automatic retries for playback load errors.
+
+### Changed
+- Improved player overlays and fullscreen behavior across supported platforms.
+
+## [1.8.1]
+
+### Changed
+- Added validation for required Supabase configuration before GitHub Pages deployment.
+
+## [1.8.0]
+
+### Added
+- Web push notifications for opted-in browsers.
+- Admin console for sending push notifications to web and PWA users.
+
 ## [1.7.1]
 
 ### Added

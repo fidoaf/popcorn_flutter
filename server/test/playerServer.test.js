@@ -164,7 +164,7 @@ test('player provider selector precedes source and switches providers with curre
     URLSearchParams,
     Option: function Option() {},
     fetch: () => new Promise(() => {}),
-    window: { addEventListener() {}, location: { assign(url) { navigations.push(url); } } },
+    window: { addEventListener() {}, location: { search: '?resumeSubtitleDelay=2', assign(url) { navigations.push(url); } } },
   });
   const provider = elements.get('provider');
   assert.equal(provider.value, 'vidsrcbuzz');
@@ -176,7 +176,7 @@ test('player provider selector precedes source and switches providers with curre
   const url = new URL(navigations[0], 'http://localhost');
   assert.equal(url.pathname, '/player');
   assert.deepEqual(Object.fromEntries(url.searchParams), {
-    provider: 'nxsha', type: 'tv', id: '1399', lang: 'fr', sub: '0', season: '2', episode: '3',
+    provider: 'nxsha', type: 'tv', id: '1399', lang: 'fr', sub: '0', season: '2', episode: '3', resumeSubtitleDelay: '2',
   });
 });
 
@@ -499,7 +499,7 @@ test('redirect gear opens settings and preserves media when preferences or provi
   elements.get('provider').dispatch('change');
   assert.deepEqual(Object.fromEntries(navigations.at(-1).searchParams), {
     provider: 'vidsrcbuzz', type: 'tv', id: '1399', season: '2', episode: '3', lang: 'es', sub: '0',
-    resume: '95', resumeSubtitles: '', parentOrigin: 'https://app.example', title: 'Game of Thrones', year: '2011',
+    resume: '95', resumeSubtitles: '', resumeSubtitleDelay: '0', parentOrigin: 'https://app.example', title: 'Game of Thrones', year: '2011',
   });
 });
 

@@ -15,6 +15,43 @@ import 'package:popcorn_flutter/src/search/domain/media_season.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 
 void main() {
+  test('next action label reflects season rollover and scope notifies on target changes', () {
+    PlaybackSessionScope scope(int? nextSeason) => PlaybackSessionScope(
+      initial: const PlaybackSession(),
+      mediaId: 42,
+      mediaType: 'tv',
+      season: 1,
+      episode: 2,
+      nextSeason: nextSeason,
+      onChanged: _ignoreSession,
+      child: const SizedBox(),
+    );
+    expect(scope(1).nextEpisodeLabel, 'Next episode');
+    expect(scope(2).nextEpisodeLabel, 'Next season');
+    expect(scope(null).nextEpisodeLabel, 'Next episode');
+    expect(scope(2).updateShouldNotify(scope(1)), isTrue);
+    expect(scope(1).updateShouldNotify(scope(1)), isFalse);
+  });
+
+  test('next episode falls back to the final 20 seconds only without credits timestamps', () {
+    const missing = IntroDbTimestamps();
+    const duration = Duration(seconds: 100);
+    expect(missing.nextEpisodeAt(const Duration(milliseconds: 79999), duration), isFalse);
+    expect(missing.nextEpisodeAt(const Duration(seconds: 80), duration), isTrue);
+    expect(missing.nextEpisodeAt(duration, duration), isTrue);
+    expect(missing.nextEpisodeAt(const Duration(milliseconds: 100001), duration), isFalse);
+    expect(missing.nextEpisodeAt(Duration.zero, Duration.zero), isFalse);
+    expect(missing.nextEpisodeAt(const Duration(seconds: -1), duration), isFalse);
+    expect(missing.nextEpisodeAt(Duration.zero, const Duration(seconds: 15)), isTrue);
+    final known = IntroDbTimestamps.fromJson({
+      'credits': [
+        {'start_ms': 50000, 'end_ms': 60000},
+      ],
+    });
+    expect(known.nextEpisodeAt(const Duration(seconds: 50), duration), isTrue);
+    expect(known.nextEpisodeAt(const Duration(seconds: 80), duration), isFalse);
+  });
+
   test('IntroDB uses v3, TMDB identity, episode and actual duration', () async {
     final client = MockClient((request) async {
       expect(request.url.origin, 'https://api.theintrodb.org');
@@ -66,10 +103,7 @@ void main() {
   test('missing timestamps are normal, API and malformed data failures are explicit', () async {
     final missing = await loadIntroDbTimestamps(tmdbId: 42, duration: const Duration(minutes: 1), client: MockClient((_) async => http.Response('', 404)));
     expect(missing.intros, isEmpty);
-    await expectLater(
-      loadIntroDbTimestamps(tmdbId: 42, duration: const Duration(minutes: 1), client: MockClient((_) async => http.Response('', 503))),
-      throwsA(isA<http.ClientException>()),
-    );
+    await expectLater(loadIntroDbTimestamps(tmdbId: 42, duration: const Duration(minutes: 1), client: MockClient((_) async => http.Response('', 503))), throwsA(isA<http.ClientException>()));
     for (final segment in [
       {'start_ms': -1, 'end_ms': 100},
       {'start_ms': 200, 'end_ms': 100},
@@ -121,6 +155,8 @@ void main() {
     expect(calls, ['save:90.0', 'next']);
   });
 }
+
+void _ignoreSession(PlaybackSession session) {}
 
 MediaEpisode _episode(int number, {bool released = true}) => MediaEpisode(episodeNumber: number, name: '', airDate: released ? DateTime(2020) : DateTime(2100));
 

@@ -7,9 +7,12 @@ const { resolveJustWatchProviderLinks } = require('./justWatchProviderLinks');
 const { fetchIntroDb } = require('./introDb');
 const { parseTokens } = require('../config');
 const { PlayerAuth } = require('./playerAuth');
+const { LiveTvCatalog } = require('../liveTvCatalog');
+const { LiveTvEpg } = require('../liveTvEpg');
 
-function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch, apiTokens = parseTokens(process.env.API_TOKENS || process.env.AUTH_TOKEN), auth = new PlayerAuth(apiTokens) }) {
+function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch, apiTokens = parseTokens(process.env.API_TOKENS || process.env.AUTH_TOKEN), auth = new PlayerAuth(apiTokens), liveTvCatalog = new LiveTvCatalog({ fetchImpl }) }) {
   if (!providers || !resourceProxy) throw new TypeError('Player server requires providers and a resource proxy');
+  const liveTvEpg = new LiveTvEpg({ fetchImpl });
 
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
@@ -40,6 +43,20 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
         sendHtml(response, renderPlayerPage(initialMedia, { providers: providers.list(), session: auth.pageSession(url) }));
       } else if (url.pathname === '/providers') {
         sendJson(response, 200, { providers: providers.list(), defaultProvider: providers.defaultProviderId }, { 'Access-Control-Allow-Origin': '*' });
+      } else if (url.pathname === '/live-tv') {
+        sendJson(response, 200, await liveTvCatalog.getCatalogue({
+          country: url.searchParams.get('country') || '',
+          channelId: url.searchParams.get('channel'),
+          query: url.searchParams.get('q') || '',
+        }));
+      } else if (url.pathname === '/live-tv/epg') {
+        const id = url.searchParams.get('channel');
+        const channel = await liveTvCatalog.getChannel(id);
+        if (!channel) {
+          sendJson(response, 404, { error: 'channel_not_found' });
+          return;
+        }
+        sendJson(response, 200, { programmes: await liveTvEpg.getProgrammes(channel) });
       } else if (url.pathname === '/player') {
         const media = mediaFromQuery(url.searchParams, providers);
         const provider = providers.get(media.providerId);
@@ -119,6 +136,10 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
       console.error(`Request ${url.pathname} failed: ${error.message}`);
       if (!response.headersSent) {
         const status = error.statusCode || 502;
+        if (url.pathname === '/live-tv' || url.pathname === '/live-tv/epg') {
+          sendJson(response, status, { error: 'live_tv_unavailable' });
+          return;
+        }
         if (url.pathname === '/watch-providers') {
           sendJson(response, status, { error: status === 400 ? error.message : 'Unable to load JustWatch provider links' });
           return;
