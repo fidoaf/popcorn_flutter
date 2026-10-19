@@ -10,6 +10,8 @@ import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/home/view/browse_home_view.dart';
 import 'package:popcorn_flutter/src/live_tv/live_tv_controller.dart';
+import 'package:popcorn_flutter/src/radio/radio_controller.dart';
+import 'package:popcorn_flutter/src/radio/radio_station.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_search_repository.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
@@ -32,6 +34,109 @@ class _Favorites implements FavoritesRepository {
 }
 
 void main() {
+  testWidgets('radio search chip debounces queries, retries, clears and opens station player', (tester) async {
+    final requests = <Uri>[];
+    var failed = false;
+    final radio = RadioController(
+      serverToken: '',
+      client: MockClient((request) async {
+        requests.add(request.url);
+        if (failed) return http.Response('', 502);
+        return http.Response(
+          jsonEncode({
+            'stations': request.url.queryParameters['q'] == 'missing'
+                ? []
+                : [
+                    {'id': 'station-id', 'name': 'Jazz Radio', 'url': 'https://example.com/jazz.mp3', 'country': 'France'},
+                  ],
+          }),
+          200,
+        );
+      }),
+    );
+    final live = LiveTvController(serverToken: '', client: MockClient((_) async => http.Response('{"channels":[]}', 200)));
+    final search = MediaSearchController(repository: _Repository());
+    final favorites = FavoritesController(repository: _Favorites());
+    addTearDown(radio.dispose);
+    addTearDown(live.dispose);
+    addTearDown(search.dispose);
+    addTearDown(favorites.dispose);
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: HomeSearchOverlay(
+              active: true,
+              onActivate: () {},
+              controller: search,
+              favoritesController: favorites,
+              onClose: () {},
+              onOpenDetails: (_) {},
+              onPlay: (_) {},
+              radioController: radio,
+              liveTvController: live,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/radio/:id',
+          builder: (context, state) {
+            expect((state.extra as RadioStation).name, 'Jazz Radio');
+            expect(state.pathParameters['id'], 'station-id');
+            return const Scaffold(body: Text('Radio player'));
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    expect(requests, isEmpty);
+    await tester.tap(find.text('Radio stations'));
+    await tester.pumpAndSettle();
+    expect(find.text('Jazz Radio'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'jazz');
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(requests, hasLength(1));
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    expect(requests.last.queryParameters['q'], 'jazz');
+    expect(requests.last.queryParameters.containsKey('country'), isFalse);
+    await tester.tap(find.text('Jazz Radio'));
+    await tester.pumpAndSettle();
+    expect(find.text('Radio player'), findsOneWidget);
+    router.pop();
+    await tester.pumpAndSettle();
+    failed = true;
+    await tester.enterText(find.byType(TextField), 'news');
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    expect(find.text('Radio stations are unavailable right now.'), findsOneWidget);
+    failed = false;
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(requests.last.queryParameters['q'], 'news');
+    expect(find.text('Jazz Radio'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'missing');
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    expect(find.text('No results found.'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(requests.last.queryParameters.containsKey('q'), isFalse);
+    await tester.enterText(find.byType(TextField), 'jazz');
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Live TV'));
+    await tester.pumpAndSettle();
+    expect(find.text('Jazz Radio'), findsNothing);
+    await tester.tap(find.text('TV Series'));
+    await tester.pumpAndSettle();
+    expect(search.mediaType, MediaType.tv);
+    expect(search.query, 'jazz');
+    expect(find.text('Movie result'), findsOneWidget);
+    await tester.tap(find.text('Radio stations'));
+    await tester.pumpAndSettle();
+    expect(requests.last.queryParameters['q'], 'jazz');
+  });
+
   testWidgets('Live TV search chip debounces queries, renders channel actions and switches back to movies', (tester) async {
     final requests = <Uri>[];
     final live = LiveTvController(

@@ -164,7 +164,12 @@ names (English, Spanish, Catalan), initially set to "All countries". Selecting
 a country requests `/radio?country=ES`, filtering Radio Browser before its
 60-station limit. Country choices come from Radio Browser's full country-code
 directory, not just the initial stations. Clearing restores all countries.
-Country lists and per-country results are cached for an hour (up to 32 result
+Home search includes a **Radio stations** chip. Station names are searched
+case-insensitively via `/radio?q=...`, forwarded to Radio Browser's name search
+before the 60-result limit. Typing is debounced; results open the radio player.
+Radio search has independent state from the home row's country selection and
+includes clear, empty, error and retry states.
+Country lists and per-country/search results are cached for an hour (up to 32 result
 sets); radio and Live TV country selections are independent.
 Station cards show the station logo (or a radio placeholder), name and country.
 Opening a card navigates to `/radio/{stationUuid}`, with play/pause and volume

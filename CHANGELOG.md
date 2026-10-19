@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3]
+
+### Added
+- Radio station-name search in the home search overlay, alongside movies, TV series, and Live TV.
+
+### Changed
+- Radio search now filters upstream results and caches them by search query and country.
+
 ## [1.9.2]
 
 ### Added

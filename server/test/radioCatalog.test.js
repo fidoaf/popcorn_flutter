@@ -127,6 +127,40 @@ test('filters upstream before the station limit with independent caches and a fu
   assert.equal(calls.length, 3);
 });
 
+test('searches names upstream before the result limit and caches by query and country', async () => {
+  const requests = [];
+  const catalog = new RadioCatalog({
+    resolveServers,
+    fetchImpl: async (input) => {
+      const url = new URL(input);
+      requests.push(url);
+      if (url.pathname.endsWith('/countrycodes')) return response([]);
+      const name = url.searchParams.get('name');
+      return response(name === 'missing' ? [] : [{ ...station, name: name || 'Popular station' }]);
+    },
+  });
+  assert.equal((await catalog.getCatalogue()).stations[0].name, 'Popular station');
+  const [searched, duplicate] = await Promise.all([
+    catalog.getCatalogue({ query: '  Ràdio Music & News  ' }),
+    catalog.getCatalogue({ query: 'ràdio music & news' }),
+  ]);
+  assert.deepEqual(searched, duplicate);
+  assert.equal(searched.stations[0].name, 'Ràdio Music & News');
+  const searchUrl = requests.find((url) => url.searchParams.has('name'));
+  assert.equal(searchUrl.searchParams.get('name'), 'Ràdio Music & News');
+  assert.equal(searchUrl.searchParams.get('limit'), '60');
+  assert.equal(searchUrl.searchParams.has('countrycode'), false);
+  await catalog.getCatalogue({ country: 'FR', query: 'Ràdio Music & News' });
+  assert.equal(requests.at(-1).searchParams.get('countrycode'), 'FR');
+  assert.equal(requests.at(-1).searchParams.get('name'), 'Ràdio Music & News');
+  const count = requests.length;
+  await catalog.getCatalogue({ query: 'RÀDIO MUSIC & NEWS' });
+  await catalog.getCatalogue({ query: '   ' });
+  assert.equal(requests.length, count);
+  assert.deepEqual((await catalog.getCatalogue({ query: 'missing' })).stations, []);
+  await assert.rejects(catalog.getCatalogue({ query: null }), { statusCode: 400 });
+});
+
 test('looks up stations outside the home list and reports a click only when playback starts', async () => {
   const paths = [];
   const catalog = new RadioCatalog({
@@ -169,6 +203,7 @@ test('radio endpoints enforce bearer auth and support CORS, station lookup, play
       calls += 1;
       if (fail) return response([], 503);
       if (url.includes('/countrycodes')) return response([{ name: 'FR', stationcount: 10 }, { name: 'ES', stationcount: 20 }]);
+      if (new URL(url).searchParams.get('name') === 'Jazz') return response([{ ...station, name: 'Jazz Radio' }]);
       if (new URL(url).searchParams.get('countrycode') === 'ES') {
         return response([{ ...station, name: 'Spanish Radio', country: 'Spain', countrycode: 'ES' }]);
       }
@@ -197,6 +232,8 @@ test('radio endpoints enforce bearer auth and support CORS, station lookup, play
   const filtered = await (await fetch(`${base}/radio?country=ES`, { headers })).json();
   assert.equal(filtered.stations[0].name, 'Spanish Radio');
   assert.equal(filtered.countries.length, 2);
+  const searched = await (await fetch(`${base}/radio?q=Jazz`, { headers })).json();
+  assert.equal(searched.stations[0].name, 'Jazz Radio');
   const invalidCountry = await fetch(`${base}/radio?country=Spain`, { headers });
   assert.equal(invalidCountry.status, 400);
   assert.deepEqual(await invalidCountry.json(), { error: 'invalid_radio_country' });
@@ -215,7 +252,8 @@ test('legacy radio handlers support catalogue, playback, preflight and explicit 
   const catalog = new RadioCatalog({
     resolveServers,
     fetchImpl: async (url) => response(url.includes('/json/url/')
-      ? { ok: true, stationuuid: id, url: station.url_resolved } : [station]),
+      ? { ok: true, stationuuid: id, url: station.url_resolved }
+      : [{ ...station, name: new URL(url).searchParams.get('name') || station.name }]),
   });
   const controllers = new Controllers({ radioCatalog: catalog });
   const request = async (path, method = 'GET') => {
@@ -227,6 +265,7 @@ test('legacy radio handlers support catalogue, playback, preflight and explicit 
     return result;
   };
   assert.equal((await request('/radio')).body.stations[0].id, id);
+  assert.equal((await request('/radio?q=Jazz')).body.stations[0].name, 'Jazz');
   assert.equal((await request(`/radio?station=${id}`)).body.stations[0].id, id);
   assert.deepEqual((await request(`/radio/play?station=${id}`)).body, { url: station.url_resolved });
   assert.equal((await request('/radio', 'OPTIONS')).status, 204);

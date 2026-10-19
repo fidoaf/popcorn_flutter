@@ -47,7 +47,7 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
       } else if (url.pathname === '/radio') {
         const id = url.searchParams.get('station');
         const catalogue = id === null
-          ? await radioCatalog.getCatalogue({ country: url.searchParams.get('country') || '' })
+          ? await radioCatalog.getCatalogue({ country: url.searchParams.get('country') || '', query: url.searchParams.get('q') || '' })
           : { stations: [await radioCatalog.getStation(id)].filter(Boolean) };
         sendJson(response, 200, catalogue);
       } else if (url.pathname === '/radio/play') {

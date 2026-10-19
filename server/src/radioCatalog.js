@@ -115,19 +115,28 @@ class RadioCatalog {
     return this.countriesInFlight;
   }
 
-  async getCatalogue({ country = '' } = {}) {
+  async getCatalogue({ country = '', query = '' } = {}) {
     if (typeof country !== 'string' || (country !== '' && !/^[A-Z]{2}$/.test(country))) {
       const error = new Error('Invalid radio country');
       error.statusCode = 400;
       error.code = 'invalid_radio_country';
       throw error;
     }
-    const cached = this.catalogues.get(country);
+    if (typeof query !== 'string') {
+      const error = new Error('Invalid radio search');
+      error.statusCode = 400;
+      error.code = 'invalid_radio_query';
+      throw error;
+    }
+    const search = query.trim();
+    const cacheKey = JSON.stringify([country, search.toLowerCase()]);
+    const cached = this.catalogues.get(cacheKey);
     if (cached && cached.expiresAt > this.now()) return { stations: cached.stations, countries: await this._countries() };
-    if (!this.inFlight.has(country)) {
-      const query = new URLSearchParams({ hidebroken: 'true', order: 'clickcount', reverse: 'true', limit: '60' });
-      if (country) query.set('countrycode', country);
-      const pending = this._request(`/json/stations/search?${query}`, Array.isArray)
+    if (!this.inFlight.has(cacheKey)) {
+      const params = new URLSearchParams({ hidebroken: 'true', order: 'clickcount', reverse: 'true', limit: '60' });
+      if (country) params.set('countrycode', country);
+      if (search) params.set('name', search);
+      const pending = this._request(`/json/stations/search?${params}`, Array.isArray)
         .then((entries) => {
           const stations = new Map();
           for (const entry of entries) {
@@ -135,15 +144,15 @@ class RadioCatalog {
             if (station && (!country || station.countryCode === country) && !stations.has(station.id)) stations.set(station.id, station);
           }
           const result = [...stations.values()].slice(0, 60);
-          this.catalogues.delete(country);
-          this.catalogues.set(country, { stations: result, expiresAt: this.now() + TTL_MS });
+          this.catalogues.delete(cacheKey);
+          this.catalogues.set(cacheKey, { stations: result, expiresAt: this.now() + TTL_MS });
           if (this.catalogues.size > 32) this.catalogues.delete(this.catalogues.keys().next().value);
           return result;
         })
-        .finally(() => { this.inFlight.delete(country); });
-      this.inFlight.set(country, pending);
+        .finally(() => { this.inFlight.delete(cacheKey); });
+      this.inFlight.set(cacheKey, pending);
     }
-    const [stations, countries] = await Promise.all([this.inFlight.get(country), this._countries()]);
+    const [stations, countries] = await Promise.all([this.inFlight.get(cacheKey), this._countries()]);
     return { stations, countries };
   }
 

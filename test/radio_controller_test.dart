@@ -128,6 +128,71 @@ void main() {
     expect(requests.last.queryParameters.containsKey('country'), isFalse);
   });
 
+  test('search sends a trimmed query, preserves it on retry and country change, and clears', () async {
+    final requests = <Uri>[];
+    final controller = RadioController(
+      serverToken: '',
+      client: MockClient((request) async {
+        requests.add(request.url);
+        return http.Response('{"stations":[]}', 200);
+      }),
+    );
+    addTearDown(controller.dispose);
+    await controller.search('  Jazz & News  ');
+    expect(requests.last.queryParameters['q'], 'Jazz & News');
+    expect(requests.last.queryParameters.containsKey('country'), isFalse);
+    await controller.load();
+    expect(requests.last.queryParameters['q'], 'Jazz & News');
+    await controller.selectCountry('FR');
+    expect(requests.last.queryParameters['q'], 'Jazz & News');
+    expect(requests.last.queryParameters['country'], 'FR');
+    await controller.load(stationId: data['id'] as String);
+    expect(requests.last.queryParameters.containsKey('q'), isFalse);
+    await controller.search('');
+    expect(requests.last.queryParameters.containsKey('q'), isFalse);
+    expect(requests.last.queryParameters['country'], 'FR');
+  });
+
+  test('newer search results are not replaced by a slower previous query', () async {
+    final pending = <String, Completer<http.Response>>{};
+    final controller = RadioController(
+      serverToken: '',
+      client: MockClient((request) {
+        final completion = Completer<http.Response>();
+        pending[request.url.queryParameters['q']!] = completion;
+        return completion.future;
+      }),
+    );
+    addTearDown(controller.dispose);
+    final old = controller.search('old');
+    final latest = controller.search('latest');
+    await Future<void>.delayed(Duration.zero);
+    pending['latest']!.complete(
+      http.Response(
+        jsonEncode({
+          'stations': [
+            {...data, 'name': 'Latest Radio'},
+          ],
+        }),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+    );
+    await latest;
+    pending['old']!.complete(
+      http.Response(
+        jsonEncode({
+          'stations': [data],
+        }),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+    );
+    await old;
+    expect(controller.stations.single.name, 'Latest Radio');
+    expect(controller.hasError, isFalse);
+  });
+
   test('rejects invalid playback responses', () async {
     final controller = RadioController(serverToken: '', client: MockClient((_) async => http.Response('{"url":"file:///audio"}', 200)));
     addTearDown(controller.dispose);

@@ -24,12 +24,19 @@ class RadioController extends ChangeNotifier {
   List<RadioStation> _stations = const [];
   List<LiveTvCountry> _countries = const [];
   String? _selectedCountry;
+  String _query = '';
 
   bool get isLoading => _isLoading;
   bool get hasError => _hasError;
   List<RadioStation> get stations => _stations;
   List<LiveTvCountry> get countries => _countries;
   String? get selectedCountry => _selectedCountry;
+
+  Future<void> search(String query) async {
+    if (_disposed) return;
+    _query = query.trim();
+    await load();
+  }
 
   Future<void> selectCountry(String? country) async {
     if (_disposed || country == _selectedCountry) return;
@@ -59,6 +66,7 @@ class RadioController extends ChangeNotifier {
           queryParameters: {
             if (stationId != null) 'station': stationId,
             if (stationId == null && _selectedCountry != null) 'country': _selectedCountry!,
+            if (stationId == null && _query.isNotEmpty) 'q': _query,
           },
         ),
       );

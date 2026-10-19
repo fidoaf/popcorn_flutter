@@ -75,7 +75,7 @@ class Controllers {
       const result = url.pathname === '/radio/play'
         ? await this.radioCatalog.startPlayback(id)
         : id === null
-          ? await this.radioCatalog.getCatalogue({ country: url.searchParams.get('country') || '' })
+          ? await this.radioCatalog.getCatalogue({ country: url.searchParams.get('country') || '', query: url.searchParams.get('q') || '' })
           : { stations: [await this.radioCatalog.getStation(id)].filter(Boolean) };
       sendJson(res, 200, result, headers);
     } catch (error) {

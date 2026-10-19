@@ -326,6 +326,7 @@ class HomeSearchOverlay extends StatefulWidget {
     required this.onPlay,
     this.enableDpadFocus = false,
     this.liveTvController,
+    this.radioController,
   });
 
   final bool active;
@@ -337,22 +338,28 @@ class HomeSearchOverlay extends StatefulWidget {
   final ValueChanged<MediaItem> onPlay;
   final bool enableDpadFocus;
   final LiveTvController? liveTvController;
+  final RadioController? radioController;
 
   @override
   State<HomeSearchOverlay> createState() => _SearchOverlayState();
 }
 
+enum _SearchType { movie, tv, liveTv, radio }
+
 class _SearchOverlayState extends State<HomeSearchOverlay> {
   final TextEditingController _queryController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   Timer? _debounce;
-  bool _liveTv = false;
+  late _SearchType _searchType;
   late final LiveTvController _liveSearch;
+  late final RadioController _radioSearch;
 
   @override
   void initState() {
     super.initState();
     _liveSearch = widget.liveTvController ?? LiveTvController();
+    _radioSearch = widget.radioController ?? RadioController();
+    _searchType = widget.controller.mediaType == MediaType.tv ? _SearchType.tv : _SearchType.movie;
     _queryController.text = widget.controller.query;
     _focusNode.addListener(_onFocusChanged);
     if (widget.active) {
@@ -373,7 +380,7 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
       _debounce?.cancel();
       _focusNode.unfocus();
       _queryController.clear();
-      _liveTv = false;
+      _searchType = widget.controller.mediaType == MediaType.tv ? _SearchType.tv : _SearchType.movie;
     }
   }
 
@@ -381,6 +388,7 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
   void dispose() {
     _debounce?.cancel();
     if (widget.liveTvController == null) _liveSearch.dispose();
+    if (widget.radioController == null) _radioSearch.dispose();
     _queryController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -393,20 +401,22 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
   }
 
   void _search(String query) {
-    if (_liveTv) {
+    if (_searchType == _SearchType.radio) {
+      _radioSearch.search(query);
+    } else if (_searchType == _SearchType.liveTv) {
       _liveSearch.search(query);
     } else {
       widget.controller.search(query);
     }
   }
 
-  void _selectType(MediaType? type) {
+  void _selectType(_SearchType type) {
     _debounce?.cancel();
-    setState(() => _liveTv = type == null);
-    if (type == null) {
+    setState(() => _searchType = type);
+    if (type == _SearchType.liveTv || type == _SearchType.radio) {
       widget.controller.clear();
     } else {
-      widget.controller.setMediaType(type);
+      widget.controller.setMediaType(type == _SearchType.tv ? MediaType.tv : MediaType.movie);
     }
     _search(_queryController.text);
   }
@@ -419,7 +429,9 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
   void _clear() {
     _debounce?.cancel();
     _queryController.clear();
-    if (_liveTv) {
+    if (_searchType == _SearchType.radio) {
+      _radioSearch.search('');
+    } else if (_searchType == _SearchType.liveTv) {
       _liveSearch.search('');
     } else {
       widget.controller.clear();
@@ -506,12 +518,26 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
                   ],
                 ),
               ),
-              if (widget.active) _MediaTypeToggle(controller: widget.controller, liveTv: _liveTv, onSelected: _selectType),
+              if (widget.active)
+                ListenableBuilder(
+                  listenable: widget.controller,
+                  builder: (context, _) => _MediaTypeToggle(
+                    selectedType: switch (_searchType) {
+                      _SearchType.movie || _SearchType.tv => widget.controller.mediaType == MediaType.tv ? _SearchType.tv : _SearchType.movie,
+                      _ => _searchType,
+                    },
+                    onSelected: _selectType,
+                  ),
+                ),
               if (widget.active)
                 Expanded(
                   child: ListenableBuilder(
-                    listenable: Listenable.merge([widget.controller, _liveSearch]),
-                    builder: (context, _) => _liveTv ? _buildLiveResults(context) : _buildResults(context),
+                    listenable: Listenable.merge([widget.controller, _liveSearch, _radioSearch]),
+                    builder: (context, _) => switch (_searchType) {
+                      _SearchType.radio => _buildRadioResults(context),
+                      _SearchType.liveTv => _buildLiveResults(context),
+                      _ => _buildResults(context),
+                    },
                   ),
                 ),
             ],
@@ -552,6 +578,24 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 200, mainAxisExtent: 142, mainAxisSpacing: 12, crossAxisSpacing: 12),
       itemCount: _liveSearch.channels.length,
       itemBuilder: (context, index) => LiveTvChannelCard(channel: _liveSearch.channels[index]),
+    );
+  }
+
+  Widget _buildRadioResults(BuildContext context) {
+    if (_radioSearch.isLoading) return const Center(child: CircularProgressIndicator(color: _Palette.accent));
+    if (_radioSearch.hasError) {
+      return _LiveTvMessage(
+        text: RadioTranslations.unavailable.trOf(context),
+        actionLabel: HomeTranslations.retry.trOf(context),
+        onAction: () => _search(_queryController.text),
+      );
+    }
+    if (_radioSearch.stations.isEmpty) return _message(SearchTranslations.emptyResults.trOf(context));
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 200, mainAxisExtent: 164, mainAxisSpacing: 12, crossAxisSpacing: 12),
+      itemCount: _radioSearch.stations.length,
+      itemBuilder: (context, index) => RadioStationCard(station: _radioSearch.stations[index]),
     );
   }
 
@@ -606,39 +650,36 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
   }
 }
 
-/// The movie/TV switch shown above the search results.
+/// Content types shown above the search results.
 class _MediaTypeToggle extends StatelessWidget {
-  const _MediaTypeToggle({required this.controller, required this.liveTv, required this.onSelected});
+  const _MediaTypeToggle({required this.selectedType, required this.onSelected});
 
-  final MediaSearchController controller;
-  final bool liveTv;
-  final ValueChanged<MediaType?> onSelected;
+  final _SearchType selectedType;
+  final ValueChanged<_SearchType> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: controller,
-      builder: (context, _) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          children: [
-            _chip(context, MediaType.movie, SearchTranslations.mediaMovies.trOf(context)),
-            _chip(context, MediaType.tv, SearchTranslations.mediaTvSeries.trOf(context)),
-            _chip(context, null, HomeTranslations.liveTv.trOf(context)),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 8,
+        children: [
+          _chip(context, _SearchType.movie, SearchTranslations.mediaMovies.trOf(context)),
+          _chip(context, _SearchType.tv, SearchTranslations.mediaTvSeries.trOf(context)),
+          _chip(context, _SearchType.liveTv, HomeTranslations.liveTv.trOf(context)),
+          _chip(context, _SearchType.radio, RadioTranslations.title.trOf(context)),
+        ],
       ),
     );
   }
 
-  Widget _chip(BuildContext context, MediaType? type, String label) {
-    final selected = type == null ? liveTv : !liveTv && controller.mediaType == type;
+  Widget _chip(BuildContext context, _SearchType type, String label) {
+    final selected = type == selectedType;
     return Semantics(selected: selected, button: true, child: _buildChip(type, label, selected));
   }
 
-  Widget _buildChip(MediaType? type, String label, bool selected) {
+  Widget _buildChip(_SearchType type, String label, bool selected) {
     return _Pressable(
       onTap: () => onSelected(type),
       borderRadius: 18,
