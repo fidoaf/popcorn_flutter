@@ -9,7 +9,7 @@ const moduleLog = createLogger('controllers');
 // Request handlers. Each method owns one endpoint and delegates the real work to
 // injected services, so this layer stays thin and free of business logic.
 class Controllers {
-  constructor({ config, auth, scraper, streamProxy, limiter, streamCache, reverseProxy, liveTvCatalog }) {
+  constructor({ config, auth, scraper, streamProxy, limiter, streamCache, reverseProxy, liveTvCatalog, radioCatalog }) {
     this.config = config;
     this.auth = auth;
     this.scraper = scraper;
@@ -18,6 +18,7 @@ class Controllers {
     this.streamCache = streamCache;
     this.reverseProxy = reverseProxy;
     this.liveTvCatalog = liveTvCatalog;
+    this.radioCatalog = radioCatalog;
     this.inFlightManifestLoads = new Map();
   }
 
@@ -50,6 +51,37 @@ class Controllers {
     } catch (error) {
       log.error('live TV catalogue unavailable', { error });
       sendJson(res, 502, { ok: false, error: 'live_tv_unavailable' }, corsHeaders);
+    }
+  }
+
+  async radio(req, res, url) {
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Authorization',
+      'Cache-Control': 'no-store',
+    };
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, headers);
+      res.end();
+      return;
+    }
+    if (req.method !== 'GET') {
+      sendJson(res, 405, { error: 'method_not_allowed' }, { ...headers, Allow: 'GET, OPTIONS' });
+      return;
+    }
+    try {
+      const id = url.searchParams.get('station');
+      const result = url.pathname === '/radio/play'
+        ? await this.radioCatalog.startPlayback(id)
+        : id === null
+          ? await this.radioCatalog.getCatalogue({ country: url.searchParams.get('country') || '' })
+          : { stations: [await this.radioCatalog.getStation(id)].filter(Boolean) };
+      sendJson(res, 200, result, headers);
+    } catch (error) {
+      (req.log || moduleLog).error('radio unavailable', { error });
+      const status = error.statusCode || 502;
+      sendJson(res, status, { error: status === 400 ? error.code || 'invalid_radio_station' : 'radio_unavailable' }, headers);
     }
   }
 

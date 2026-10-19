@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2]
+
+### Added
+- Radio station browsing with country filtering, station details, and playback controls.
+- Radio Browser-backed station discovery with cached country lists and station catalogues.
+
+### Changed
+- Added Radio to the home page below Live TV.
+
 ## [1.9.1]
 
 ### Added

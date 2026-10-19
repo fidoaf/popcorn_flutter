@@ -32,6 +32,7 @@ function createServer(initialMedia = null, dependencies = {}) {
     fetchImpl: dependencies.fetchImpl,
     apiTokens: dependencies.apiTokens,
     auth: dependencies.auth,
+    radioCatalog: dependencies.radioCatalog,
   });
 }
 

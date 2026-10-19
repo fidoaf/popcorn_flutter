@@ -19,6 +19,7 @@ abstract final class AppRoutes {
 
   static String liveTvDetails(String id) => '/live-tv/${Uri.encodeComponent(id)}';
   static String liveTvWatch(String id) => '${liveTvDetails(id)}/watch';
+  static String radio(String id) => '/radio/${Uri.encodeComponent(id)}';
 
   static String homeSearch(String query, {MediaType type = MediaType.movie}) =>
       query.trim().isEmpty ? home : Uri(path: home, queryParameters: {'q': query.trim(), 'type': type.name}).toString();

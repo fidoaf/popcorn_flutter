@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
 import 'package:popcorn_flutter/src/live_tv/live_tv_channel.dart';
 import 'package:popcorn_flutter/src/live_tv/live_tv_page.dart';
+import 'package:popcorn_flutter/src/radio/radio_page.dart';
+import 'package:popcorn_flutter/src/radio/radio_station.dart';
 
 /// Builds the platform-specific [Page] for a resolved [AppRouteRequest].
 ///
@@ -52,7 +54,8 @@ GoRouter createAppRouter({
       request is FavoritesRoute ||
       request is HistoryRoute ||
       request is TrailerRoute ||
-      Uri.parse(initialLocation).path.startsWith('/live-tv/');
+      Uri.parse(initialLocation).path.startsWith('/live-tv/') ||
+      Uri.parse(initialLocation).path.startsWith('/radio/');
   var wasSignedIn = isSignedIn();
 
   GoRoute route(String path) => GoRoute(path: path, pageBuilder: (context, state) => pageBuilder(context, state, AppRoutes.parse(state.uri.toString())));
@@ -97,6 +100,13 @@ GoRouter createAppRouter({
       route('/watch/:type/:id'),
       liveTvRoute('/live-tv/:id'),
       liveTvRoute('/live-tv/:id/watch', watch: true),
+      GoRoute(
+        path: '/radio/:id',
+        pageBuilder: (context, state) => MaterialPage<void>(
+          key: state.pageKey,
+          child: RadioPage(stationId: state.pathParameters['id']!, station: state.extra is RadioStation ? state.extra as RadioStation : null),
+        ),
+      ),
     ],
   );
 

@@ -153,6 +153,30 @@ Use `--dart-define=PLAYER_SERVER_URL=https://your-service.onrender.com` when
 overriding the configured player host. Restart/rebuild after changing a
 compile-time value.
 
+Radio stations appear below Live TV at the bottom of the home page. The
+authenticated `GET /radio` endpoint fetches up to 60 popular, working stations
+from [Radio Browser](https://api.radio-browser.info/) and caches them for an hour.
+The server discovers and randomizes API mirrors using Radio Browser's DNS SRV
+records and retries other mirrors on upstream errors. No API key is needed;
+the app uses its existing player-server bearer token.
+The radio header has a searchable country selector with flags and localized
+names (English, Spanish, Catalan), initially set to "All countries". Selecting
+a country requests `/radio?country=ES`, filtering Radio Browser before its
+60-station limit. Country choices come from Radio Browser's full country-code
+directory, not just the initial stations. Clearing restores all countries.
+Country lists and per-country results are cached for an hour (up to 32 result
+sets); radio and Live TV country selections are independent.
+Station cards show the station logo (or a radio placeholder), name and country.
+Opening a card navigates to `/radio/{stationUuid}`, with play/pause and volume
+controls powered by media-kit. Playback stops when leaving this page.
+Deep links resolve station metadata independently of the home row.
+On Play, `GET /radio/play?station={stationUuid}` resolves the stream and reports
+the listening click using Radio Browser's `/json/url` endpoint; browsing does
+not report clicks. Pausing and resuming does not report another click.
+Loading, empty, error and retry states are localized in English, Spanish and
+Catalan. Streams play directly: browser codec, mixed-content, CORS and regional
+restrictions can still prevent individual stations from playing.
+
 Live TV uses `GET /live-tv` on this same player server. The server fetches and
 caches the iptv-org catalogue for six hours, and the app sends the configured
 player-server bearer token with catalogue requests. Channel logos come from

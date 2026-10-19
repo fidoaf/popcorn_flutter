@@ -338,11 +338,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('SEASON PREMIERE'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Trending Movies'), 200, scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
 
     expect(find.text('NEW MOVIE'), findsOneWidget);
-    expect(find.text('SEASON PREMIERE'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

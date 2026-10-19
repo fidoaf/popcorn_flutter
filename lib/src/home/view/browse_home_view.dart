@@ -13,8 +13,13 @@ import 'package:popcorn_flutter/src/home/view/home_feed_controller.dart';
 import 'package:popcorn_flutter/src/home/view/home_translations.dart';
 import 'package:popcorn_flutter/src/live_tv/live_tv.dart';
 import 'package:popcorn_flutter/src/live_tv/live_tv_logo.dart';
+import 'package:popcorn_flutter/src/live_tv/live_tv_country.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/radio/radio_controller.dart';
+import 'package:popcorn_flutter/src/radio/radio_logo.dart';
+import 'package:popcorn_flutter/src/radio/radio_station.dart';
+import 'package:popcorn_flutter/src/radio/radio_translations.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/domain/media_video.dart';
@@ -96,11 +101,13 @@ class BrowseHomeView extends StatefulWidget {
 class _BrowseHomeViewState extends State<BrowseHomeView> {
   bool _searchActive = false;
   late final LiveTvController _liveTvController;
+  late final RadioController _radioController;
 
   @override
   void initState() {
     super.initState();
     _liveTvController = LiveTvController()..load();
+    _radioController = RadioController()..load();
     widget.searchController.addListener(_syncSearchUrl);
     final query = widget.initialQuery?.trim() ?? '';
     if (query.isEmpty) {
@@ -133,6 +140,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
   void dispose() {
     widget.searchController.removeListener(_syncSearchUrl);
     _liveTvController.dispose();
+    _radioController.dispose();
     super.dispose();
   }
 
@@ -295,6 +303,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
               },
             ),
           SliverToBoxAdapter(child: LiveTvSection(controller: _liveTvController)),
+          SliverToBoxAdapter(child: RadioSection(controller: _radioController)),
           const SliverToBoxAdapter(
             child: Padding(padding: EdgeInsets.fromLTRB(16, 24, 16, 20), child: AppVersionFooter()),
           ),
@@ -1411,6 +1420,126 @@ class _SearchGridSkeleton extends StatelessWidget {
   }
 }
 
+class RadioSection extends StatelessWidget {
+  const RadioSection({super.key, required this.controller});
+
+  final RadioController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            child: Wrap(
+              spacing: 20,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  RadioTranslations.title.trOf(context),
+                  style: const TextStyle(color: _Palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                _CountrySelector(countries: controller.countries, selectedCountry: controller.selectedCountry, onSelected: controller.selectCountry),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Text(RadioTranslations.attribution.trOf(context), style: const TextStyle(color: _Palette.textSecondary, fontSize: 12)),
+          ),
+          if (controller.isLoading)
+            SizedBox(
+              height: 88,
+              child: Center(
+                child: CircularProgressIndicator(color: _Palette.accent, semanticsLabel: RadioTranslations.loading.trOf(context)),
+              ),
+            )
+          else if (controller.hasError)
+            _LiveTvMessage(
+              text: RadioTranslations.unavailable.trOf(context),
+              actionLabel: HomeTranslations.retry.trOf(context),
+              onAction: controller.load,
+            )
+          else if (controller.stations.isEmpty)
+            _LiveTvMessage(text: RadioTranslations.empty.trOf(context))
+          else
+            SizedBox(
+              height: 164,
+              child: ListView.separated(
+                key: ValueKey(controller.selectedCountry),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: controller.stations.length,
+                separatorBuilder: (context, _) => const SizedBox(width: 12),
+                itemBuilder: (context, index) => RadioStationCard(station: controller.stations[index]),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class RadioStationCard extends StatelessWidget {
+  const RadioStationCard({super.key, required this.station});
+
+  final RadioStation station;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Pressable(
+      onTap: () => context.push(AppRoutes.radio(station.id), extra: station),
+      borderRadius: 8,
+      builder: (focused, hovered) => Container(
+        width: 164,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _Palette.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: focused
+                ? _Palette.focus
+                : hovered
+                ? _Palette.accent
+                : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(child: RadioLogo(station: station)),
+                  const Positioned(bottom: 0, left: 0, child: Icon(Icons.play_circle_fill, color: _Palette.textPrimary, size: 30)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              station.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: _Palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            Text(
+              station.country,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: _Palette.textSecondary, fontSize: 11),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class LiveTvSection extends StatelessWidget {
   const LiveTvSection({super.key, required this.controller});
 
@@ -1422,8 +1551,6 @@ class LiveTvSection extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         final channels = controller.channels;
-        final locale = Localizations.localeOf(context);
-        final countries = controller.countries.toList()..sort((first, second) => first.localizedName(locale).compareTo(second.localizedName(locale)));
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1438,43 +1565,10 @@ class LiveTvSection extends StatelessWidget {
                     HomeTranslations.liveTv.trOf(context),
                     style: const TextStyle(color: _Palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
                   ),
-                  SizedBox(
-                    width: 240,
-                    child: Semantics(
-                      label: HomeTranslations.country.trOf(context),
-                      child: Theme(
-                        data: ThemeData.dark().copyWith(
-                          colorScheme: const ColorScheme.dark(primary: _Palette.accent, surface: _Palette.surface),
-                        ),
-                        child: DropdownMenu<String>(
-                          key: ValueKey(locale.toLanguageTag()),
-                          width: 240,
-                          menuHeight: 300,
-                          initialSelection: controller.selectedCountry ?? '',
-                          enableFilter: true,
-                          requestFocusOnTap: true,
-                          enabled: controller.countries.isNotEmpty,
-                          textStyle: const TextStyle(color: _Palette.textPrimary, fontSize: 14),
-                          filterCallback: (entries, query) {
-                            final search = query.trim().toLowerCase();
-                            return entries
-                                .where(
-                                  (entry) => entry.value.isEmpty || entry.label.toLowerCase().contains(search) || entry.value.toLowerCase().contains(search),
-                                )
-                                .toList();
-                          },
-                          dropdownMenuEntries: [
-                            DropdownMenuEntry(value: '', label: HomeTranslations.allCountries.trOf(context)),
-                            for (final country in countries) DropdownMenuEntry(value: country.code, label: '${country.flag}  ${country.localizedName(locale)}'),
-                          ],
-                          onSelected: (value) {
-                            if (value != null) {
-                              controller.selectCountry(value.isEmpty ? null : value);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
+                  _CountrySelector(
+                    countries: controller.countries,
+                    selectedCountry: controller.selectedCountry,
+                    onSelected: controller.selectCountry,
                   ),
                 ],
               ),
@@ -1513,6 +1607,52 @@ class LiveTvSection extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _CountrySelector extends StatelessWidget {
+  const _CountrySelector({required this.countries, required this.selectedCountry, required this.onSelected});
+
+  final List<LiveTvCountry> countries;
+  final String? selectedCountry;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final sortedCountries = countries.toList()..sort((first, second) => first.localizedName(locale).compareTo(second.localizedName(locale)));
+    return SizedBox(
+      width: 240,
+      child: Semantics(
+        label: HomeTranslations.country.trOf(context),
+        child: Theme(
+          data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: _Palette.accent, surface: _Palette.surface)),
+          child: DropdownMenu<String>(
+            key: ValueKey(locale.toLanguageTag()),
+            width: 240,
+            menuHeight: 300,
+            initialSelection: selectedCountry ?? '',
+            enableFilter: true,
+            requestFocusOnTap: true,
+            enabled: countries.isNotEmpty,
+            textStyle: const TextStyle(color: _Palette.textPrimary, fontSize: 14),
+            filterCallback: (entries, query) {
+              final search = query.trim().toLowerCase();
+              return entries.where((entry) =>
+                entry.value.isEmpty || entry.label.toLowerCase().contains(search) || entry.value.toLowerCase().contains(search)).toList();
+            },
+            dropdownMenuEntries: [
+              DropdownMenuEntry(value: '', label: HomeTranslations.allCountries.trOf(context)),
+              for (final country in sortedCountries)
+                DropdownMenuEntry(value: country.code, label: '${country.flag}  ${country.localizedName(locale)}'),
+            ],
+            onSelected: (value) {
+              if (value != null) onSelected(value.isEmpty ? null : value);
+            },
+          ),
+        ),
+      ),
     );
   }
 }

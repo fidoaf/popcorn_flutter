@@ -9,6 +9,7 @@ const { StreamProxy } = require('./streamProxy');
 const { ReverseProxy } = require('./reverseProxy');
 const { Controllers } = require('./controllers');
 const { LiveTvCatalog } = require('./liveTvCatalog');
+const { RadioCatalog } = require('./radioCatalog');
 const { Router } = require('./router');
 const { createLogger } = require('./logger');
 
@@ -46,11 +47,14 @@ function createApp(env = process.env) {
     streamCache,
     reverseProxy,
     liveTvCatalog,
+    radioCatalog: new RadioCatalog(),
   });
 
   const router = new Router({ auth })
     .register('/health', (req, res) => controllers.health(req, res))
     .register('/live-tv', (req, res, url) => controllers.liveTv(req, res, url))
+    .register('/radio', (req, res, url) => controllers.radio(req, res, url))
+    .register('/radio/play', (req, res, url) => controllers.radio(req, res, url))
     .register('/favicon.ico', (req, res) => controllers.favicon(req, res))
     .register('/proxy-demo', (req, res) => controllers.demo(req, res))
     .register('/proxy-stream', (req, res, url) => controllers.proxyStream(req, res, url))

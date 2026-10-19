@@ -9,8 +9,9 @@ const { parseTokens } = require('../config');
 const { PlayerAuth } = require('./playerAuth');
 const { LiveTvCatalog } = require('../liveTvCatalog');
 const { LiveTvEpg } = require('../liveTvEpg');
+const { RadioCatalog } = require('../radioCatalog');
 
-function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch, apiTokens = parseTokens(process.env.API_TOKENS || process.env.AUTH_TOKEN), auth = new PlayerAuth(apiTokens), liveTvCatalog = new LiveTvCatalog({ fetchImpl }) }) {
+function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch, apiTokens = parseTokens(process.env.API_TOKENS || process.env.AUTH_TOKEN), auth = new PlayerAuth(apiTokens), liveTvCatalog = new LiveTvCatalog({ fetchImpl }), radioCatalog = new RadioCatalog({ fetchImpl }) }) {
   if (!providers || !resourceProxy) throw new TypeError('Player server requires providers and a resource proxy');
   const liveTvEpg = new LiveTvEpg({ fetchImpl });
 
@@ -43,6 +44,14 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
         sendHtml(response, renderPlayerPage(initialMedia, { providers: providers.list(), session: auth.pageSession(url) }));
       } else if (url.pathname === '/providers') {
         sendJson(response, 200, { providers: providers.list(), defaultProvider: providers.defaultProviderId }, { 'Access-Control-Allow-Origin': '*' });
+      } else if (url.pathname === '/radio') {
+        const id = url.searchParams.get('station');
+        const catalogue = id === null
+          ? await radioCatalog.getCatalogue({ country: url.searchParams.get('country') || '' })
+          : { stations: [await radioCatalog.getStation(id)].filter(Boolean) };
+        sendJson(response, 200, catalogue);
+      } else if (url.pathname === '/radio/play') {
+        sendJson(response, 200, await radioCatalog.startPlayback(url.searchParams.get('station')));
       } else if (url.pathname === '/live-tv') {
         sendJson(response, 200, await liveTvCatalog.getCatalogue({
           country: url.searchParams.get('country') || '',
@@ -136,6 +145,10 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
       console.error(`Request ${url.pathname} failed: ${error.message}`);
       if (!response.headersSent) {
         const status = error.statusCode || 502;
+        if (url.pathname === '/radio' || url.pathname === '/radio/play') {
+          sendJson(response, status, { error: status === 400 ? error.code || 'invalid_radio_station' : 'radio_unavailable' });
+          return;
+        }
         if (url.pathname === '/live-tv' || url.pathname === '/live-tv/epg') {
           sendJson(response, status, { error: 'live_tv_unavailable' });
           return;
