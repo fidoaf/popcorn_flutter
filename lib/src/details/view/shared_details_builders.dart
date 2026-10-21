@@ -38,19 +38,22 @@ class WatchProvidersBuilder extends StatelessWidget {
                     label: '${provider.name} on JustWatch',
                     child: Tooltip(
                       message: provider.name,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(4),
-                        onTap: provider.justWatchUrl == null ? null : () => launchUrl(provider.justWatchUrl!, webOnlyWindowName: '_self'),
-                        child: SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: Center(
-                            child: Image.network(
-                              provider.logoUrl.toString(),
-                              width: 40,
-                              height: 40,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 40, height: 40),
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(4),
+                          onTap: provider.justWatchUrl == null ? null : () => launchUrl(provider.justWatchUrl!, webOnlyWindowName: '_self'),
+                          child: SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: Center(
+                              child: Image.network(
+                                provider.logoUrl.toString(),
+                                width: 40,
+                                height: 40,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) => const SizedBox(width: 40, height: 40),
+                              ),
                             ),
                           ),
                         ),
@@ -218,9 +221,12 @@ class PersonNameLink extends StatelessWidget {
     return Semantics(
       link: enabled,
       enabled: enabled,
-      child: InkWell(
-        onTap: enabled ? () => context.push(AppRoutes.person(member.id!)) : null,
-        child: Text(member.name, style: linkStyle),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: enabled ? () => context.push(AppRoutes.person(member.id!)) : null,
+          child: Text(member.name, style: linkStyle),
+        ),
       ),
     );
   }

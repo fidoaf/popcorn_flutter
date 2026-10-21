@@ -15,6 +15,7 @@ import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_racer.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_resolver.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/vidsrc_resolver.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/video_player/player_fullscreen_scope.dart';
 
 /// A native [VideoPlayer] built on `media_kit`, offering an alternative to the
 /// WebView-based player.
@@ -35,16 +36,19 @@ final class MediaKitVideoPlayer extends VideoPlayer {
   @override
   Widget build(BuildContext context) {
     final scope = PlaybackSessionScope.of(context);
-    return _MediaKitPlayer(
-      source: source,
-      fullscreenController: fullscreenController,
-      alternates: alternates,
-      onUrlChanged: onUrlChanged,
-      initialSession: scope?.initial,
-      onSessionChanged: scope?.onChanged,
-      mediaId: scope?.mediaId,
-      season: scope?.season,
-      episode: scope?.episode,
+    return PlayerFullscreenScope(
+      controller: fullscreenController,
+      builder: (context, controller) => _MediaKitPlayer(
+        source: source,
+        fullscreenController: controller,
+        alternates: alternates,
+        onUrlChanged: onUrlChanged,
+        initialSession: scope?.initial,
+        onSessionChanged: scope?.onChanged,
+        mediaId: scope?.mediaId,
+        season: scope?.season,
+        episode: scope?.episode,
+      ),
     );
   }
 }
@@ -448,7 +452,8 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
 
   Future<void> _toggleFullscreen() async {
     await widget.fullscreenController.setFullscreen(!_isFullscreen);
-    if (mounted) setState(() => _isFullscreen = !_isFullscreen);
+    if (!mounted) return;
+    setState(() => _isFullscreen = !_isFullscreen);
     _showControls();
   }
 

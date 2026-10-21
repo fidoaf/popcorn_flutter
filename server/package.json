@@ -11,7 +11,9 @@
     "node": ">=20"
   },
   "dependencies": {
-    "saxes": "^6.0.0",
-    "puppeteer": "^24.0.0"
+    "@sparticuz/chromium": "^138.0.2",
+    "puppeteer": "^24.0.0",
+    "puppeteer-core": "^24.11.0",
+    "saxes": "^6.0.0"
   }
 }

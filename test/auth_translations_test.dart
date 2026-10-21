@@ -16,7 +16,7 @@ void main() {
           locale: testCase.$1,
           supportedLocales: const [Locale('en'), Locale('es'), Locale('ca', 'ES')],
           localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
-          home: Builder(builder: (context) => Text(AuthTranslations.authenticationErrorFor(context, AuthException('Invalid login credentials')))),
+          home: Builder(builder: (context) => Text(AuthTranslations.authenticationErrorFor(context, const AuthException('Invalid login credentials')))),
         ),
       );
 
@@ -31,7 +31,7 @@ void main() {
         locale: const Locale('es'),
         supportedLocales: const [Locale('en'), Locale('es'), Locale('ca', 'ES')],
         localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
-        home: Builder(builder: (context) => Text(AuthTranslations.authenticationErrorFor(context, AuthException('Unexpected provider error')))),
+        home: Builder(builder: (context) => Text(AuthTranslations.authenticationErrorFor(context, const AuthException('Unexpected provider error')))),
       ),
     );
 

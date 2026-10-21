@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -128,5 +129,28 @@ void main() {
     await tester.pump();
 
     expect(launchedMethods.single.arguments['url'], 'https://click.justwatch.com/a?cx=offer-context&r=https%3A%2F%2Fapp.primevideo.com%2Fdetail%3Fgti%3Dtest');
+  });
+
+  testWidgets('provider logos build under FluentApp without a Material ancestor', (tester) async {
+    await tester.pumpWidget(
+      fluent.FluentApp(
+        home: fluent.ScaffoldPage(
+          content: WatchProvidersBuilder(
+            providers: Future.value([
+              MediaWatchProvider(
+                id: 8,
+                name: 'Netflix',
+                logoUrl: Uri.parse('https://image.tmdb.org/t/p/w92/netflix.png'),
+                justWatchUrl: Uri.parse('https://www.justwatch.com'),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(Image), findsOneWidget);
   });
 }

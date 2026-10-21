@@ -12,6 +12,18 @@ import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 import 'package:popcorn_flutter/src/search/infrastructure/tmdb_media_search_repository.dart';
 
 void main() {
+  testWidgets('linked person name builds without a Scaffold ancestor', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Center(
+          child: PersonNameLink(member: CastMember(id: 1136406, name: 'Tom Holland')),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+
   test('person profile route is deep-linkable', () {
     expect(AppRoutes.person(1136406), '/person/1136406');
     expect(AppRoutes.parse('/person/1136406'), isA<PersonRoute>());

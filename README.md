@@ -79,6 +79,12 @@ deno check --node-modules-dir=none --no-lock supabase/functions/send-push/index.
 
 ## Local App and Player
 
+Closing a video player restores the application out of playback fullscreen,
+including when navigating Back to details. Native WebView and media-kit players
+wait for pending fullscreen requests before restoring the window; the web iframe
+player exits browser fullscreen when it is removed. Inline playback does not
+change the window state when closed.
+
 ### GitHub Pages environment configuration
 
 The Pages workflow replaces the built web configuration with the GitHub Actions

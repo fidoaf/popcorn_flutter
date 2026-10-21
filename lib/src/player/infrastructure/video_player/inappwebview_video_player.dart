@@ -7,6 +7,7 @@ import 'package:popcorn_flutter/src/player/domain/fullscreen_controller.dart';
 import 'package:popcorn_flutter/src/player/domain/media_source.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/domain/video_player.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/video_player/player_fullscreen_scope.dart';
 
 final class InappwebviewVideoPlayer extends VideoPlayer {
   const InappwebviewVideoPlayer({super.key, required super.source, required this.fullscreenController, super.onUrlChanged});
@@ -91,88 +92,91 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
     // filter sees every request, including those made from within iframes).
     final isWindows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
     final interceptRequests = serveViaInterception || isWindows;
-    return InAppWebView(
-      // Cookies must be installed before the page loads, so when the source
-      // carries any, defer the initial navigation to [onWebViewCreated]. When
-      // serving inline data through interception, navigate to the base URL so
-      // the intercepted response establishes a real document origin.
-      initialUrlRequest: hasCookies || useInitialData
-          ? null
-          : serveViaInterception
-          ? URLRequest(url: _baseUrl)
-          : _request,
-      initialData: useInitialData ? InAppWebViewInitialData(data: source.data!, baseUrl: _baseUrl) : null,
-      onWebViewCreated: (controller) async {
-        controller.addJavaScriptHandler(
-          handlerName: 'popcornPlayback',
-          callback: (arguments) async {
-            final url = await controller.getUrl();
-            if (url?.host != source.url.host || arguments.length != 1) return null;
-            if (context.mounted) PlaybackSessionScope.of(context)?.accept(arguments.first);
-            return null;
-          },
-        );
-        if (hasCookies) await _loadWithCookies(controller);
-      },
-      // On Windows, log every intercepted request and serve the inline embed
-      // HTML for the base-URL navigation; elsewhere interception is unused.
-      shouldInterceptRequest: interceptRequests ? _interceptRequest : null,
-      initialSettings: InAppWebViewSettings(
-        // Present a mainstream browser identity for inline embed documents to
-        // avoid YouTube's WebView bot detection.
-        userAgent: hasData ? _embedUserAgent : null,
-        // Sandbox the web `<iframe>` per the source's `sandbox` flag.
-        iframeSandbox: _iframeSandbox,
-        // Allow the video/player to request fullscreen. On web the WebView is
-        // hosted inside an <iframe>, which must be granted these permissions
-        // for the HTML Fullscreen API (and thus the callbacks below) to work.
-        iframeAllow: 'fullscreen; autoplay; encrypted-media; picture-in-picture',
-        iframeAllowFullscreen: true,
-        // Let the embedded player start/handle media without a prior gesture.
-        mediaPlaybackRequiresUserGesture: false,
-        allowsInlineMediaPlayback: true,
-        // Required so [shouldOverrideUrlLoading] is invoked and can veto
-        // top-level navigations away from the provided URL.
-        useShouldOverrideUrlLoading: true,
-        // Required so [shouldInterceptRequest] is invoked to monitor requests
-        // and serve the inline embed document under a real origin on Windows.
-        useShouldInterceptRequest: interceptRequests,
-        // Required so [onLoadResource] reports every resource the WebView loads
-        // (including those requested from within iframes).
-        useOnLoadResource: true,
-        // Keep everything inside this WebView: never spawn a separate window
-        // for `window.open`/`target="_blank"` links (see [onCreateWindow]).
-        supportMultipleWindows: false,
-        javaScriptCanOpenWindowsAutomatically: false,
-      ),
-      // Keep the WebView pinned to the provided URL: allow sub-frame content
-      // (e.g. the embedded player iframe) and same-host navigations, but cancel
-      // any top-level navigation to a different host (external links/redirects).
-      shouldOverrideUrlLoading: (controller, navigationAction) async {
-        final request = navigationAction.request.url;
-        if (request == null || navigationAction.isForMainFrame != true || request.host == homeHost) {
-          return NavigationActionPolicy.ALLOW;
-        }
-        return NavigationActionPolicy.CANCEL;
-      },
-      // Veto any request to open a new window (pop-ups, `target="_blank"`,
-      // `window.open`), so nothing escapes the player.
-      onCreateWindow: (controller, createWindowAction) async => false,
-      // Log every URL the WebView loads, including resources requested from
-      // within iframes (the embedded player, ad frames, media streams, etc.).
-      onLoadResource: (controller, resource) {
-        final url = resource.url;
-        if (url != null) debugPrint('[VideoPlayer] loaded ${resource.initiatorType ?? 'resource'}: $url');
-      },
-      onEnterFullscreen: (_) => fullscreenController.setFullscreen(true),
-      onExitFullscreen: (_) => fullscreenController.setFullscreen(false),
-      // Report client-side navigations (e.g. the embedded player advancing to
-      // the next episode) so callers can update the watch history.
-      onUpdateVisitedHistory: onUrlChanged == null
-          ? null
-          : (controller, url, isReload) {
-              if (url != null) onUrlChanged!(url);
+    return PlayerFullscreenScope(
+      controller: fullscreenController,
+      builder: (context, fullscreenController) => InAppWebView(
+        // Cookies must be installed before the page loads, so when the source
+        // carries any, defer the initial navigation to [onWebViewCreated]. When
+        // serving inline data through interception, navigate to the base URL so
+        // the intercepted response establishes a real document origin.
+        initialUrlRequest: hasCookies || useInitialData
+            ? null
+            : serveViaInterception
+            ? URLRequest(url: _baseUrl)
+            : _request,
+        initialData: useInitialData ? InAppWebViewInitialData(data: source.data!, baseUrl: _baseUrl) : null,
+        onWebViewCreated: (controller) async {
+          controller.addJavaScriptHandler(
+            handlerName: 'popcornPlayback',
+            callback: (arguments) async {
+              final url = await controller.getUrl();
+              if (url?.host != source.url.host || arguments.length != 1) return null;
+              if (context.mounted) PlaybackSessionScope.of(context)?.accept(arguments.first);
+              return null;
             },
+          );
+          if (hasCookies) await _loadWithCookies(controller);
+        },
+        // On Windows, log every intercepted request and serve the inline embed
+        // HTML for the base-URL navigation; elsewhere interception is unused.
+        shouldInterceptRequest: interceptRequests ? _interceptRequest : null,
+        initialSettings: InAppWebViewSettings(
+          // Present a mainstream browser identity for inline embed documents to
+          // avoid YouTube's WebView bot detection.
+          userAgent: hasData ? _embedUserAgent : null,
+          // Sandbox the web `<iframe>` per the source's `sandbox` flag.
+          iframeSandbox: _iframeSandbox,
+          // Allow the video/player to request fullscreen. On web the WebView is
+          // hosted inside an <iframe>, which must be granted these permissions
+          // for the HTML Fullscreen API (and thus the callbacks below) to work.
+          iframeAllow: 'fullscreen; autoplay; encrypted-media; picture-in-picture',
+          iframeAllowFullscreen: true,
+          // Let the embedded player start/handle media without a prior gesture.
+          mediaPlaybackRequiresUserGesture: false,
+          allowsInlineMediaPlayback: true,
+          // Required so [shouldOverrideUrlLoading] is invoked and can veto
+          // top-level navigations away from the provided URL.
+          useShouldOverrideUrlLoading: true,
+          // Required so [shouldInterceptRequest] is invoked to monitor requests
+          // and serve the inline embed document under a real origin on Windows.
+          useShouldInterceptRequest: interceptRequests,
+          // Required so [onLoadResource] reports every resource the WebView loads
+          // (including those requested from within iframes).
+          useOnLoadResource: true,
+          // Keep everything inside this WebView: never spawn a separate window
+          // for `window.open`/`target="_blank"` links (see [onCreateWindow]).
+          supportMultipleWindows: false,
+          javaScriptCanOpenWindowsAutomatically: false,
+        ),
+        // Keep the WebView pinned to the provided URL: allow sub-frame content
+        // (e.g. the embedded player iframe) and same-host navigations, but cancel
+        // any top-level navigation to a different host (external links/redirects).
+        shouldOverrideUrlLoading: (controller, navigationAction) async {
+          final request = navigationAction.request.url;
+          if (request == null || navigationAction.isForMainFrame != true || request.host == homeHost) {
+            return NavigationActionPolicy.ALLOW;
+          }
+          return NavigationActionPolicy.CANCEL;
+        },
+        // Veto any request to open a new window (pop-ups, `target="_blank"`,
+        // `window.open`), so nothing escapes the player.
+        onCreateWindow: (controller, createWindowAction) async => false,
+        // Log every URL the WebView loads, including resources requested from
+        // within iframes (the embedded player, ad frames, media streams, etc.).
+        onLoadResource: (controller, resource) {
+          final url = resource.url;
+          if (url != null) debugPrint('[VideoPlayer] loaded ${resource.initiatorType ?? 'resource'}: $url');
+        },
+        onEnterFullscreen: (_) => fullscreenController.setFullscreen(true),
+        onExitFullscreen: (_) => fullscreenController.setFullscreen(false),
+        // Report client-side navigations (e.g. the embedded player advancing to
+        // the next episode) so callers can update the watch history.
+        onUpdateVisitedHistory: onUrlChanged == null
+            ? null
+            : (controller, url, isReload) {
+                if (url != null) onUrlChanged!(url);
+              },
+      ),
     );
   }
 
