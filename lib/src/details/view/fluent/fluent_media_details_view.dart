@@ -195,13 +195,13 @@ class FluentMediaDetailsView extends StatelessWidget {
                   if (directors.isNotEmpty) ...[
                     Text(DetailsTranslations.director.trOf(context), style: typography.subtitle),
                     const SizedBox(height: 8),
-                    PersonNames(members: directors, style: typography.body),
+                    PersonNames(members: directors, style: typography.body, underline: false),
                   ],
                   if (directors.isNotEmpty && cast.isNotEmpty) const SizedBox(height: 16),
                   if (cast.isNotEmpty) ...[
                     Text(DetailsTranslations.cast.trOf(context), style: typography.subtitle),
                     const SizedBox(height: 8),
-                    PersonNames(members: cast, style: typography.body),
+                    PersonNames(members: cast, style: typography.body, underline: false),
                   ],
                 ],
               ),

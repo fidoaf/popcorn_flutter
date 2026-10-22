@@ -55,7 +55,7 @@ try {
     }
     $chrome = (Get-Content (Join-Path $release 'local_server\chrome-path.txt') -Raw).Trim()
     if (!(Test-Path (Join-Path $release "local_server\$chrome"))) { throw 'Release bundle is missing Chromium.' }
-    & $CompilerPath "/DReleaseDir=$release" "/DVcRuntimeDir=$VcRuntimeDirectory" (Join-Path $PSScriptRoot 'windows_installer.iss')
+    & $CompilerPath /Qp "/DReleaseDir=$release" "/DVcRuntimeDir=$VcRuntimeDirectory" (Join-Path $PSScriptRoot 'windows_installer.iss')
     if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed.' }
 } finally {
     Pop-Location

@@ -183,36 +183,39 @@ class _PersonCreditCard extends StatelessWidget {
     final theme = Theme.of(context);
     return SizedBox(
       width: 128,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                width: 128,
-                height: 184,
-                child: credit.item.posterUrl == null
-                    ? const ColoredBox(color: Color(0x33808080))
-                    : Image.network(
-                        credit.item.posterUrl.toString(),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const ColoredBox(color: Color(0x33808080)),
-                      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 128,
+                  height: 184,
+                  child: credit.item.posterUrl == null
+                      ? const ColoredBox(color: Color(0x33808080))
+                      : Image.network(
+                          credit.item.posterUrl.toString(),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const ColoredBox(color: Color(0x33808080)),
+                        ),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(credit.item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium),
-            if (credit.role?.isNotEmpty == true)
-              Text(
-                credit.role!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-          ],
+              const SizedBox(height: 8),
+              Text(credit.item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium),
+              if (credit.role?.isNotEmpty == true)
+                Text(
+                  credit.role!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -232,7 +235,10 @@ class _PersonError extends StatelessWidget {
         children: [
           Text(DetailsTranslations.personLoadError.trOf(context)),
           const SizedBox(height: 8),
-          TextButton(onPressed: onRetry, child: Text(DetailsTranslations.retry.trOf(context))),
+          Material(
+            type: MaterialType.transparency,
+            child: TextButton(onPressed: onRetry, child: Text(DetailsTranslations.retry.trOf(context))),
+          ),
         ],
       ),
     );

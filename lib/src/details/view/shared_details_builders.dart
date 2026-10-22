@@ -177,10 +177,11 @@ class CreditsBuilder extends StatelessWidget {
 
 /// Renders person names as links when their TMDB IDs are available.
 class PersonNames extends StatelessWidget {
-  const PersonNames({super.key, required this.members, this.style});
+  const PersonNames({super.key, required this.members, this.style, this.underline = true});
 
   final List<CastMember> members;
   final TextStyle? style;
+  final bool underline;
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +194,7 @@ class PersonNames extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              PersonNameLink(member: members[index], style: style),
+              PersonNameLink(member: members[index], style: style, underline: underline),
               // Trailing whitespace is dropped from text width on web, so pad explicitly.
               if (index < members.length - 1)
                 Padding(
@@ -208,16 +209,19 @@ class PersonNames extends StatelessWidget {
 }
 
 class PersonNameLink extends StatelessWidget {
-  const PersonNameLink({super.key, required this.member, this.style});
+  const PersonNameLink({super.key, required this.member, this.style, this.underline = true});
 
   final CastMember member;
   final TextStyle? style;
+  final bool underline;
 
   @override
   Widget build(BuildContext context) {
     final enabled = member.id != null;
     final baseStyle = style ?? DefaultTextStyle.of(context).style;
-    final linkStyle = enabled ? baseStyle.copyWith(color: Theme.of(context).colorScheme.primary, decoration: TextDecoration.underline) : style;
+    final linkStyle = enabled
+        ? baseStyle.copyWith(color: Theme.of(context).colorScheme.primary, decoration: underline ? TextDecoration.underline : TextDecoration.none)
+        : style;
     return Semantics(
       link: enabled,
       enabled: enabled,

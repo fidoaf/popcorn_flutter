@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -1662,6 +1663,7 @@ class _CountrySelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
+    final isWindows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
     final sortedCountries = countries.toList()..sort((first, second) => first.localizedName(locale).compareTo(second.localizedName(locale)));
     return SizedBox(
       width: 240,
@@ -1686,7 +1688,21 @@ class _CountrySelector extends StatelessWidget {
             dropdownMenuEntries: [
               DropdownMenuEntry(value: '', label: HomeTranslations.allCountries.trOf(context)),
               for (final country in sortedCountries)
-                DropdownMenuEntry(value: country.code, label: '${country.flag}  ${country.localizedName(locale)}'),
+                if (isWindows)
+                  // Windows has no flag emoji glyphs, so render flag images instead.
+                  DropdownMenuEntry(
+                    value: country.code,
+                    label: country.localizedName(locale),
+                    leadingIcon: SizedBox(
+                      width: 24,
+                      child: Image.network(
+                        'https://flagcdn.com/w40/${country.code.toLowerCase()}.png',
+                        errorBuilder: (_, _, _) => Text(country.code, style: const TextStyle(fontSize: 11)),
+                      ),
+                    ),
+                  )
+                else
+                  DropdownMenuEntry(value: country.code, label: '${country.flag}  ${country.localizedName(locale)}'),
             ],
             onSelected: (value) {
               if (value != null) onSelected(value.isEmpty ? null : value);

@@ -404,6 +404,7 @@ class _CastCard extends StatelessWidget {
             PersonNameLink(
               member: member!,
               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              underline: Theme.of(context).platform != TargetPlatform.windows,
             ),
             if (member!.character != null)
               Text(

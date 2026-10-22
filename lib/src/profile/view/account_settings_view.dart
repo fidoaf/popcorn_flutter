@@ -2,6 +2,7 @@ import 'package:country_picker/country_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/domain/media_region_preference.dart';
@@ -64,7 +65,25 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   }
 
   void _chooseRegion() {
-    showCountryPicker(context: context, favorite: [_region], onSelect: (country) => _saveRegion(country.countryCode));
+    showCountryPicker(
+      context: context,
+      favorite: [_region],
+      // Windows has no flag emoji glyphs, so render flag images instead.
+      customFlagBuilder: _isWindows ? (country) => _flagImage(country.countryCode, 28) : null,
+      onSelect: (country) => _saveRegion(country.countryCode),
+    );
+  }
+
+  Widget _flagImage(String code, double width) {
+    return SizedBox(
+      width: width,
+      child: Image.network(
+        'https://flagcdn.com/w80/${code.toLowerCase()}.png',
+        width: width,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => Text(code, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ),
+    );
   }
 
   Future<void> _saveRegion(String? region) async {
@@ -80,7 +99,7 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   Widget build(BuildContext context) {
     final country = Country.tryParse(_region);
     final regionName = country?.name ?? _region;
-    final regionValue = '${country?.flagEmoji ?? ''} $regionName${_usesDeviceRegion ? ' · ${ProfileTranslations.deviceRegion.trOf(context)}' : ''}';
+    final regionValue = '${_isWindows ? '' : country?.flagEmoji ?? ''} $regionName${_usesDeviceRegion ? ' · ${ProfileTranslations.deviceRegion.trOf(context)}' : ''}';
     return Material(
       type: MaterialType.transparency,
       child: ListView(
@@ -89,12 +108,14 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
             SwitchListTile(
               secondary: const Icon(Icons.computer),
               title: Text(ProfileTranslations.localPlayerServer.trOf(context)),
-              subtitle: Text(_localServerError ?? ProfileTranslations.localPlayerServerHint.trOf(context)),
-              value: _localServer ?? false,
-              onChanged: _localServer == null || _savingLocalServer ? null : _saveLocalServer,
+              subtitle: Text(
+                PlayerServerConfig.usesDefinedServer ? PlayerServerConfig.serverUrl : _localServerError ?? ProfileTranslations.localPlayerServerHint.trOf(context),
+              ),
+              value: PlayerServerConfig.usesDefinedServer || (_localServer ?? false),
+              onChanged: PlayerServerConfig.usesDefinedServer || _localServer == null || _savingLocalServer ? null : _saveLocalServer,
             ),
           ListTile(
-            leading: const Icon(Icons.public),
+            leading: _isWindows && country != null ? _flagImage(country.countryCode, 32) : const Icon(Icons.public),
             title: Text(ProfileTranslations.countryOrRegion.trOf(context)),
             subtitle: Text(regionValue),
             trailing: Row(

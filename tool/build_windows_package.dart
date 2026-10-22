@@ -17,21 +17,48 @@ Future<void> main(List<String> args) async {
   }
 
   final root = File.fromUri(Platform.script).parent.parent.path;
-  final serverReady = File('$root\\build\\windows-server\\chrome-path.txt').existsSync();
-  if (!serverReady && !await _runScript(root, 'bundle_windows_server.ps1')) {
+  final environment = _environmentWithFlutterOnPath();
+  if (environment == null) {
+    stderr.writeln('flutter.bat was not found. Run this with the Flutter SDK Dart executable or add Flutter to PATH.');
     exitCode = 1;
     return;
   }
-  if (!await _runScript(root, script)) {
+  final serverReady = File('$root\\build\\windows-server\\chrome-path.txt').existsSync();
+  if (!serverReady && !await _runScript(root, 'bundle_windows_server.ps1', environment)) {
+    exitCode = 1;
+    return;
+  }
+  if (!await _runScript(root, script, environment)) {
     exitCode = 1;
     return;
   }
   stdout.writeln('Installer ready in $root\\build\\installer');
 }
 
-Future<bool> _runScript(String root, String script) async {
+/// VS Code launches this with the configured SDK's dart.exe without adding Flutter to PATH,
+/// but the packaging scripts call flutter.bat and dart.bat.
+Map<String, String>? _environmentWithFlutterOnPath() {
+  final environment = Map<String, String>.of(Platform.environment);
+  final pathKey = environment.keys.firstWhere((key) => key.toUpperCase() == 'PATH', orElse: () => 'PATH');
+  // dart.exe lives in <flutter>\bin\cache\dart-sdk\bin.
+  final flutterBin = File(Platform.resolvedExecutable).parent.parent.parent.parent;
+  if (File('${flutterBin.path}\\flutter.bat').existsSync()) {
+    environment[pathKey] = '${flutterBin.path};${environment[pathKey] ?? ''}';
+    return environment;
+  }
+  final onPath = (environment[pathKey] ?? '').split(';').any((dir) => dir.isNotEmpty && File('$dir\\flutter.bat').existsSync());
+  return onPath ? environment : null;
+}
+
+Future<bool> _runScript(String root, String script, Map<String, String> environment) async {
   stdout.writeln('> tool\\$script');
-  final process = await Process.start('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '$root\\tool\\$script'], workingDirectory: root);
+  final process = await Process.start(
+    'powershell.exe',
+    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '$root\\tool\\$script'],
+    workingDirectory: root,
+    environment: environment,
+    includeParentEnvironment: false,
+  );
   await Future.wait([process.stdout.transform(utf8.decoder).forEach(stdout.write), process.stderr.transform(utf8.decoder).forEach(stderr.write)]);
   final code = await process.exitCode;
   if (code != 0) stderr.writeln('tool\\$script failed with exit code $code.');

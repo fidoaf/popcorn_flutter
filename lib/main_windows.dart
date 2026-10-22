@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/material.dart' as material show Colors, Theme, ThemeData;
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -268,19 +269,27 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
       theme: FluentThemeData.light(),
       darkTheme: FluentThemeData.dark(),
       routerConfig: _router!,
-      builder: (context, child) => AuthGate(
-        controller: _services.authController,
-        currentRoute: _location,
-        isPublicRoute: AppRoutes.isPublic,
-        loginBuilder: (context) => FluentLoginView(
+      builder: (context, child) => material.Theme(
+        data: _materialThemeFor(FluentTheme.of(context).brightness),
+        child: AuthGate(
           controller: _services.authController,
-          onOpenPrivacy: () => _router!.push(AppRoutes.privacy),
-          onOpenTerms: () => _router!.push(AppRoutes.terms),
+          currentRoute: _location,
+          isPublicRoute: AppRoutes.isPublic,
+          loginBuilder: (context) => FluentLoginView(
+            controller: _services.authController,
+            onOpenPrivacy: () => _router!.push(AppRoutes.privacy),
+            onOpenTerms: () => _router!.push(AppRoutes.terms),
+          ),
+          child: child!,
         ),
-        child: child!,
       ),
     );
   }
+
+  /// FluentApp provides no Material theme, so Material surfaces such as bottom
+  /// sheets would be transparent without one.
+  material.ThemeData _materialThemeFor(Brightness brightness) =>
+      material.ThemeData(brightness: brightness, colorSchemeSeed: material.Colors.deepOrange, useMaterial3: true);
 
   Page<void> _buildPage(BuildContext context, GoRouterState state, AppRouteRequest request) =>
       _FluentPage(key: state.pageKey, child: _pageFor(context, request, state.extra));
@@ -335,26 +344,30 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
 
   Widget _accountSettingsPage(BuildContext context) => _PopOnEscape(
     child: PopcornFluentSplashScreen(
-      child: ScaffoldPage(
-        header: PageHeader(
-          leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
-          title: Text(ProfileTranslations.accountSettings.trOf(context)),
-          commandBar: const PopcornAppBarLogo(),
+      child: Builder(
+        builder: (context) => ScaffoldPage(
+          header: PageHeader(
+            leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+            title: Text(ProfileTranslations.accountSettings.trOf(context)),
+            commandBar: const PopcornAppBarLogo(),
+          ),
+          content: const AccountSettingsView(),
         ),
-        content: const AccountSettingsView(),
       ),
     ),
   );
 
   Widget _legalPage(BuildContext context, LegalDocument document) => _PopOnEscape(
     child: PopcornFluentSplashScreen(
-      child: ScaffoldPage(
-        header: PageHeader(
-          leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
-          title: Text(document.title.trOf(context)),
-          commandBar: const PopcornAppBarLogo(),
+      child: Builder(
+        builder: (context) => ScaffoldPage(
+          header: PageHeader(
+            leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+            title: Text(document.title.trOf(context)),
+            commandBar: const PopcornAppBarLogo(),
+          ),
+          content: LegalDocumentView(document: document),
         ),
-        content: LegalDocumentView(document: document),
       ),
     ),
   );
@@ -493,21 +506,43 @@ class _WindowsHomeView extends StatelessWidget {
   Widget build(BuildContext context) {
     if (browse) {
       return PopcornFluentSplashScreen(
-        child: BrowseHomeView(
-          feedController: services.homeFeedController,
-          favoritesController: services.favoritesController,
-          historyController: services.historyController,
-          searchController: services.searchController,
-          initialQuery: initialQuery,
-          initialMediaType: initialMediaType,
-          onOpenDetails: (media, type) => context.push(AppRoutes.details(type, media.id), extra: media),
-          onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id), extra: media),
-          onResume: (entry) => context.push(
-            AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
-            extra: entry.item,
+        child: ScaffoldPage(
+          padding: EdgeInsets.zero,
+          header: SizedBox(
+            height: 56,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const PopcornAppBarLogo(),
+                  const Spacer(),
+                  UserIdentityTitle(
+                    controller: services.authController,
+                    profileController: services.profileController,
+                    fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context)),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
+            ),
           ),
-          onSeeAllFavorites: () => context.push(AppRoutes.favorites),
-          onSeeAllHistory: () => context.push(AppRoutes.history),
+          content: BrowseHomeView(
+            feedController: services.homeFeedController,
+            favoritesController: services.favoritesController,
+            historyController: services.historyController,
+            searchController: services.searchController,
+            initialQuery: initialQuery,
+            initialMediaType: initialMediaType,
+            onOpenDetails: (media, type) => context.push(AppRoutes.details(type, media.id), extra: media),
+            onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id), extra: media),
+            onResume: (entry) => context.push(
+              AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+              extra: entry.item,
+            ),
+            onSeeAllFavorites: () => context.push(AppRoutes.favorites),
+            onSeeAllHistory: () => context.push(AppRoutes.history),
+          ),
         ),
       );
     }
