@@ -15,8 +15,10 @@ class AuthController extends ChangeNotifier {
   }
 
   // Registered in the Supabase dashboard and in each platform's deep-link
-  // configuration; ignored on web, where the current page URL is used instead.
-  static const String _nativeRedirect = 'com.comacasaencaplloc.popcorn_flutter://login-callback/';
+  // configuration (Android manifest, macOS Info.plist, Windows installers);
+  // ignored on web, where the current page URL is used instead. Uses a hyphen
+  // because underscores are not valid in URI schemes or MSIX protocol names.
+  static const String _nativeRedirect = 'com.comacasaencaplloc.popcorn-flutter://login-callback/';
 
   final SupabaseClient _client;
   late final StreamSubscription<AuthState> _subscription;
@@ -83,7 +85,7 @@ class AuthController extends ChangeNotifier {
 
   /// Starts the Google OAuth flow. On web this redirects the current tab; on
   /// native platforms it opens an external browser and returns via the
-  /// registered [_nativeRedirect] deep link.
+  /// registered platform deep link.
   Future<bool> signInWithGoogle() {
     return _client.auth.signInWithOAuth(
       OAuthProvider.google,

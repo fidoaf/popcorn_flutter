@@ -41,6 +41,30 @@ class ProfileTranslations {
 
   static const countryOrRegion = Translation({AppLanguage.en: 'Country or region', AppLanguage.es: 'País o región', AppLanguage.ca: 'País o regió'});
 
+  static const localPlayerServer = Translation({
+    AppLanguage.en: 'Use local player server',
+    AppLanguage.es: 'Usar servidor de reproducción local',
+    AppLanguage.ca: 'Utilitza el servidor de reproducció local',
+  });
+
+  static const localPlayerServerHint = Translation({
+    AppLanguage.en: 'Starts the bundled server when needed. Restart the app to apply. Off uses the configured hosted server.',
+    AppLanguage.es: 'Inicia el servidor incluido cuando es necesario. Reinicia la aplicación para aplicar. Desactivado usa el servidor configurado.',
+    AppLanguage.ca: 'Inicia el servidor inclòs quan cal. Reinicia l’aplicació per aplicar-ho. Desactivat utilitza el servidor configurat.',
+  });
+
+  static const localPlayerServerFailed = Translation({
+    AppLanguage.en: 'The local player server could not run.',
+    AppLanguage.es: 'No se ha podido ejecutar el servidor local.',
+    AppLanguage.ca: 'No s’ha pogut executar el servidor local.',
+  });
+
+  static const useHostedServer = Translation({
+    AppLanguage.en: 'Disable local mode and use hosted server',
+    AppLanguage.es: 'Desactivar el modo local y usar el servidor alojado',
+    AppLanguage.ca: 'Desactiva el mode local i utilitza el servidor allotjat',
+  });
+
   static const deviceRegion = Translation({AppLanguage.en: 'Device region', AppLanguage.es: 'Región del dispositivo', AppLanguage.ca: 'Regió del dispositiu'});
 
   static const useDeviceRegion = Translation({

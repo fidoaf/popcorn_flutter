@@ -1,5 +1,7 @@
 import 'package:country_picker/country_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/domain/media_region_preference.dart';
@@ -14,11 +16,42 @@ class AccountSettingsView extends StatefulWidget {
 class _AccountSettingsViewState extends State<AccountSettingsView> {
   String _region = MediaRegionPreference.deviceRegion;
   bool _usesDeviceRegion = true;
+  bool? _localServer;
+  bool _savingLocalServer = false;
+  String? _localServerError;
+  bool get _isWindows => !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   @override
   void initState() {
     super.initState();
     _loadRegion();
+    if (_isWindows) _loadLocalServer();
+  }
+
+  Future<void> _loadLocalServer() async {
+    try {
+      final enabled = await LocalServerPreference.isEnabled();
+      if (mounted) setState(() => _localServer = enabled);
+    } catch (error) {
+      if (mounted) setState(() => _localServerError = error.toString());
+    }
+  }
+
+  Future<void> _saveLocalServer(bool enabled) async {
+    setState(() => _savingLocalServer = true);
+    try {
+      await LocalServerPreference.setEnabled(enabled);
+      if (mounted) {
+        setState(() {
+          _localServer = enabled;
+          _localServerError = null;
+        });
+      }
+    } catch (error) {
+      if (mounted) setState(() => _localServerError = error.toString());
+    } finally {
+      if (mounted) setState(() => _savingLocalServer = false);
+    }
   }
 
   Future<void> _loadRegion() async {
@@ -48,27 +81,38 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
     final country = Country.tryParse(_region);
     final regionName = country?.name ?? _region;
     final regionValue = '${country?.flagEmoji ?? ''} $regionName${_usesDeviceRegion ? ' · ${ProfileTranslations.deviceRegion.trOf(context)}' : ''}';
-    return ListView(
-      children: [
-        ListTile(
-          leading: const Icon(Icons.public),
-          title: Text(ProfileTranslations.countryOrRegion.trOf(context)),
-          subtitle: Text(regionValue),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!_usesDeviceRegion)
-                IconButton(
-                  icon: const Icon(Icons.my_location_outlined),
-                  tooltip: ProfileTranslations.useDeviceRegion.trOf(context),
-                  onPressed: () => _saveRegion(null),
-                ),
-              const Icon(Icons.chevron_right),
-            ],
+    return Material(
+      type: MaterialType.transparency,
+      child: ListView(
+        children: [
+          if (_isWindows)
+            SwitchListTile(
+              secondary: const Icon(Icons.computer),
+              title: Text(ProfileTranslations.localPlayerServer.trOf(context)),
+              subtitle: Text(_localServerError ?? ProfileTranslations.localPlayerServerHint.trOf(context)),
+              value: _localServer ?? false,
+              onChanged: _localServer == null || _savingLocalServer ? null : _saveLocalServer,
+            ),
+          ListTile(
+            leading: const Icon(Icons.public),
+            title: Text(ProfileTranslations.countryOrRegion.trOf(context)),
+            subtitle: Text(regionValue),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!_usesDeviceRegion)
+                  IconButton(
+                    icon: const Icon(Icons.my_location_outlined),
+                    tooltip: ProfileTranslations.useDeviceRegion.trOf(context),
+                    onPressed: () => _saveRegion(null),
+                  ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+            onTap: _chooseRegion,
           ),
-          onTap: _chooseRegion,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

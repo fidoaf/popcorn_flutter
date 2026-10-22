@@ -33,7 +33,7 @@
     <dict>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>com.comacasaencaplloc.popcorn_flutter</string>
+        <string>com.comacasaencaplloc.popcorn-flutter</string>
       </array>
     </dict>
   </array>

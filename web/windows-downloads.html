@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Popcorn for Windows</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 3rem auto; padding: 0 1rem; line-height: 1.6; }
+    section { border: 1px solid #888; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Popcorn for Windows</h1>
+  <p>Choose either Windows x64 installer. Both include the optional local player server.</p>
+  <section>
+    <h2>Per-user installer (Inno Setup)</h2>
+    <p>No administrator access or certificate import required. Updates are installed manually by running a newer installer.</p>
+    <p><a href="https://github.com/fidoaf/popcorn_flutter/releases/download/windows-inno/Popcorn-Windows-x64-Setup.exe">Download the EXE installer</a>
+      &middot; <a href="https://github.com/fidoaf/popcorn_flutter/releases/download/windows-inno/SHA256SUMS.txt">SHA-256 checksum</a></p>
+    <p>This installer is unsigned; Windows SmartScreen may warn. Available after the first successful Inno Setup workflow run.</p>
+  </section>
+  <section>
+    <h2>MSIX / App Installer</h2>
+    <p>Supports automatic updates through App Installer. The development signing certificate must first be trusted under Local Machine &gt; Trusted People (requires administrator access).</p>
+    <p><a href="downloads/index.html">MSIX installation page</a>
+      &middot; <a href="downloads/popcorn_flutter.msix">Download MSIX</a>
+      &middot; <a href="downloads/popcorn_flutter.cer">Signing certificate</a></p>
+    <p>Available after the first successful MSIX packaging workflow run.</p>
+  </section>
+  <p>The formats are installed separately. Remove the unwanted copy if you install both.</p>
+  <p><a href="./">Back to Popcorn</a></p>
+</body>
+</html>

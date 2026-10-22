@@ -1,0 +1,95 @@
+name: Package Windows app (Inno Setup)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-inno
+  cancel-in-progress: false
+
+jobs:
+  package-inno:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup bundled Node.js runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          architecture: x64
+      - name: Bundle local player server and Chromium
+        shell: pwsh
+        run: .\tool\bundle_windows_server.ps1
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.2'
+          channel: stable
+          cache: true
+      - name: Write env file
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ENV_FILE)) {
+            throw 'ENV_FILE must contain the complete app environment configuration.'
+          }
+          New-Item -ItemType Directory -Force -Path assets/config | Out-Null
+          Set-Content -Path assets/config/app.env -Value $env:ENV_FILE -NoNewline
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Ensure Inno Setup compiler
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $compiler)) {
+            choco install innosetup --version=6.7.3 --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Installing Inno Setup failed.' }
+          }
+          if (!(Test-Path $compiler)) { throw 'Inno Setup compiler not found.' }
+          "INNO_COMPILER=$compiler" >> $env:GITHUB_ENV
+      - name: Build per-user installer
+        shell: pwsh
+        run: .\tool\build_windows_installer.ps1 -CompilerPath $env:INNO_COMPILER
+      - name: Stage stable download and checksum
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem build\installer\Popcorn-*-Windows-x64-Setup.exe)
+          if ($installers.Count -ne 1) { throw 'Expected exactly one Inno installer.' }
+          Copy-Item $installers[0].FullName build\installer\Popcorn-Windows-x64-Setup.exe
+          $hash = (Get-FileHash build\installer\Popcorn-Windows-x64-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Popcorn-Windows-x64-Setup.exe" | Set-Content build\installer\SHA256SUMS.txt -Encoding ascii
+      - name: Upload Inno installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: popcorn-windows-inno-installer
+          path: |
+            build/installer/*-Setup.exe
+            build/installer/SHA256SUMS.txt
+          if-no-files-found: error
+          compression-level: 0
+      - name: Publish independently of MSIX and Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tags = @(gh api "repos/$env:GH_REPO/releases?per_page=100" --paginate --jq '.[].tag_name')
+          if ($LASTEXITCODE -ne 0) { throw 'Could not list GitHub releases.' }
+          if ($tags -notcontains 'windows-inno') {
+            gh release create windows-inno --target $env:GITHUB_SHA --title "Windows per-user installer (Inno Setup)" --notes "Per-user installer: no administrator access or certificate import required. Updates are manual. This installer is unsigned and Windows SmartScreen may warn. MSIX remains available separately from the website downloads page." --latest=false
+            if ($LASTEXITCODE -ne 0) { throw 'Creating the Inno release failed.' }
+          }
+          gh release upload windows-inno build\installer\Popcorn-Windows-x64-Setup.exe build\installer\SHA256SUMS.txt --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Uploading the Inno installer failed.' }
+          "### Windows per-user installer" >> $env:GITHUB_STEP_SUMMARY
+          "- [Download installer](https://github.com/$env:GH_REPO/releases/download/windows-inno/Popcorn-Windows-x64-Setup.exe)" >> $env:GITHUB_STEP_SUMMARY
+          "- [Checksums](https://github.com/$env:GH_REPO/releases/download/windows-inno/SHA256SUMS.txt)" >> $env:GITHUB_STEP_SUMMARY
+          "- Built from commit: $env:GITHUB_SHA" >> $env:GITHUB_STEP_SUMMARY

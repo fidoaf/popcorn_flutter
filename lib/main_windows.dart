@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -24,6 +25,9 @@ import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/windows_local_server.dart';
 import 'package:popcorn_flutter/src/profile/view/account_settings_view.dart';
 import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
@@ -118,7 +122,7 @@ class _WindowStatePersistence extends WindowListener {
 }
 
 class _PopcornWindowsApp extends StatefulWidget {
-  const _PopcornWindowsApp();
+  const _PopcornWindowsApp({super.key});
 
   @override
   State<_PopcornWindowsApp> createState() => _PopcornWindowsAppState();
@@ -132,13 +136,19 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
   final String _initialLocation = PlatformDispatcher.instance.defaultRouteName;
   GoRouter? _router;
   RouterLocationListenable? _location;
+  WindowsLocalServer? _localServer;
+  bool _localServerFailed = false;
+  bool _recovering = false;
 
   @override
   void initState() {
     super.initState();
-    AppServices.create()
+    _createServices()
         .then((services) {
-          if (!mounted) return;
+          if (!mounted) {
+            services.dispose();
+            return;
+          }
           final router = createAppRouter(
             navigatorKey: _navigatorKey,
             pageBuilder: _buildPage,
@@ -157,8 +167,59 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
         });
   }
 
+  Future<AppServices> _createServices() async {
+    if (await LocalServerPreference.isEnabled()) {
+      final prefs = await SharedPreferences.getInstance();
+      final token = await WindowsLocalServer.loadToken(prefs);
+      if (!mounted) throw StateError('Application closed during local server startup.');
+      final bundle = Directory('${File(Platform.resolvedExecutable).parent.path}\\local_server');
+      final server = WindowsLocalServer(
+        bundleDirectory: bundle,
+        token: token,
+        onUnexpectedExit: (code) {
+          if (mounted) {
+            setState(() {
+              _localServerFailed = true;
+              _startupError = StateError('Local player server exited with code $code.');
+            });
+          }
+        },
+      );
+      _localServer = server;
+      try {
+        await server.start();
+        if (!mounted) {
+          await server.stop();
+          throw StateError('Application closed during local server startup.');
+        }
+        PlayerServerConfig.useLocalServer(url: server.serverUrl, token: server.token);
+      } catch (_) {
+        _localServerFailed = true;
+        rethrow;
+      }
+    }
+    return AppServices.create();
+  }
+
+  Future<void> _useHostedServer() async {
+    setState(() => _recovering = true);
+    try {
+      await _localServer?.stop();
+      await LocalServerPreference.setEnabled(false);
+      PlayerServerConfig.useHostedServer();
+      if (!mounted) return;
+      // Recreate repositories and route controllers with the hosted endpoint.
+      runApp(_PopcornWindowsApp(key: UniqueKey()));
+    } catch (error) {
+      if (mounted) setState(() => _startupError = error);
+    } finally {
+      if (mounted) setState(() => _recovering = false);
+    }
+  }
+
   @override
   void dispose() {
+    unawaited(_localServer?.stop().catchError((Object error) => debugPrint('[LocalServer] Shutdown failed: $error')));
     _location?.dispose();
     _router?.dispose();
     _servicesOrNull?.dispose();
@@ -178,6 +239,24 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (_startupError != null && _localServerFailed) {
+      return _bootstrapApp(
+        Builder(
+          builder: (context) => ScaffoldPage(
+            content: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(ProfileTranslations.localPlayerServerFailed.trOf(context)),
+                  Padding(padding: const EdgeInsets.all(16), child: Text(_startupError.toString())),
+                  Button(onPressed: _recovering ? null : _useHostedServer, child: Text(ProfileTranslations.useHostedServer.trOf(context))),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     if (_startupError != null) return _bootstrapApp(const MaintenancePage());
     if (_servicesOrNull == null || _router == null) return _bootstrapApp(const PopcornFluentSplashScreen());
     return FluentApp.router(

@@ -77,6 +77,7 @@ function main() {
   function shutdown(signal) {
     if (shuttingDown) return;
     shuttingDown = true;
+    if (process.env.POPCORN_MANAGED_SERVER === '1') process.stdin.pause();
     console.log(`[server] ${signal}; closing HTTP server`);
     const timeout = setTimeout(() => {
       console.error('[server] shutdown timed out; closing remaining connections');
@@ -107,8 +108,16 @@ function main() {
     shutdown('uncaughtException');
   });
 
-  server.listen(port, '0.0.0.0', () => {
-    console.log(`Player available at http://127.0.0.1:${port}/`);
+  if (process.env.POPCORN_MANAGED_SERVER === '1') {
+    process.stdin.resume();
+    process.stdin.once('end', () => {
+      process.stdin.pause();
+      shutdown('parent closed');
+    });
+  }
+
+  server.listen(port, process.env.HOST || '0.0.0.0', () => {
+    console.log(`Player available at http://127.0.0.1:${server.address().port}/`);
   });
 }
 

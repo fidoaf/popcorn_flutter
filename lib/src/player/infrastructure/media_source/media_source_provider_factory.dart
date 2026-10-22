@@ -46,20 +46,26 @@ abstract final class MediaSourceProviderFactory {
   static ConfigurableMediaSourceProvider createFromJson(
     String source, {
     MediaSourcePreferences? preferences,
-    String playerServerUrl = const String.fromEnvironment('PLAYER_SERVER_URL'),
+    String? playerServerUrl,
     String? playerServerToken,
-  }) => createFromMap(jsonDecode(source) as Map<String, dynamic>, preferences: preferences, playerServerUrl: playerServerUrl, playerServerToken: playerServerToken);
+  }) => createFromMap(
+    jsonDecode(source) as Map<String, dynamic>,
+    preferences: preferences,
+    playerServerUrl: playerServerUrl,
+    playerServerToken: playerServerToken,
+  );
 
   /// Builds the provider from an already-decoded JSON [config] map.
   static ConfigurableMediaSourceProvider createFromMap(
     Map<String, dynamic> config, {
     MediaSourcePreferences? preferences,
-    String playerServerUrl = const String.fromEnvironment('PLAYER_SERVER_URL'),
+    String? playerServerUrl,
     String? playerServerToken,
   }) {
     final resolvedPreferences = preferences ?? MediaSourcePreferences();
     final resolvedToken = playerServerToken ?? PlayerServerConfig.token;
-    final serverUrl = playerServerUrl.isEmpty ? null : Uri.parse(playerServerUrl);
+    final resolvedServerUrl = playerServerUrl ?? PlayerServerConfig.providerOverrideUrl;
+    final serverUrl = resolvedServerUrl.isEmpty ? null : Uri.parse(resolvedServerUrl);
     if (serverUrl != null &&
         (!['http', 'https'].contains(serverUrl.scheme) ||
             serverUrl.host.isEmpty ||

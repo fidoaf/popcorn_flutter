@@ -1,9 +1,25 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 abstract final class PlayerServerConfig {
-  static const String serverUrl = String.fromEnvironment('PLAYER_SERVER_URL', defaultValue: 'https://popcorn-flutter.onrender.com');
+  static const String _definedUrl = String.fromEnvironment('PLAYER_SERVER_URL');
+  static String? _localUrl;
+  static String? _localToken;
+
+  static String get serverUrl => _localUrl ?? (_definedUrl.isEmpty ? 'https://popcorn-flutter.onrender.com' : _definedUrl);
+  static String get providerOverrideUrl => _localUrl ?? _definedUrl;
+
+  static void useLocalServer({required String url, required String token}) {
+    _localUrl = url;
+    _localToken = token;
+  }
+
+  static void useHostedServer() {
+    _localUrl = null;
+    _localToken = null;
+  }
 
   static String get token {
+    if (_localToken != null) return _localToken!;
     const definedToken = String.fromEnvironment('PLAYER_SERVER_TOKEN');
     if (definedToken.isNotEmpty) return definedToken;
     return dotenv.isInitialized ? dotenv.env['playerServer.token'] ?? '' : '';

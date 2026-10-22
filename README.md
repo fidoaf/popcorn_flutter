@@ -79,6 +79,125 @@ deno check --node-modules-dir=none --no-lock supabase/functions/send-push/index.
 
 ## Local App and Player
 
+### Per-user Windows installer (no administrator access)
+
+Native Google sign-in (Windows, Android and macOS) opens the system browser and
+returns through `com.comacasaencaplloc.popcorn-flutter://login-callback/`
+(hyphen, since underscores are not valid in URI schemes). Add that exact URL
+to Supabase **Authentication > URL Configuration > Redirect URLs**. Both
+Windows installers register the scheme, and the runner forwards callbacks to
+the existing app instance, where Supabase exchanges the code and updates the
+session. Install an updated package to apply protocol registration; rebuilding
+or hot-reloading alone does not register a development executable.
+
+Debug Windows builds (for example the **Popcorn Windows + Local Server** launch
+configuration) register the same scheme under
+`HKEY_CURRENT_USER\Software\Classes\com.comacasaencaplloc.popcorn-flutter`
+for the running debug executable on startup. Reinstall or repair the installed
+app afterwards to point the scheme back at the installed executable. Release or
+profile builds run outside an installer still need that key registered manually
+with an empty `URL Protocol` string and a `shell\open\command` default value of
+`"C:\path\to\popcorn_flutter.exe" "%1"`.
+Do not log callback URLs, which can contain authentication credentials.
+If both MSIX and Inno copies are installed, Windows may route the protocol to
+the other copy; use one installation for authentication testing.
+
+GitHub Actions provides two independent, manually triggered workflows:
+
+- **Package Windows app** builds MSIX/App Installer and deploys its downloads
+  through GitHub Pages (including its automatic-update feed).
+- **Package Windows app (Inno Setup)** builds the per-user EXE and uploads the
+  `popcorn-windows-inno-installer` artifact. It also publishes a stable
+  [EXE download](https://github.com/fidoaf/popcorn_flutter/releases/download/windows-inno/Popcorn-Windows-x64-Setup.exe)
+  and SHA-256 checksum under the dedicated `windows-inno` GitHub Release.
+  Subsequent runs replace that release's download; this does not add in-app
+  automatic updates. The workflow requires the complete `ENV_FILE` secret and
+  release-write permission for its `GITHUB_TOKEN`.
+
+The [Windows downloads page](https://fidoaf.github.io/popcorn_flutter/windows-downloads.html)
+links to both installers and explains their different trust/update behavior.
+Deploy Pages after adding this page, and run each packaging workflow at least
+once to populate its downloads. Inno publication does not deploy Pages or
+overwrite the MSIX installer/feed; normal Pages deployments preserve the
+existing MSIX files and the Inno release remains independently accessible.
+
+The Inno Setup installer installs to `%LOCALAPPDATA%\Programs\Popcorn`, creates a
+current-user Start menu shortcut, offers an optional desktop shortcut, and
+registers a current-user uninstaller. It includes the local server, Chromium,
+and app-local Visual C++ runtime DLLs; no certificate import or elevation is
+required. Hosted playback remains the default. Windows SmartScreen may warn
+because this test installer is not signed by a trusted publisher.
+
+To build it, install Inno Setup 6 and the Visual Studio C++ build tools, prepare
+the server bundle, and run:
+
+```powershell
+.\tool\bundle_windows_server.ps1
+.\tool\build_windows_installer.ps1
+```
+
+If the server bundle is already prepared, omit the first command. The installer
+is written to `build\installer\Popcorn-<version>-Windows-x64-Setup.exe`.
+The version comes from the release executable. Pass `-SkipBuild` to package an
+existing release, `-CompilerPath` for a custom `ISCC.exe` location, or
+`-VcRuntimeDirectory` for the Visual Studio x64 `Microsoft.VC143.CRT` directory.
+Close Popcorn before upgrading or uninstalling. Uninstall removes installed
+files and shortcuts but preserves application preferences. This installer is
+separate from the MSIX package; uninstall either copy explicitly if both are
+installed.
+
+In VS Code, the **Build Windows Inno Setup installer (local)** and **Build
+Windows MSIX (local)** launch configurations build either package. They prepare
+the server bundle when it is missing. The MSIX
+(`build\installer\Popcorn-<version>-Windows-x64.msix`, built by
+`.\tool\build_windows_msix.ps1`) is signed with the msix package test
+certificate, exported as `build\installer\Popcorn-test-certificate.cer`. Import
+it into **Local Machine > Trusted People** before installing the MSIX.
+
+### Optional bundled Windows server
+
+Windows **Account settings > Use local player server** is off by default.
+Enable it and restart the app to use the bundled server at `127.0.0.1:3000`.
+Disable it and restart to return to the configured hosted server. The choice
+applies to playback providers, Live TV, radio, and watch-provider lookups;
+authentication, TMDB, and other internet services still require connectivity.
+
+Local mode first checks server health and its authenticated provider catalogue.
+It reuses a compatible server accepting this installation's randomly generated,
+persisted token; otherwise it starts bundled Node.js without requiring a system
+Node installation. The server binds only to loopback. A different or unauthorized
+service on port 3000 is reported, not stopped or replaced. Local startup/runtime
+errors offer **Disable local mode and use hosted server** instead of silently
+switching backends. The application closes only its own server; the server also
+shuts down when its parent's stdin pipe closes.
+
+The Windows packaging workflow bundles Node.js, server production dependencies,
+and Chromium for Puppeteer providers. This increases the installer size.
+Runtime licenses/notices are retained in the bundle. To prepare a local build:
+
+```powershell
+.\tool\bundle_windows_server.ps1
+flutter build windows --target lib\main_windows.dart
+```
+
+Run the bundler before building (including debug builds using local mode).
+It stages files in `build\windows-server`; CMake installs them next to the app
+under `local_server`, which MSIX includes. The bundler requires Windows x64
+Node.js/npm and network access at build time, verifies the official Node archive
+against its published SHA-256, and installs the Chromium version selected by the
+locked Puppeteer dependency. It refuses to overwrite a nonempty staging folder;
+explicitly remove that generated folder before preparing a fresh bundle.
+The packaged app needs neither system Node.js nor system Chrome.
+
+Focused checks:
+
+```powershell
+flutter test test\windows_local_server_test.dart test\local_server_settings_test.dart test\media_source_provider_test.dart
+node --test server\test\managedServer.test.js
+```
+
+The bundled-process test runs only when the staged bundle exists.
+
 Closing a video player restores the application out of playback fullscreen,
 including when navigating Back to details. Native WebView and media-kit players
 wait for pending fullscreen requests before restoring the window; the web iframe

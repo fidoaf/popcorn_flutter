@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_provider_factory.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
 import 'package:popcorn_flutter/src/search/domain/media_type.dart';
 
@@ -22,6 +23,23 @@ void main() {
   test('normal playback keeps the production player origin', () {
     final provider = MediaSourceProviderFactory.createFromMap(config(), playerServerUrl: '');
     expect(provider.resolve(media, MediaType.movie).url.origin, 'https://popcorn-flutter.onrender.com');
+  });
+
+  test('Windows local mode overrides all server clients and player providers until reset', () {
+    final hostedUrl = PlayerServerConfig.serverUrl;
+    final hostedToken = PlayerServerConfig.token;
+    addTearDown(PlayerServerConfig.useHostedServer);
+    PlayerServerConfig.useLocalServer(url: 'http://127.0.0.1:3000', token: 'local-test-token');
+    expect(PlayerServerConfig.serverUrl, 'http://127.0.0.1:3000');
+    expect(PlayerServerConfig.token, 'local-test-token');
+    final provider = MediaSourceProviderFactory.createFromMap(config());
+    final source = provider.resolve(media, MediaType.movie);
+    expect(source.url.origin, PlayerServerConfig.serverUrl);
+    expect(source.headers['Authorization'], 'Bearer local-test-token');
+    expect(provider.providers.last.resolve(media, MediaType.movie).url.host, 'external.example');
+    PlayerServerConfig.useHostedServer();
+    expect(PlayerServerConfig.serverUrl, hostedUrl);
+    expect(PlayerServerConfig.token, hostedToken);
   });
 
   test('local override preserves movie and episode parameters without changing external providers', () {

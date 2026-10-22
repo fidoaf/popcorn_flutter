@@ -18,6 +18,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Setup bundled Node.js runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          architecture: x64
+      - name: Bundle local player server and Chromium
+        shell: pwsh
+        run: .\tool\bundle_windows_server.ps1
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -62,6 +70,8 @@ jobs:
           $indexHtml = Join-Path 'msix' 'index.html'
           $trustNote = '<div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px 16px;margin:14px;border-radius:6px;font-family:sans-serif"><strong>First-time install?</strong> This app is signed with a development certificate. <a href="popcorn_flutter.cer" style="color:#0369a1">Download and install the certificate</a> (double-click it, choose "Local Machine", then "Place all certificates in the following store" &rarr; "Trusted People") before clicking Install.</div>'
           $indexContent = (Get-Content $indexHtml -Raw) -replace '(<body>)', "`$1`n$trustNote"
+          $innoNote = '<p style="padding:12px 16px;font-family:sans-serif">Prefer no administrator access or certificate import? <a href="../windows-downloads.html">Compare both Windows installers</a> or <a href="https://github.com/' + $env:GITHUB_REPOSITORY_OWNER + '/' + $env:GITHUB_REPOSITORY_NAME + '/releases/download/windows-inno/Popcorn-Windows-x64-Setup.exe">download the per-user EXE installer</a> (manual updates).</p>'
+          $indexContent = $indexContent -replace '(<body>)', "`$1`n$innoNote"
           $indexContent = $indexContent -replace "a\.href = '/", "a.href = './"
           Set-Content $indexHtml -Value $indexContent
       - name: Upload App Installer artifact
@@ -81,6 +91,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Stage Windows download choices
+        run: cp web/windows-downloads.html docs/windows-downloads.html
       - name: Write env file (production)
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}

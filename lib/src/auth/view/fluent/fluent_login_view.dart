@@ -25,12 +25,32 @@ class _FluentLoginViewState extends State<FluentLoginView> {
   bool _handledRedirectError = false;
 
   @override
+  void initState() {
+    super.initState();
+    // On Windows the OAuth callback arrives while this screen is shown, so
+    // failures must be picked up as they are reported.
+    widget.controller.addListener(_checkOAuthError);
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_handledRedirectError) return;
     _handledRedirectError = true;
     final detail = widget.controller.consumeOAuthError();
     if (detail != null) _error = AuthTranslations.signInErrorWithDetail(context, detail);
+  }
+
+  void _checkOAuthError() {
+    if (!mounted) return;
+    final detail = widget.controller.consumeOAuthError();
+    if (detail != null) setState(() => _error = AuthTranslations.signInErrorWithDetail(context, detail));
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_checkOAuthError);
+    super.dispose();
   }
 
   Future<void> _signIn() async {
