@@ -53,7 +53,7 @@ final class IntroDbTimestamps {
 }
 
 Future<IntroDbTimestamps> loadIntroDbTimestamps({required int tmdbId, required Duration duration, int? season, int? episode, http.Client? client}) async {
-  final uri = Uri.https('api.theintrodb.org', '/v3/media', {
+  final uri = Uri.https('api.theintrodb.org', '/v4/media', {
     'tmdb_id': '$tmdbId',
     'duration_ms': '${duration.inMilliseconds}',
     if (season != null) 'season': '$season',

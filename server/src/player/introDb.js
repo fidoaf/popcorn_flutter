@@ -6,7 +6,7 @@ async function fetchIntroDb(params, fetchImpl = fetch) {
       !/^[1-9]\d*$/.test(duration || '') || !Number.isSafeInteger(Number(duration))) {
     throw badRequest('Invalid IntroDB media or duration');
   }
-  const url = new URL('https://api.theintrodb.org/v3/media');
+  const url = new URL('https://api.theintrodb.org/v4/media');
   url.searchParams.set(id.startsWith('tt') ? 'imdb_id' : 'tmdb_id', id);
   url.searchParams.set('duration_ms', duration);
   if (type === 'tv') {

@@ -52,13 +52,17 @@ void main() {
     expect(known.nextEpisodeAt(const Duration(seconds: 80), duration), isFalse);
   });
 
-  test('IntroDB uses v3, TMDB identity, episode and actual duration', () async {
+  test('IntroDB uses v4, TMDB addressing, episode and actual duration with a TVDB-keyed response', () async {
     final client = MockClient((request) async {
       expect(request.url.origin, 'https://api.theintrodb.org');
-      expect(request.url.path, '/v3/media');
+      expect(request.url.path, '/v4/media');
       expect(request.url.queryParameters, {'tmdb_id': '1399', 'season': '2', 'episode': '3', 'duration_ms': '2700000'});
       return http.Response(
         jsonEncode({
+          'tvdb_id': 121361,
+          'type': 'tv',
+          'season': 2,
+          'episode': 3,
           'intro': [
             {'start_ms': null, 'end_ms': 23000},
           ],
@@ -74,6 +78,18 @@ void main() {
     expect(data.introAt(const Duration(seconds: 23), const Duration(minutes: 45)), isNull);
     expect(data.creditsAt(const Duration(milliseconds: 2599999)), isFalse);
     expect(data.creditsAt(const Duration(milliseconds: 2600000)), isTrue);
+  });
+
+  test('IntroDB v4 movie requests omit TV parameters and accept omitted segment arrays', () async {
+    final client = MockClient((request) async {
+      expect(request.url.path, '/v4/media');
+      expect(request.url.queryParameters, {'tmdb_id': '42', 'duration_ms': '60000'});
+      return http.Response(jsonEncode({'tvdb_id': 123, 'type': 'movie'}), 200);
+    });
+    final data = await loadIntroDbTimestamps(tmdbId: 42, duration: const Duration(minutes: 1), client: client);
+    expect(data.intros, isEmpty);
+    expect(data.credits, isEmpty);
+    expect(data.nextEpisodeAt(const Duration(seconds: 40), const Duration(minutes: 1)), isTrue);
   });
 
   test('multiple ranges use inclusive start and exclusive end; unknown intro end cannot seek', () {
