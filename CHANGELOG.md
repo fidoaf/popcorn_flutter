@@ -9,9 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Radio station-name search in the home search overlay, alongside movies, TV series, and Live TV.
+- Optional bundled local player server on Windows, with a per-user installer.
 
 ### Changed
 - Radio search now filters upstream results and caches them by search query and country.
+- Windows account settings can switch between the local and hosted player servers.
+
+### Fixed
+- Closing playback now exits fullscreen reliably across supported players.
 
 ## [1.9.2]
 
