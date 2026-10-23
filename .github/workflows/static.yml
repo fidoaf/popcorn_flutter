@@ -34,6 +34,22 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Stage Windows download choices
         run: cp web/windows-downloads.html docs/windows-downloads.html
+      - name: Set Windows download version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          pubspec = Path("pubspec.yaml").read_text(encoding="utf-8")
+          match = re.search(r"^version:\s*['\"]?([^+'\"\s]+)", pubspec, re.MULTILINE)
+          if not match:
+              raise SystemExit("Could not read app version from pubspec.yaml")
+          page = Path("docs/windows-downloads.html")
+          content = page.read_text(encoding="utf-8")
+          if "__APP_VERSION__" not in content:
+              raise SystemExit("Windows download page is missing its version placeholder")
+          page.write_text(content.replace("__APP_VERSION__", match.group(1)), encoding="utf-8")
+          PY
       - name: Write env file (production)
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}

@@ -440,12 +440,18 @@ successful write. Abrupt termination may lose the latest few seconds.
 ## Skip Intro and Next Episode
 
 The hosted HTML player and media_kit player use the free
-[IntroDB API](https://theintrodb.org/docs) to display floating **Skip intro**
+[IntroDB API v4](https://theintrodb.org/docs) to display floating **Skip intro**
 buttons during known intro segments and **Next episode** buttons during
 credits. If credits timestamps are unavailable, Next episode appears during the
 last 20 seconds of a TV episode, provided a released next episode exists.
 Requests include the media ID, season/episode, and actual video
 duration in milliseconds to identify the release. No IntroDB API key is needed.
+Both players request `/v4/media`. TMDB (or IMDb for hosted sources) identifiers
+remain supported request parameters; v4 responses identify media by `tvdb_id`.
+The players read the unchanged segment arrays without depending on a response
+TMDB ID. TV requests retain the catalog's season/episode numbering, which v4
+resolves from the supplied provider ID; no media-server display-order override
+is applied.
 The hosted player uses the server's `/introdb` endpoint; deploy the updated
 player server together with the app.
 

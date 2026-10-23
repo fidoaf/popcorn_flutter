@@ -5,15 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.1]
+
+### Changed
+- Updated intro and credits timestamp lookup to IntroDB API v4.
+- Windows release workflows now use the updated Flutter SDK and display the app version on the downloads page.
+
+## [1.10.0]
+
+### Added
+- Windows MSIX and per-user installers with an optional bundled local player server.
+- Native Windows Google sign-in callback handling.
+
+### Changed
+- Windows account settings can switch between local and hosted player servers.
+
 ## [1.9.3]
 
 ### Added
 - Radio station-name search in the home search overlay, alongside movies, TV series, and Live TV.
-- Optional bundled local player server on Windows, with a per-user installer.
 
 ### Changed
 - Radio search now filters upstream results and caches them by search query and country.
-- Windows account settings can switch between the local and hosted player servers.
 
 ### Fixed
 - Closing playback now exits fullscreen reliably across supported players.

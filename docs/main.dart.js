@@ -36872,7 +36872,7 @@ m.l(0,"tmdb_id",""+d)
 m.l(0,"duration_ms",""+B.b.aP(a.a,1000))
 if(c!=null)m.l(0,"season",A.e(c))
 if(b!=null)m.l(0,"episode",A.e(b))
-p=A.buZ("https","api.theintrodb.org","/v3/media",m)
+p=A.buZ("https","api.theintrodb.org","/v4/media",m)
 m=A.mE(p,null)
 s=3
 return A.k(m.kH(B.bX),$async$bgO)
@@ -133623,7 +133623,7 @@ $S:26}
 A.Tq.prototype={
 ai(){var s=$.bn().gJV(),r=A.At()
 if(r==null)r=new A.mN(A.b([],t.O))
-return new A.Tr(new A.bB(null,t.b7),s,new A.QB(r,"1.10.0",$.aH()))}}
+return new A.Tr(new A.bB(null,t.b7),s,new A.QB(r,"1.10.1",$.aH()))}}
 A.Tr.prototype={
 aU(){var s=this
 s.bi()
