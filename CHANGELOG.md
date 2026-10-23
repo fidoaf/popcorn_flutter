@@ -5,11 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.2]
+
+### Changed
+- Player controls now hide during inactivity on Windows and reappear on input; paused controls remain visible.
+- Media-kit and hosted players show a loading indicator while playback starts or buffers.
+- Windows installers stop the bundled player server before upgrading or uninstalling.
+
 ## [1.10.1]
 
 ### Changed
 - Updated intro and credits timestamp lookup to IntroDB API v4.
 - Windows release workflows now use the updated Flutter SDK and display the app version on the downloads page.
+- Windows downloads now link to versioned GitHub Release assets for both installer formats.
 
 ## [1.10.0]
 

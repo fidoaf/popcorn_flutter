@@ -408,10 +408,16 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       if (playbackSession) query.set('session', playbackSession);
       return query.toString();
     }
+    let playbackStarting = false;
+    function setVideoLoading(loading) {
+      videoLoading.hidden = !loading;
+      video.controls = !loading && !video.hidden && retry.hidden && hasUserStartedPlayback;
+      startPlaybackButton.hidden = loading || video.hidden || !retry.hidden || hasUserStartedPlayback || playbackStarting;
+    }
     function fail(message) {
-      videoLoading.hidden = true;
-      status.textContent = message;
       retry.hidden = false;
+      setVideoLoading(false);
+      status.textContent = message;
     }
     function clearSubtitleOptions() {
       if (subtitleTrack) { subtitleTrack.remove(); subtitleTrack = null; }
@@ -460,21 +466,26 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       }
     });
     startPlaybackButton.addEventListener('click', async () => {
+      playbackStarting = true;
       startPlaybackButton.disabled = true;
       video.muted = false;
-      video.controls = true;
+      setVideoLoading(true);
       try {
         const fullscreen = videoContainer.requestFullscreen?.();
         const playback = video.play();
         const [fullscreenResult, playbackResult] = await Promise.allSettled([Promise.resolve(fullscreen), playback]);
         if (playbackResult.status === 'rejected') throw playbackResult.reason;
         hasUserStartedPlayback = true;
+        playbackStarting = false;
+        setVideoLoading(video.readyState < 3 || video.seeking);
         updateFullscreenControl();
         updateSkipActions();
         startPlaybackButton.hidden = true;
         status.textContent = fullscreenResult.status === 'rejected' ? 'Playing with sound; fullscreen is unavailable in this view.' : '';
       } catch (error) {
+        playbackStarting = false;
         startPlaybackButton.disabled = false;
+        setVideoLoading(false);
         status.textContent = 'Could not start playback: ' + error.message;
       }
     });
@@ -485,9 +496,9 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       skipTimestamps = { intro: [], credits: [] };
       updateSkipActions();
       const generation = ++requestGeneration;
-      videoLoading.hidden = false;
       mediaRecoveryAttempted = false;
       retry.hidden = true;
+      setVideoLoading(true);
       status.textContent = 'Connecting to stream...';
       quality.replaceChildren(new Option('Auto', '-1'));
       quality.disabled = true;
@@ -546,7 +557,6 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
         video.addEventListener('loadeddata', () => {
           if (generation === requestGeneration) {
             status.textContent = 'Ready to play';
-            if (!hasUserStartedPlayback) startPlaybackButton.hidden = false;
           }
         }, { once: true });
       } catch (error) {
@@ -594,15 +604,15 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     for (const event of ['loadstart', 'waiting', 'seeking']) {
       video.addEventListener(event, () => {
         if (!retry.hidden || video.hidden) return;
-        videoLoading.hidden = false;
+        setVideoLoading(true);
       });
     }
     for (const event of ['loadeddata', 'canplay', 'seeked', 'playing']) {
       video.addEventListener(event, () => {
-        if (!video.seeking && video.readyState >= 3) videoLoading.hidden = true;
+        if (retry.hidden && !video.hidden && !video.seeking && video.readyState >= 3) setVideoLoading(false);
       });
     }
-    video.addEventListener('ended', () => { videoLoading.hidden = true; });
+    video.addEventListener('ended', () => { setVideoLoading(false); });
     async function loadSubtitles(media, generation) {
       try {
         const response = await fetch('/subtitles?' + mediaQuery(media));
@@ -702,6 +712,7 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
       }
       selectedMedia = media;
       hasUserStartedPlayback = false;
+      playbackStarting = false;
       fullscreenToggle.hidden = true;
       showFullscreenControl();
       startPlaybackButton.hidden = true;

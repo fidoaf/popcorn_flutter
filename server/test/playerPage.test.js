@@ -15,7 +15,7 @@ function playerHarness({ timestamps = {}, query = {}, embedUrl = null, delayed =
   function element() {
     const listeners = new Map();
     return {
-      hidden: true, value: '', currentTime: 0, duration: 100, options: [], dataset: {},
+      hidden: true, value: '', currentTime: 0, duration: 100, readyState: 4, seeking: false, options: [], dataset: {},
       addEventListener(event, callback) {
         if (!listeners.has(event)) listeners.set(event, []);
         listeners.get(event).push(callback);
@@ -85,6 +85,98 @@ function playerHarness({ timestamps = {}, query = {}, embedUrl = null, delayed =
     resolve(data) { resolveTimestamps(data); },
   };
 }
+
+test('loading hides both the start button and browser playback controls until ready', async () => {
+  const { elements } = playerHarness();
+  const video = elements.get('video');
+  const start = elements.get('start-playback');
+  const loading = elements.get('video-loading');
+  assert.equal(loading.hidden, false);
+  assert.equal(start.hidden, true);
+  assert.equal(video.controls, false);
+  video.readyState = 2;
+  await video.dispatch('loadeddata');
+  assert.equal(loading.hidden, false);
+  assert.equal(start.hidden, true);
+  video.readyState = 3;
+  await video.dispatch('canplay');
+  assert.equal(loading.hidden, true);
+  assert.equal(start.hidden, false);
+  assert.equal(video.controls, false);
+  await start.dispatch('click');
+  assert.equal(start.hidden, true);
+  assert.equal(video.controls, true);
+  for (const event of ['waiting', 'loadstart', 'seeking']) {
+    await video.dispatch(event);
+    assert.equal(loading.hidden, false);
+    assert.equal(start.hidden, true);
+    assert.equal(video.controls, false);
+    video.seeking = true;
+    await video.dispatch('canplay');
+    assert.equal(loading.hidden, false);
+    video.seeking = false;
+    await video.dispatch('playing');
+    assert.equal(loading.hidden, true);
+    assert.equal(start.hidden, true);
+    assert.equal(video.controls, true);
+  }
+});
+
+test('pending playback shows only loading and a rejected start restores the play action', async () => {
+  const { elements } = playerHarness();
+  const video = elements.get('video');
+  const start = elements.get('start-playback');
+  await video.dispatch('canplay');
+  let rejectPlay;
+  video.play = () => new Promise((_, reject) => { rejectPlay = reject; });
+  const pending = start.dispatch('click');
+  assert.equal(start.hidden, true);
+  assert.equal(video.controls, false);
+  assert.equal(elements.get('video-loading').hidden, false);
+  await video.dispatch('canplay');
+  assert.equal(start.hidden, true, 'Readiness cannot restore Play during a pending start');
+  rejectPlay(new Error('Autoplay blocked'));
+  await pending;
+  assert.equal(start.hidden, false);
+  assert.equal(start.disabled, false);
+  assert.equal(elements.get('video-loading').hidden, true);
+  assert.match(elements.get('status').textContent, /Autoplay blocked/);
+});
+
+test('fatal loading errors clear the spinner without exposing playback controls', async () => {
+  const { elements } = playerHarness();
+  const video = elements.get('video');
+  await video.dispatch('error');
+  assert.equal(elements.get('video-loading').hidden, true);
+  assert.equal(elements.get('start-playback').hidden, true);
+  assert.equal(video.controls, false);
+  assert.equal(elements.get('retry').hidden, false);
+  await video.dispatch('canplay');
+  assert.equal(elements.get('start-playback').hidden, true);
+});
+
+test('source switches and retries hide playback controls again until ready', async () => {
+  const { elements } = playerHarness();
+  const video = elements.get('video');
+  const start = elements.get('start-playback');
+  await video.dispatch('canplay');
+  await start.dispatch('click');
+  await elements.get('source').dispatch('change');
+  assert.equal(video.controls, false);
+  assert.equal(start.hidden, true);
+  assert.equal(elements.get('video-loading').hidden, false);
+  await video.dispatch('canplay');
+  assert.equal(video.controls, true);
+  assert.equal(start.hidden, true);
+  await video.dispatch('error');
+  await elements.get('retry').dispatch('click');
+  assert.equal(video.controls, false);
+  assert.equal(start.hidden, true);
+  assert.equal(elements.get('video-loading').hidden, false);
+  await video.dispatch('canplay');
+  assert.equal(video.controls, true);
+  assert.equal(elements.get('video-loading').hidden, true);
+});
 
 test('missing credits show next episode in the last 20 seconds and seeking back hides it', async () => {
   const { elements, messages } = playerHarness();

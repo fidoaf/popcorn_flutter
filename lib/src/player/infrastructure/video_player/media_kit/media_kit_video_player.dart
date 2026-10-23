@@ -16,6 +16,8 @@ import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/stream_resolver.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/vidsrc_resolver.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/player_fullscreen_scope.dart';
+import 'package:popcorn_flutter/src/player/view/player_controls_scope.dart';
+import 'package:popcorn_flutter/src/player/view/player_play_pause_button.dart';
 
 /// A native [VideoPlayer] built on `media_kit`, offering an alternative to the
 /// WebView-based player.
@@ -87,8 +89,9 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   late final VideoController _controller;
   final _subscriptions = <StreamSubscription<dynamic>>[];
 
-  bool _controlsVisible = true;
-  Timer? _hideTimer;
+  late PlayerControlsController _controls;
+  bool _ownsControls = true;
+  bool get _controlsVisible => _controls.value;
 
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -101,6 +104,8 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   String? _loadErrorDuringRetry;
   bool _playing = false;
   bool _buffering = true;
+  bool _loadingSource = true;
+  bool get _loading => _loadingSource || _buffering;
   double _volume = 1;
   bool _muted = false;
   bool _hasStartedPlayback = false;
@@ -143,6 +148,8 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   @override
   void initState() {
     super.initState();
+    _controls = PlayerControlsController();
+    _controls.addListener(_controlsChanged);
     _session = widget.initialSession ?? const PlaybackSession();
     _subtitleDelay = Duration(milliseconds: (_session.subtitleDelaySeconds * 1000).round());
     if (!_mediaKitReady) {
@@ -153,7 +160,23 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
     _controller = VideoController(_player);
     _wireStreams();
     _startPlayback();
-    _scheduleHide();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final shared = PlayerControlsScope.controllerOf(context);
+    if (identical(shared, _controls) || (shared == null && _ownsControls)) return;
+    _controls.removeListener(_controlsChanged);
+    if (_ownsControls) _controls.dispose();
+    _controls = shared ?? PlayerControlsController();
+    _ownsControls = shared == null;
+    _controls.playing = _playing;
+    _controls.addListener(_controlsChanged);
+  }
+
+  void _controlsChanged() {
+    if (mounted) setState(() {});
   }
 
   void _wireStreams() {
@@ -173,6 +196,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
       stream.buffer.listen((value) => setState(() => _buffer = value)),
       stream.playing.listen((value) {
         setState(() => _playing = value);
+        _controls.playing = value;
         if (value) _hasLoadedMedia = true;
         if (!value) _reportSession();
       }),
@@ -282,6 +306,8 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
     final media = Media(winner.url.toString(), httpHeaders: winner.headers.isEmpty ? null : winner.headers);
     _activeMedia = media;
     await _player.open(media, play: false);
+    if (!mounted) return;
+    setState(() => _loadingSource = false);
     await _prepareResume();
     await _restoreRemoteSubtitles();
     if (!mounted) return;
@@ -395,15 +421,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   // --- Controls behaviour ---------------------------------------------------
 
   void _showControls() {
-    setState(() => _controlsVisible = true);
-    _scheduleHide();
-  }
-
-  void _scheduleHide() {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted && _playing) setState(() => _controlsVisible = false);
-    });
+    _controls.show();
   }
 
   void _togglePlay() {
@@ -462,7 +480,8 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   @override
   void dispose() {
     _reportSession(position: _player.state.completed ? Duration.zero : _position);
-    _hideTimer?.cancel();
+    _controls.removeListener(_controlsChanged);
+    if (_ownsControls) _controls.dispose();
     _resumeCountdown?.cancel();
     if (_duration > Duration.zero && _position > const Duration(seconds: 5)) {
       ResumeStore.write(_resumeId, _position, _duration);
@@ -491,7 +510,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
             fit: StackFit.expand,
             children: [
               Video(controller: _controller, controls: NoVideoControls, fit: BoxFit.contain),
-              if (_buffering && _resumeAt == null) const Center(child: CircularProgressIndicator(color: Colors.white)),
+              if (_loading && _resumeAt == null) const Center(child: CircularProgressIndicator(color: Colors.white)),
               if (_resumeAt != null) _buildResumeBanner(),
               _buildControls(),
               if (_resumeAt == null && _hasStartedPlayback) _buildSkipActions(context),
@@ -593,7 +612,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
         children: [
           _circleButton(Icons.replay_10, () => _seekBy(const Duration(seconds: -10)), size: 40),
           const SizedBox(width: 32),
-          _circleButton(_playing ? Icons.pause : Icons.play_arrow, _togglePlay, size: 64),
+          PlayerPlayPauseButton(loading: _loading, playing: _playing, onPressed: _togglePlay, prominent: true),
           const SizedBox(width: 32),
           _circleButton(Icons.forward_10, () => _seekBy(const Duration(seconds: 10)), size: 40),
         ],
@@ -628,7 +647,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
           _buildSeekBar(),
           Row(
             children: [
-              _barButton(_playing ? Icons.pause : Icons.play_arrow, _togglePlay),
+              PlayerPlayPauseButton(loading: _loading, playing: _playing, onPressed: _togglePlay),
               _barButton(_muted ? Icons.volume_off : Icons.volume_up, _toggleMute),
               SizedBox(
                 width: 90,

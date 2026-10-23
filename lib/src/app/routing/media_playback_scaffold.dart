@@ -9,6 +9,7 @@ import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/next_episode.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/player/view/player_close_button.dart';
+import 'package:popcorn_flutter/src/player/view/player_controls_scope.dart';
 import 'package:popcorn_flutter/src/player/view/player_overlay_layout.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
@@ -250,46 +251,50 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
       episode: _episode,
       onNextEpisode: _nextEpisode == null ? null : () => _advance(source),
       nextSeason: _nextEpisode?.$1,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          KeyedSubtree(
-            key: ObjectKey(source),
-            child: widget.builder(context, source, _item!, (url) {
-              if (identical(source, _source)) _onUrlChanged(url);
-            }),
-          ),
-          if (source.url.path == '/player')
-            Positioned(
-              top: 0,
-              right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 12 + playerOverlayTopInset(context), right: 12),
-                  child: PlayerCloseButton(
-                    onClose: () {
-                      final router = GoRouter.of(context);
-                      if (router.canPop()) {
-                        router.pop();
-                      } else {
-                        router.go(AppRoutes.details(widget.type, widget.id), extra: _item);
-                      }
-                    },
+      child: PlayerControlsScope(
+        key: ObjectKey(source),
+        enabled: !kIsWeb && defaultTargetPlatform == TargetPlatform.windows,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            KeyedSubtree(
+              key: ObjectKey(source),
+              child: widget.builder(context, source, _item!, (url) {
+                if (identical(source, _source)) _onUrlChanged(url);
+              }),
+            ),
+            if (source.url.path == '/player')
+              Positioned(
+                top: 0,
+                right: 0,
+                child: SafeArea(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 12 + playerOverlayTopInset(context), right: 12),
+                    child: PlayerCloseButton(
+                      onClose: () {
+                        final router = GoRouter.of(context);
+                        if (router.canPop()) {
+                          router.pop();
+                        } else {
+                          router.go(AppRoutes.details(widget.type, widget.id), extra: _item);
+                        }
+                      },
+                    ),
                   ),
                 ),
               ),
-            ),
-          if (_historySaveError != null)
-            Align(
-              alignment: Alignment.topCenter,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: const Color(0xFF9B1C20),
-                child: Text(_historySaveError!, style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 14)),
+            if (_historySaveError != null)
+              Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  color: const Color(0xFF9B1C20),
+                  child: Text(_historySaveError!, style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 14)),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

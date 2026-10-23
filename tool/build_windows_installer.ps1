@@ -43,20 +43,51 @@ if (!$VcRuntimeDirectory -or !(Test-Path (Join-Path $VcRuntimeDirectory 'msvcp14
 
 Push-Location $root
 try {
+    $timer = [Diagnostics.Stopwatch]::StartNew()
     if (!$SkipBuild) {
         if (!(Test-Path 'build\windows-server\chrome-path.txt')) {
             throw 'Prepare the local server first with .\tool\bundle_windows_server.ps1.'
         }
+        Write-Host 'Building the Windows release application...'
         & flutter.bat build windows --release --target lib\main_windows.dart
         if ($LASTEXITCODE -ne 0) { throw 'Windows release build failed.' }
+        Write-Host "Windows release build finished in $([math]::Round($timer.Elapsed.TotalSeconds)) seconds."
     }
     foreach ($file in @('popcorn_flutter.exe', 'local_server\node.exe', 'local_server\server\server.js', 'local_server\chrome-path.txt')) {
         if (!(Test-Path (Join-Path $release $file))) { throw "Release bundle is missing $file." }
     }
     $chrome = (Get-Content (Join-Path $release 'local_server\chrome-path.txt') -Raw).Trim()
     if (!(Test-Path (Join-Path $release "local_server\$chrome"))) { throw 'Release bundle is missing Chromium.' }
-    & $CompilerPath /Qp "/DReleaseDir=$release" "/DVcRuntimeDir=$VcRuntimeDirectory" (Join-Path $PSScriptRoot 'windows_installer.iss')
-    if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed.' }
+    Write-Host 'Inno Setup is compressing the release files; large Chromium bundles can take several minutes.'
+    $iss = Join-Path $PSScriptRoot 'windows_installer.iss'
+    $arguments = '/Qp "/DReleaseDir={0}" "/DVcRuntimeDir={1}" "{2}"' -f $release, $VcRuntimeDirectory, $iss
+    $startInfo = New-Object Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $CompilerPath
+    $startInfo.Arguments = $arguments
+    $startInfo.WorkingDirectory = $root
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $process = New-Object Diagnostics.Process
+    $process.StartInfo = $startInfo
+    try {
+        if (!$process.Start()) { throw 'Could not start the Inno Setup compiler.' }
+        $outputTask = $process.StandardOutput.ReadToEndAsync()
+        $errorTask = $process.StandardError.ReadToEndAsync()
+        while (!$process.WaitForExit(30000)) {
+            Write-Host "Inno Setup is still compiling ($([math]::Round($timer.Elapsed.TotalSeconds)) seconds elapsed)."
+        }
+        $process.WaitForExit()
+        $compilerOutputText = $outputTask.GetAwaiter().GetResult()
+        $compilerErrorText = $errorTask.GetAwaiter().GetResult()
+        if ($compilerOutputText) { Write-Host $compilerOutputText.TrimEnd() }
+        if ($compilerErrorText) { Write-Error $compilerErrorText.TrimEnd() -ErrorAction Continue }
+        if ($process.ExitCode -ne 0) { throw "Inno Setup compilation failed with exit code $($process.ExitCode)." }
+        Write-Host "Installer compiled in $([math]::Round($timer.Elapsed.TotalSeconds)) seconds."
+    } finally {
+        $process.Dispose()
+    }
 } finally {
     Pop-Location
 }

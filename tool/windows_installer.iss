@@ -39,6 +39,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "{#ReleaseDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,AppxManifest.xml,resources.pri"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#VcRuntimeDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "stop_local_server.ps1"; Flags: dontcopy
 
 [Icons]
 Name: "{userprograms}\Popcorn"; Filename: "{app}\popcorn_flutter.exe"; WorkingDir: "{app}"
@@ -52,3 +53,31 @@ Root: HKCU; Subkey: "Software\Classes\com.comacasaencaplloc.popcorn-flutter\shel
 
 [Run]
 Filename: "{app}\popcorn_flutter.exe"; Description: "{cm:LaunchProgram,Popcorn}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function StopBundledPlayerServer: String;
+var
+  ResultCode: Integer;
+  ScriptPath, Parameters, PowerShellPath: String;
+begin
+  Result := '';
+  if not FileExists(ExpandConstant('{app}\local_server\node.exe')) then
+    exit;
+
+  ExtractTemporaryFile('stop_local_server.ps1');
+  ScriptPath := ExpandConstant('{tmp}\stop_local_server.ps1');
+  PowerShellPath := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe');
+  Parameters := '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + ScriptPath + '" "' + ExpandConstant('{app}') + '"';
+  if not Exec(PowerShellPath, Parameters, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    Result := 'Could not start PowerShell to stop Popcorn''s local player server.';
+    exit;
+  end;
+  if ResultCode <> 0 then
+    Result := 'Could not stop Popcorn''s local player server. Close Popcorn and retry.';
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := StopBundledPlayerServer;
+end;

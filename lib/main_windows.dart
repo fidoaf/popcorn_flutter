@@ -26,6 +26,7 @@ import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/player/view/player_controls_scope.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/windows_local_server.dart';
@@ -169,7 +170,7 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
   }
 
   Future<AppServices> _createServices() async {
-    if (await LocalServerPreference.isEnabled()) {
+    if (!PlayerServerConfig.usesDefinedServer && await LocalServerPreference.isEnabled()) {
       final prefs = await SharedPreferences.getInstance();
       final token = await WindowsLocalServer.loadToken(prefs);
       if (!mounted) throw StateError('Application closed during local server startup.');
@@ -388,7 +389,9 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           Positioned(
             top: 8,
             left: 8,
-            child: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+            child: PlayerOverlayControls(
+              child: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+            ),
           ),
         ],
       ),

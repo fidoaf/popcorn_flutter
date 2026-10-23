@@ -4,6 +4,7 @@ import 'package:popcorn_flutter/src/details/view/details_translations.dart';
 import 'package:popcorn_flutter/src/details/view/shared_details_builders.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/view/player_overlay_layout.dart';
+import 'package:popcorn_flutter/src/player/view/player_controls_scope.dart';
 import 'package:popcorn_flutter/src/search/domain/cast_member.dart';
 import 'package:popcorn_flutter/src/search/domain/media_details.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
@@ -65,7 +66,7 @@ class _MediaXRayOverlayState extends State<MediaXRayOverlay> {
                     padding: EdgeInsets.only(top: 12 + playerOverlayTopInset(context)),
                     child: PointerInterceptor(
                       intercepting: !_open,
-                      child: _XRayButton(onPressed: _toggle),
+                      child: PlayerOverlayControls(child: _XRayButton(onPressed: _toggle)),
                     ),
                   ),
                 ),

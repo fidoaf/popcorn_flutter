@@ -165,6 +165,11 @@ Disable it and restart to return to the configured hosted server. The choice
 applies to playback providers, Live TV, radio, and watch-provider lookups;
 authentication, TMDB, and other internet services still require connectivity.
 
+An explicit `--dart-define=PLAYER_SERVER_URL=...` takes precedence over the saved
+local-mode setting. The **Popcorn Windows + Local Server** debug configuration
+uses the separately launched Node server and `PLAYER_SERVER_TOKEN`, without
+starting the bundled server or using its persisted token.
+
 Local mode first checks server health and its authenticated provider catalogue.
 It reuses a compatible server accepting this installation's randomly generated,
 persisted token; otherwise it starts bundled Node.js without requiring a system
@@ -206,6 +211,15 @@ including when navigating Back to details. Native WebView and media-kit players
 wait for pending fullscreen requests before restoring the window; the web iframe
 player exits browser fullscreen when it is removed. Inline playback does not
 change the window state when closed.
+
+On Windows, the native video controls and the Cast & info, Back, and Close
+overlays hide together after three seconds of inactivity during playback.
+Mouse movement, a pointer press, or keyboard input reveals them again; pausing
+keeps them visible.
+
+Across platforms, the media-kit and hosted HTML players show a loading indicator
+without Play/Pause buttons while loading or buffering, restoring playback
+controls once ready. Third-party embedded players manage their own controls.
 
 ### GitHub Pages environment configuration
 
