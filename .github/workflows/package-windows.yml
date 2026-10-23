@@ -15,6 +15,8 @@ concurrency:
 jobs:
   package-windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -52,6 +54,7 @@ jobs:
           GITHUB_REPOSITORY_NAME: ${{ github.event.repository.name }}
         run: |
           $publishPath = (Resolve-Path build/publish).Path
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9]+\.[0-9]+\.[0-9]+)').Matches[0].Groups[1].Value
           $appInstaller = Get-ChildItem $publishPath -Filter *.appinstaller | Select-Object -First 1
           [xml]$manifest = Get-Content $appInstaller.FullName
           $baseUrl = "https://$env:GITHUB_REPOSITORY_OWNER.github.io/$env:GITHUB_REPOSITORY_NAME/downloads"
@@ -61,19 +64,42 @@ jobs:
           $manifest.Save($appInstaller.FullName)
           New-Item -ItemType Directory -Force -Path msix | Out-Null
           Copy-Item "$publishPath\*" msix -Recurse -Force
-          Copy-Item "$publishPath\versions\*.msix" msix/popcorn_flutter.msix -Force
+          $msixPackage = Get-ChildItem "$publishPath\versions\*.msix" | Select-Object -First 1
+          if (!$msixPackage) { throw 'MSIX package was not produced.' }
+          Copy-Item $msixPackage.FullName "msix\Popcorn-$version-Windows-x64.msix" -Force
+          Copy-Item $msixPackage.FullName msix\popcorn_flutter.msix -Force
 
           $certPfx = Get-ChildItem "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\msix-*\lib\assets\test_certificate.pfx" | Select-Object -First 1
           $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPfx.FullName, '1234')
-          Export-Certificate -Cert $cert -FilePath msix/popcorn_flutter.cer | Out-Null
+          Export-Certificate -Cert $cert -FilePath msix/Popcorn-test-certificate.cer | Out-Null
+          Copy-Item msix\Popcorn-test-certificate.cer msix\popcorn_flutter.cer -Force
+          $msixHash = (Get-FileHash "msix\Popcorn-$version-Windows-x64.msix" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $certificateHash = (Get-FileHash msix\Popcorn-test-certificate.cer -Algorithm SHA256).Hash.ToLowerInvariant()
+          $hashLines = @(
+            "$msixHash  Popcorn-$version-Windows-x64.msix",
+            "$certificateHash  Popcorn-test-certificate.cer"
+          )
+          $hashLines | Set-Content msix\SHA256SUMS-MSIX.txt -Encoding ascii
 
           $indexHtml = Join-Path 'msix' 'index.html'
-          $trustNote = '<div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px 16px;margin:14px;border-radius:6px;font-family:sans-serif"><strong>First-time install?</strong> This app is signed with a development certificate. <a href="popcorn_flutter.cer" style="color:#0369a1">Download and install the certificate</a> (double-click it, choose "Local Machine", then "Place all certificates in the following store" &rarr; "Trusted People") before clicking Install.</div>'
+          $trustNote = '<div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px 16px;margin:14px;border-radius:6px;font-family:sans-serif"><strong>First-time install?</strong> This app is signed with a development certificate. <a href="Popcorn-test-certificate.cer" style="color:#0369a1">Download and install the certificate</a> (double-click it, choose "Local Machine", then "Place all certificates in the following store" &rarr; "Trusted People") before clicking Install.</div>'
           $indexContent = (Get-Content $indexHtml -Raw) -replace '(<body>)', "`$1`n$trustNote"
-          $innoNote = '<p style="padding:12px 16px;font-family:sans-serif">Prefer no administrator access or certificate import? <a href="../windows-downloads.html">Compare both Windows installers</a> or <a href="https://github.com/' + $env:GITHUB_REPOSITORY_OWNER + '/' + $env:GITHUB_REPOSITORY_NAME + '/releases/download/windows-inno/Popcorn-Windows-x64-Setup.exe">download the per-user EXE installer</a> (manual updates).</p>'
+          $innoNote = '<p style="padding:12px 16px;font-family:sans-serif">Prefer no administrator access or certificate import? <a href="../windows-downloads.html">Compare both Windows installers</a> or visit the <a href="https://github.com/' + $env:GITHUB_REPOSITORY_OWNER + '/' + $env:GITHUB_REPOSITORY_NAME + '/releases">GitHub Releases</a> page for the per-user EXE installer (manual updates).</p>'
           $indexContent = $indexContent -replace '(<body>)', "`$1`n$innoNote"
           $indexContent = $indexContent -replace "a\.href = '/", "a.href = './"
           Set-Content $indexHtml -Value $indexContent
+      - name: Publish versioned Windows Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9]+\.[0-9]+\.[0-9]+)').Matches[0].Groups[1].Value
+          .\tool\publish_windows_release.ps1 -AssetPaths @(
+            "msix\Popcorn-$version-Windows-x64.msix",
+            'msix\Popcorn-test-certificate.cer',
+            'msix\SHA256SUMS-MSIX.txt'
+          )
       - name: Upload App Installer artifact
         uses: actions/upload-artifact@v7
         with:

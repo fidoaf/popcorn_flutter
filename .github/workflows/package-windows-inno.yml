@@ -60,11 +60,13 @@ jobs:
       - name: Stage stable download and checksum
         shell: pwsh
         run: |
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9]+\.[0-9]+\.[0-9]+)').Matches[0].Groups[1].Value
           $installers = @(Get-ChildItem build\installer\Popcorn-*-Windows-x64-Setup.exe)
           if ($installers.Count -ne 1) { throw 'Expected exactly one Inno installer.' }
+          if ($installers[0].Name -ne "Popcorn-$version-Windows-x64-Setup.exe") { throw 'Installer filename does not match pubspec.yaml version.' }
           Copy-Item $installers[0].FullName build\installer\Popcorn-Windows-x64-Setup.exe
-          $hash = (Get-FileHash build\installer\Popcorn-Windows-x64-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  Popcorn-Windows-x64-Setup.exe" | Set-Content build\installer\SHA256SUMS.txt -Encoding ascii
+          $hash = (Get-FileHash $installers[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installers[0].Name)" | Set-Content build\installer\SHA256SUMS.txt -Encoding ascii
       - name: Upload Inno installer artifact
         uses: actions/upload-artifact@v7
         with:
@@ -74,22 +76,18 @@ jobs:
             build/installer/SHA256SUMS.txt
           if-no-files-found: error
           compression-level: 0
-      - name: Publish independently of MSIX and Pages
+      - name: Publish versioned Windows Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-          $tags = @(gh api "repos/$env:GH_REPO/releases?per_page=100" --paginate --jq '.[].tag_name')
-          if ($LASTEXITCODE -ne 0) { throw 'Could not list GitHub releases.' }
-          if ($tags -notcontains 'windows-inno') {
-            gh release create windows-inno --target $env:GITHUB_SHA --title "Windows per-user installer (Inno Setup)" --notes "Per-user installer: no administrator access or certificate import required. Updates are manual. This installer is unsigned and Windows SmartScreen may warn. MSIX remains available separately from the website downloads page." --latest=false
-            if ($LASTEXITCODE -ne 0) { throw 'Creating the Inno release failed.' }
-          }
-          gh release upload windows-inno build\installer\Popcorn-Windows-x64-Setup.exe build\installer\SHA256SUMS.txt --clobber
-          if ($LASTEXITCODE -ne 0) { throw 'Uploading the Inno installer failed.' }
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9]+\.[0-9]+\.[0-9]+)').Matches[0].Groups[1].Value
+          .\tool\publish_windows_release.ps1 -AssetPaths @(
+            "build\installer\Popcorn-$version-Windows-x64-Setup.exe",
+            'build\installer\SHA256SUMS.txt'
+          )
           "### Windows per-user installer" >> $env:GITHUB_STEP_SUMMARY
-          "- [Download installer](https://github.com/$env:GH_REPO/releases/download/windows-inno/Popcorn-Windows-x64-Setup.exe)" >> $env:GITHUB_STEP_SUMMARY
-          "- [Checksums](https://github.com/$env:GH_REPO/releases/download/windows-inno/SHA256SUMS.txt)" >> $env:GITHUB_STEP_SUMMARY
+          "- [Download installer](https://github.com/$env:GH_REPO/releases/download/v$version/Popcorn-$version-Windows-x64-Setup.exe)" >> $env:GITHUB_STEP_SUMMARY
+          "- [Checksums](https://github.com/$env:GH_REPO/releases/download/v$version/SHA256SUMS.txt)" >> $env:GITHUB_STEP_SUMMARY
           "- Built from commit: $env:GITHUB_SHA" >> $env:GITHUB_STEP_SUMMARY

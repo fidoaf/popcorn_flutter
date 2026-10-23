@@ -107,19 +107,22 @@ GitHub Actions provides two independent, manually triggered workflows:
 - **Package Windows app** builds MSIX/App Installer and deploys its downloads
   through GitHub Pages (including its automatic-update feed).
 - **Package Windows app (Inno Setup)** builds the per-user EXE and uploads the
-  `popcorn-windows-inno-installer` artifact. It also publishes a stable
-  [EXE download](https://github.com/fidoaf/popcorn_flutter/releases/download/windows-inno/Popcorn-Windows-x64-Setup.exe)
-  and SHA-256 checksum under the dedicated `windows-inno` GitHub Release.
-  Subsequent runs replace that release's download; this does not add in-app
-  automatic updates. The workflow requires the complete `ENV_FILE` secret and
-  release-write permission for its `GITHUB_TOKEN`.
+  `popcorn-windows-inno-installer` artifact. It publishes the versioned EXE and
+  SHA-256 checksum to the app's `v<version>` GitHub Release.
+- The MSIX workflow publishes the versioned MSIX, signing certificate, and
+  checksums to that same release, while GitHub Pages continues to host the
+  App Installer feed for automatic updates. The release assets also provide
+  direct downloads. Re-running either workflow replaces its matching assets.
+  Inno updates remain manual. Both workflows require release-write permission
+  for their `GITHUB_TOKEN`.
 
 The [Windows downloads page](https://fidoaf.github.io/popcorn_flutter/windows-downloads.html)
 links to both installers and explains their different trust/update behavior.
 Deploy Pages after adding this page, and run each packaging workflow at least
 once to populate its downloads. Inno publication does not deploy Pages or
 overwrite the MSIX installer/feed; normal Pages deployments preserve the
-existing MSIX files and the Inno release remains independently accessible.
+existing MSIX files. Both installers are listed under the same versioned
+release on GitHub.
 
 The Inno Setup installer installs to `%LOCALAPPDATA%\Programs\Popcorn`, creates a
 current-user Start menu shortcut, offers an optional desktop shortcut, and
