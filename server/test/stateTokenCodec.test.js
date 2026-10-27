@@ -18,7 +18,9 @@ test('encrypted state tokens survive new instances and reject tampering, type ch
   assert.deepEqual(verifier.decode(token, 'example', 1999), { value: 'private value' });
   assert.equal(verifier.decode(token, 'different-type', 1999), null);
   assert.equal(verifier.decode(token, 'example', 2000), null);
-  assert.equal(verifier.decode(`${token.slice(0, -1)}x`, 'example', 1999), null);
+  const [nonce, tag, encrypted] = token.split('.');
+  const changedTag = `${tag[0] === 'A' ? 'B' : 'A'}${tag.slice(1)}`;
+  assert.equal(verifier.decode(`${nonce}.${changedTag}.${encrypted}`, 'example', 1999), null);
 });
 
 test('playback sessions and provider references can be verified by fresh instances', () => {

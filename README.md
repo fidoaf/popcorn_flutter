@@ -276,38 +276,32 @@ embedding an HTTP player from a deployed HTTPS app.
 
 ### Vercel server deployment (experimental)
 
-The function uses the maximum duration allowed by the Vercel plan. Browser-based
-provider requests can take up to 75 seconds, so providers with slower responses
-may time out on plans with a lower function-duration limit.
-Flutter web app. Import the repository in Vercel and set the project **Root
-Directory** to `server`; the checked-in `vercel.json` rewrites the server's
-existing root routes to a catch-all Node function. Leave **Output Directory**
-unset.
+This deploys only the Node player server, not the Flutter web client. Import
+the repository in Vercel and set **Root Directory** to `server`; this makes
+`server/vercel.json` and `server/api/index.js` the deployment configuration and
+function entry point. Leave the Output Directory unset. The server's `/` route
+serves its player page, and `/health` is a public health check.
 
-Set these Vercel environment variables for every environment you deploy:
+Set these Vercel environment variables for Preview and Production:
 
-- `API_TOKENS`: a long random bearer token, or comma-separated tokens.
+- `API_TOKENS`: one or more comma-separated bearer tokens.
 - `PLAYER_STATE_SECRET`: at least 32 random bytes, used to encrypt expiring
    playback sessions and provider/resource references across function instances.
 - `PUPPETEER_SKIP_DOWNLOAD`: `true`, so the build does not download another
    Chromium binary; Vercel uses the bundled Sparticuz Chromium package.
 
-For example, generate values locally with
+Generate random values locally with
 `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`.
-Keep both secrets in Vercel's environment settings, not in source control. The
-function is configured for a 120-second maximum duration; the Vercel plan must
-allow that duration for browser-based provider requests to complete.
+Keep the first two values in Vercel's environment settings, not source control.
+The function uses the maximum duration allowed by the Vercel plan. Browser
+provider requests can take up to 75 seconds, and slow extraction or long direct
+streams can still exceed function limits. HLS resources are proxied as
+individual requests; catalogue caches remain per function instance.
 
-After deploying, set the Flutter app's `PLAYER_SERVER_URL` to the Vercel
-project's HTTPS **origin** (without `/api`) and set its `playerServer.token` to
-one of the matching `API_TOKENS`. The Vercel rewrite preserves the existing
-server route paths.
-
-This is an experimental serverless deployment, not a full replacement for a
-long-running host. HLS resources are proxied as individual requests, but slow
-provider extraction or long-running direct streams can exceed function limits.
-The app's in-memory catalogue caches are per function instance and are not
-shared.
+After deploying, configure the separately deployed Flutter client with
+`--dart-define=PLAYER_SERVER_URL=https://<your-vercel-domain>` and the matching
+`PLAYER_SERVER_TOKEN`. The client token is shipped to the browser, so it is not
+a secret and must not be the sole protection for sensitive operations.
 
 ### Fly.io deployment
 

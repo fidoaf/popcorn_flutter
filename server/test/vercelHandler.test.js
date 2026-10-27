@@ -1,7 +1,7 @@
 const http = require('node:http');
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const handler = require('../src/vercelHandler');
+const handler = require('../api');
 
 test('Vercel handler strips the function prefix and serves health and signed playback sessions', async (t) => {
   const previous = {
