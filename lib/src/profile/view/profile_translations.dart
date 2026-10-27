@@ -48,9 +48,9 @@ class ProfileTranslations {
   });
 
   static const localPlayerServerHint = Translation({
-    AppLanguage.en: 'Starts the bundled server when needed. Restart the app to apply. Off uses the configured hosted server.',
-    AppLanguage.es: 'Inicia el servidor incluido cuando es necesario. Reinicia la aplicación para aplicar. Desactivado usa el servidor configurado.',
-    AppLanguage.ca: 'Inicia el servidor inclòs quan cal. Reinicia l’aplicació per aplicar-ho. Desactivat utilitza el servidor configurat.',
+    AppLanguage.en: 'Runs the Dart server in this app. Restart to apply. Off uses the configured hosted server.',
+    AppLanguage.es: 'Ejecuta el servidor Dart en esta aplicación. Reinicia para aplicar. Desactivado usa el servidor alojado.',
+    AppLanguage.ca: 'Executa el servidor Dart en aquesta aplicació. Reinicia per aplicar. Desactivat utilitza el servidor allotjat.',
   });
 
   static const localPlayerServerFailed = Translation({

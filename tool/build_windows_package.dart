@@ -23,11 +23,6 @@ Future<void> main(List<String> args) async {
     exitCode = 1;
     return;
   }
-  final serverReady = File('$root\\build\\windows-server\\chrome-path.txt').existsSync();
-  if (!serverReady && !await _runScript(root, 'bundle_windows_server.ps1', environment)) {
-    exitCode = 1;
-    return;
-  }
   if (!await _runScript(root, script, environment)) {
     exitCode = 1;
     return;

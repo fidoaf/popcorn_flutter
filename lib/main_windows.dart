@@ -25,11 +25,11 @@ import 'package:popcorn_flutter/src/home/home.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
-import 'package:popcorn_flutter/src/player/player.dart';
-import 'package:popcorn_flutter/src/player/view/player_controls_scope.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/embedded_player_server.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
-import 'package:popcorn_flutter/src/player/infrastructure/windows_local_server.dart';
+import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/player/view/player_controls_scope.dart';
 import 'package:popcorn_flutter/src/profile/view/account_settings_view.dart';
 import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
@@ -138,7 +138,7 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
   final String _initialLocation = PlatformDispatcher.instance.defaultRouteName;
   GoRouter? _router;
   RouterLocationListenable? _location;
-  WindowsLocalServer? _localServer;
+  EmbeddedPlayerServer? _localServer;
   bool _localServerFailed = false;
   bool _recovering = false;
 
@@ -172,29 +172,17 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
   Future<AppServices> _createServices() async {
     if (!PlayerServerConfig.usesDefinedServer && await LocalServerPreference.isEnabled()) {
       final prefs = await SharedPreferences.getInstance();
-      final token = await WindowsLocalServer.loadToken(prefs);
+      final token = await EmbeddedPlayerServer.loadToken(prefs);
       if (!mounted) throw StateError('Application closed during local server startup.');
-      final bundle = Directory('${File(Platform.resolvedExecutable).parent.path}\\local_server');
-      final server = WindowsLocalServer(
-        bundleDirectory: bundle,
-        token: token,
-        onUnexpectedExit: (code) {
-          if (mounted) {
-            setState(() {
-              _localServerFailed = true;
-              _startupError = StateError('Local player server exited with code $code.');
-            });
-          }
-        },
-      );
+      final server = EmbeddedPlayerServer(token: token);
       _localServer = server;
       try {
-        await server.start();
+        final uri = await server.start();
         if (!mounted) {
           await server.stop();
           throw StateError('Application closed during local server startup.');
         }
-        PlayerServerConfig.useLocalServer(url: server.serverUrl, token: server.token);
+        PlayerServerConfig.useLocalServer(url: uri.toString(), token: token);
       } catch (_) {
         _localServerFailed = true;
         rethrow;

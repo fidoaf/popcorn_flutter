@@ -126,21 +126,18 @@ release on GitHub.
 
 The Inno Setup installer installs to `%LOCALAPPDATA%\Programs\Popcorn`, creates a
 current-user Start menu shortcut, offers an optional desktop shortcut, and
-registers a current-user uninstaller. It includes the local server, Chromium,
-and app-local Visual C++ runtime DLLs; no certificate import or elevation is
-required. Hosted playback remains the default. Windows SmartScreen may warn
+registers a current-user uninstaller. It includes app-local Visual C++ runtime
+DLLs; no certificate import or elevation is required. Hosted playback remains
+the default. Windows SmartScreen may warn
 because this test installer is not signed by a trusted publisher.
 
-To build it, install Inno Setup 6 and the Visual Studio C++ build tools, prepare
-the server bundle, and run:
+To build it, install Inno Setup 6 and the Visual Studio C++ build tools, then run:
 
 ```powershell
-.\tool\bundle_windows_server.ps1
 .\tool\build_windows_installer.ps1
 ```
 
-If the server bundle is already prepared, omit the first command. The installer
-is written to `build\installer\Popcorn-<version>-Windows-x64-Setup.exe`.
+The installer is written to `build\installer\Popcorn-<version>-Windows-x64-Setup.exe`.
 The version comes from the release executable. Pass `-SkipBuild` to package an
 existing release, `-CompilerPath` for a custom `ISCC.exe` location, or
 `-VcRuntimeDirectory` for the Visual Studio x64 `Microsoft.VC143.CRT` directory.
@@ -150,61 +147,39 @@ separate from the MSIX package; uninstall either copy explicitly if both are
 installed.
 
 In VS Code, the **Build Windows Inno Setup installer (local)** and **Build
-Windows MSIX (local)** launch configurations build either package. They prepare
-the server bundle when it is missing. The MSIX
+Windows MSIX (local)** launch configurations build either package. The MSIX
 (`build\installer\Popcorn-<version>-Windows-x64.msix`, built by
 `.\tool\build_windows_msix.ps1`) is signed with the msix package test
 certificate, exported as `build\installer\Popcorn-test-certificate.cer`. Import
 it into **Local Machine > Trusted People** before installing the MSIX.
 
-### Optional bundled Windows server
+### Optional local player server
 
-Windows **Account settings > Use local player server** is off by default.
-Enable it and restart the app to use the bundled server at `127.0.0.1:3000`.
-Disable it and restart to return to the configured hosted server. The choice
-applies to playback providers, Live TV, radio, and watch-provider lookups;
-authentication, TMDB, and other internet services still require connectivity.
+Windows and Android **Account settings > Use local player server** is off by
+default. Enable it and restart the app to run the Dart API in-process on a
+loopback port. Disable it and restart to use the configured hosted server.
+Playback APIs, radio, Live TV, EPG, metadata lookups, and provider requests share
+the same portable Dart core. Upstream providers and other internet services
+still require connectivity.
 
-An explicit `--dart-define=PLAYER_SERVER_URL=...` takes precedence over the saved
-local-mode setting. The **Popcorn Windows + Local Server** debug configuration
-uses the separately launched Node server and `PLAYER_SERVER_TOKEN`, without
-starting the bundled server or using its persisted token.
+An explicit `--dart-define=PLAYER_SERVER_URL=...` takes precedence over the
+saved local-mode setting. The local server uses a persisted random bearer token
+and stops with the app. Windows packages no longer bundle Node.js or Chromium.
+The **Server (Dart local)** debug configuration runs the standalone Dart API on
+`127.0.0.1:3000`; web and Windows local-server compounds use that process.
 
-Local mode first checks server health and its authenticated provider catalogue.
-It reuses a compatible server accepting this installation's randomly generated,
-persisted token; otherwise it starts bundled Node.js without requiring a system
-Node installation. The server binds only to loopback. A different or unauthorized
-service on port 3000 is reported, not stopped or replaced. Local startup/runtime
-errors offer **Disable local mode and use hosted server** instead of silently
-switching backends. The application closes only its own server; the server also
-shuts down when its parent's stdin pipe closes.
-
-The Windows packaging workflow bundles Node.js, server production dependencies,
-and Chromium for Puppeteer providers. This increases the installer size.
-Runtime licenses/notices are retained in the bundle. To prepare a local build:
+To build a Windows release, no separate server bundle step is required:
 
 ```powershell
-.\tool\bundle_windows_server.ps1
 flutter build windows --target lib\main_windows.dart
 ```
-
-Run the bundler before building (including debug builds using local mode).
-It stages files in `build\windows-server`; CMake installs them next to the app
-under `local_server`, which MSIX includes. The bundler requires Windows x64
-Node.js/npm and network access at build time, verifies the official Node archive
-against its published SHA-256, and installs the Chromium version selected by the
-locked Puppeteer dependency. It refuses to overwrite a nonempty staging folder;
-explicitly remove that generated folder before preparing a fresh bundle.
-The packaged app needs neither system Node.js nor system Chrome.
 
 Focused checks:
 
 ```powershell
-flutter test test\windows_local_server_test.dart test\local_server_settings_test.dart test\media_source_provider_test.dart
-node --test server\test\managedServer.test.js
+flutter test test\embedded_player_server_test.dart test\local_server_settings_test.dart
+flutter test test\server_core test\server_runtime
 ```
-
-The bundled-process test runs only when the staged bundle exists.
 
 Closing a video player restores the application out of playback fullscreen,
 including when navigating Back to details. Native WebView and media-kit players

@@ -1,0 +1,11 @@
+name: popcorn_server_core
+description: Platform-independent server domain logic for Popcorn.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: '>=3.11.0 <4.0.0'
+
+dependencies:
+  pointycastle: ^4.0.0
+  xml: ^7.0.1

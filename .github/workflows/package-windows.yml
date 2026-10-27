@@ -20,14 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Setup bundled Node.js runtime
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          architecture: x64
-      - name: Bundle local player server and Chromium
-        shell: pwsh
-        run: .\tool\bundle_windows_server.ps1
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:

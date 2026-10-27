@@ -893,6 +893,20 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.0"
+  popcorn_server_core:
+    dependency: "direct main"
+    description:
+      path: "packages/popcorn_server_core"
+      relative: true
+    source: path
+    version: "0.1.0"
+  popcorn_server_runtime:
+    dependency: "direct main"
+    description:
+      path: "packages/popcorn_server_runtime"
+      relative: true
+    source: path
+    version: "0.1.0"
   posix:
     dependency: transitive
     description:

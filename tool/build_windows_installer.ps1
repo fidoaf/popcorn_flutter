@@ -7,6 +7,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $release = Join-Path $root 'build\windows\x64\runner\Release'
+$staleLocalServer = Join-Path $release 'local_server'
+if (Test-Path $staleLocalServer) { Remove-Item $staleLocalServer -Recurse -Force }
 
 if (!$CompilerPath) {
     $compiler = Get-Command ISCC.exe -ErrorAction SilentlyContinue
@@ -45,20 +47,13 @@ Push-Location $root
 try {
     $timer = [Diagnostics.Stopwatch]::StartNew()
     if (!$SkipBuild) {
-        if (!(Test-Path 'build\windows-server\chrome-path.txt')) {
-            throw 'Prepare the local server first with .\tool\bundle_windows_server.ps1.'
-        }
         Write-Host 'Building the Windows release application...'
         & flutter.bat build windows --release --target lib\main_windows.dart
         if ($LASTEXITCODE -ne 0) { throw 'Windows release build failed.' }
         Write-Host "Windows release build finished in $([math]::Round($timer.Elapsed.TotalSeconds)) seconds."
     }
-    foreach ($file in @('popcorn_flutter.exe', 'local_server\node.exe', 'local_server\server\server.js', 'local_server\chrome-path.txt')) {
-        if (!(Test-Path (Join-Path $release $file))) { throw "Release bundle is missing $file." }
-    }
-    $chrome = (Get-Content (Join-Path $release 'local_server\chrome-path.txt') -Raw).Trim()
-    if (!(Test-Path (Join-Path $release "local_server\$chrome"))) { throw 'Release bundle is missing Chromium.' }
-    Write-Host 'Inno Setup is compressing the release files; large Chromium bundles can take several minutes.'
+    if (!(Test-Path (Join-Path $release 'popcorn_flutter.exe'))) { throw 'Release bundle is missing popcorn_flutter.exe.' }
+    Write-Host 'Inno Setup is compressing the release files.'
     $iss = Join-Path $PSScriptRoot 'windows_installer.iss'
     $arguments = '/Qp "/DReleaseDir={0}" "/DVcRuntimeDir={1}" "{2}"' -f $release, $VcRuntimeDirectory, $iss
     $startInfo = New-Object Diagnostics.ProcessStartInfo

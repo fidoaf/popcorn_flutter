@@ -1,0 +1,15 @@
+.git
+.dart_tool
+.flutter-plugins
+.flutter-plugins-dependencies
+**/node_modules
+**/.dart_tool
+**/build
+docs
+android
+ios
+macos
+windows
+test
+tool
+assets/config/app.env

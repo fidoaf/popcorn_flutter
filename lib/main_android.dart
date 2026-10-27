@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -23,10 +24,14 @@ import 'package:popcorn_flutter/src/home/home.dart';
 import 'package:popcorn_flutter/src/legal/legal.dart';
 import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/embedded_player_server.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/profile/view/account_settings_view.dart';
 import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'src/app/view/material/splash_screen.dart';
 
@@ -74,11 +79,12 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
   final String _initialLocation = PlatformDispatcher.instance.defaultRouteName;
   GoRouter? _router;
   RouterLocationListenable? _location;
+  EmbeddedPlayerServer? _localServer;
 
   @override
   void initState() {
     super.initState();
-    AppServices.create()
+    _createServices()
         .then((services) {
           if (!mounted) return;
           final router = createAppRouter(
@@ -99,8 +105,37 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
         });
   }
 
+  Future<AppServices> _createServices() async {
+    if (!PlayerServerConfig.usesDefinedServer && await LocalServerPreference.isEnabled()) {
+      final preferences = await SharedPreferences.getInstance();
+      final token = await EmbeddedPlayerServer.loadToken(preferences);
+      final server = EmbeddedPlayerServer(token: token);
+      _localServer = server;
+      try {
+        final uri = await server.start();
+        if (!mounted) {
+          await server.stop();
+          throw StateError('Application closed during local server startup.');
+        }
+        PlayerServerConfig.useLocalServer(url: uri.toString(), token: token);
+      } catch (error) {
+        await server.stop();
+        _localServer = null;
+        PlayerServerConfig.useHostedServer();
+        try {
+          await LocalServerPreference.setEnabled(false);
+        } catch (preferenceError) {
+          debugPrint('[LocalServer] Could not disable local mode after startup failure: $preferenceError');
+        }
+        debugPrint('[LocalServer] Android local startup failed; using hosted server: $error');
+      }
+    }
+    return AppServices.create();
+  }
+
   @override
   void dispose() {
+    unawaited(_localServer?.stop().catchError((Object error) => debugPrint('[LocalServer] Shutdown failed: $error')));
     _location?.dispose();
     _router?.dispose();
     _servicesOrNull?.dispose();
@@ -312,12 +347,7 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
             onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
             episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
             onPlayEpisode: (season, episode) => context.push(
-              AppRoutes.watch(
-                bundle.type,
-                bundle.item.id,
-                season: season.seasonNumber,
-                episode: episode.episodeNumber,
-              ),
+              AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
               extra: bundle.item,
             ),
           ),
@@ -410,8 +440,7 @@ class _AndroidHomeView extends StatelessWidget {
                 initialQuery: initialQuery,
                 initialMediaType: initialMediaType,
                 onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
-                onMediaPlay: (media) =>
-                  context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
+                onMediaPlay: (media) => context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
               ),
       ),
     );

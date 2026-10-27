@@ -5,12 +5,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $output = Join-Path $root 'build\installer'
+$staleLocalServer = Join-Path $root 'build\windows\x64\runner\Release\local_server'
+if (Test-Path $staleLocalServer) { Remove-Item $staleLocalServer -Recurse -Force }
 
 Push-Location $root
 try {
-    if (!$SkipBuild -and !(Test-Path 'build\windows-server\chrome-path.txt')) {
-        throw 'Prepare the local server first with .\tool\bundle_windows_server.ps1.'
-    }
     $version = ((Select-String -Path 'pubspec.yaml' -Pattern '^version:\s*([0-9]+\.[0-9]+\.[0-9]+)').Matches[0].Groups[1].Value)
     if (!$version) { throw 'Could not read the version from pubspec.yaml.' }
 

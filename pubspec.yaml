@@ -58,11 +58,14 @@ dependencies:
   pointer_interceptor: 0.10.1+3
   package_info_plus: ^10.2.2
   country_picker: ^2.0.28
+  popcorn_server_core:
+    path: packages/popcorn_server_core
+  popcorn_server_runtime:
+    path: packages/popcorn_server_runtime
 
 
   # Phased-out:
   # desktop_window: ^0.4.2
-  #puppeteer: ^3.16.0
 
 dev_dependencies:
   flutter_test:
@@ -126,7 +129,6 @@ flutter:
     - assets/icons/
     - assets/config/
     - assets/posters/
-    - server/config/media_source_providers.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -1,9 +1,9 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
-import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/domain/media_region_preference.dart';
 
@@ -21,12 +21,13 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   bool _savingLocalServer = false;
   String? _localServerError;
   bool get _isWindows => !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+  bool get _supportsLocalServer => !kIsWeb && (_isWindows || defaultTargetPlatform == TargetPlatform.android);
 
   @override
   void initState() {
     super.initState();
     _loadRegion();
-    if (_isWindows) _loadLocalServer();
+    if (_supportsLocalServer) _loadLocalServer();
   }
 
   Future<void> _loadLocalServer() async {
@@ -99,17 +100,20 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   Widget build(BuildContext context) {
     final country = Country.tryParse(_region);
     final regionName = country?.name ?? _region;
-    final regionValue = '${_isWindows ? '' : country?.flagEmoji ?? ''} $regionName${_usesDeviceRegion ? ' · ${ProfileTranslations.deviceRegion.trOf(context)}' : ''}';
+    final regionValue =
+        '${_isWindows ? '' : country?.flagEmoji ?? ''} $regionName${_usesDeviceRegion ? ' · ${ProfileTranslations.deviceRegion.trOf(context)}' : ''}';
     return Material(
       type: MaterialType.transparency,
       child: ListView(
         children: [
-          if (_isWindows)
+          if (_supportsLocalServer)
             SwitchListTile(
-              secondary: const Icon(Icons.computer),
+              secondary: Icon(_isWindows ? Icons.computer : Icons.phone_android),
               title: Text(ProfileTranslations.localPlayerServer.trOf(context)),
               subtitle: Text(
-                PlayerServerConfig.usesDefinedServer ? PlayerServerConfig.serverUrl : _localServerError ?? ProfileTranslations.localPlayerServerHint.trOf(context),
+                PlayerServerConfig.usesDefinedServer
+                    ? PlayerServerConfig.serverUrl
+                    : _localServerError ?? ProfileTranslations.localPlayerServerHint.trOf(context),
               ),
               value: PlayerServerConfig.usesDefinedServer || (_localServer ?? false),
               onChanged: PlayerServerConfig.usesDefinedServer || _localServer == null || _savingLocalServer ? null : _saveLocalServer,

@@ -1,19 +1,12 @@
 services:
   - type: web
     name: popcorn-vidsrc-player
-    runtime: node
+    runtime: docker
     plan: free
     region: oregon
-    rootDir: server
-    buildCommand: npm install --omit=dev
-    startCommand: npm start
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: .
     healthCheckPath: /health
     envVars:
       - key: API_TOKENS
         sync: false
-      - key: NODE_ENV
-        value: production
-      - key: PUPPETEER_SKIP_DOWNLOAD
-        value: "true"
-      - key: NODE_VERSION
-        value: "20"

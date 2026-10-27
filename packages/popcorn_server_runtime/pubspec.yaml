@@ -1,0 +1,11 @@
+name: popcorn_server_runtime
+description: Native HTTP runtime for the Popcorn server core.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: '>=3.11.0 <4.0.0'
+
+dependencies:
+  popcorn_server_core:
+    path: ../popcorn_server_core
