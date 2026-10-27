@@ -274,6 +274,39 @@ embedding an HTTP player from a deployed HTTPS app.
 
 ## Player Server Authorization
 
+### Fly.io deployment
+
+The Fly configuration and Dockerfile are in `server/`; deploy from that
+directory so the Docker build context includes the server's `package-lock.json`:
+
+1. Install and authenticate the Fly CLI, then change `app` in `server/fly.toml`
+   to an available, globally unique Fly app name if `popcorn-flutter-player` is
+   already taken.
+2. From the repository root, run:
+
+   ```powershell
+   Push-Location server
+   fly apps create popcorn-flutter-player
+   fly secrets set API_TOKENS="replace-with-a-long-random-token"
+   fly deploy
+   Pop-Location
+   ```
+
+   Use the same app name in `fly apps create` and `server/fly.toml`. Keep the
+   token secret; the health endpoint is public, while protected API routes
+   require this token.
+3. The server will be available at `https://<app-name>.fly.dev`. Point app
+   builds at it with
+   `--dart-define=PLAYER_SERVER_URL=https://<app-name>.fly.dev`, and update the
+   hosted player provider in `assets/config/media_source_providers.json` to the
+   same hostname before rebuilding if `/player` playback should use Fly.
+
+The Fly service uses the existing Chromium-enabled image, a 1 GB shared-CPU
+machine, HTTPS, and the `/health` check. Machines may stop when idle and start
+on the next request.
+
+### Render deployment
+
 In the Render service's **Environment** settings, set `API_TOKENS` to one or
 more comma-separated bearer tokens, then redeploy. Multiple tokens allow a
 new app token to be deployed before removing the old one. `AUTH_TOKEN` is also
