@@ -7,12 +7,7 @@
   "functions": {
     "api/**/*.js": {
       "maxDuration": "max",
-      "includeFiles": [
-        "config/**",
-        "proxy-demo.html",
-        "app_icon.ico",
-        "node_modules/@sparticuz/chromium/bin/**"
-      ]
+      "includeFiles": "{config/**,proxy-demo.html,app_icon.ico,node_modules/@sparticuz/chromium/bin/**}"
     }
   }
 }
