@@ -1,0 +1,18 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/", "destination": "/api?__vercel_route=/" },
+    { "source": "/:path*", "destination": "/api?__vercel_route=/:path*" }
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": "max",
+      "includeFiles": [
+        "config/**",
+        "proxy-demo.html",
+        "app_icon.ico",
+        "node_modules/@sparticuz/chromium/bin/**"
+      ]
+    }
+  }
+}

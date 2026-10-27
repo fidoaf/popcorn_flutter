@@ -3,6 +3,18 @@ const { createLogger } = require('./logger');
 
 const log = createLogger('browserPool');
 
+async function getChromiumLaunchOptions(options) {
+  if (process.env.VERCEL !== '1') return options;
+  const chromium = require('@sparticuz/chromium');
+  return {
+    ...options,
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
+  };
+}
+
 // Lazily launches and owns a single shared Chromium instance. Everything that
 // needs a page depends on this abstraction rather than on Puppeteer's launch
 // details, so browser configuration lives in exactly one place.
@@ -41,7 +53,7 @@ class BrowserPool {
     if (!this.browser) {
       const startedAt = Date.now();
       log.info('launching Chromium', { executablePath: this.chromePath || 'bundled' });
-      this.browser = await puppeteer.launch(this.launchOptions);
+      this.browser = await puppeteer.launch(await getChromiumLaunchOptions(this.launchOptions));
       log.info('Chromium launched', {
         durationMs: Date.now() - startedAt,
         pid: this.browser.process() ? this.browser.process().pid : null,
@@ -65,4 +77,4 @@ class BrowserPool {
   }
 }
 
-module.exports = { BrowserPool };
+module.exports = { BrowserPool, getChromiumLaunchOptions };

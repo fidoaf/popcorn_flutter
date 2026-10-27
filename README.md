@@ -274,6 +274,41 @@ embedding an HTTP player from a deployed HTTPS app.
 
 ## Player Server Authorization
 
+### Vercel server deployment (experimental)
+
+The function uses the maximum duration allowed by the Vercel plan. Browser-based
+provider requests can take up to 75 seconds, so providers with slower responses
+may time out on plans with a lower function-duration limit.
+Flutter web app. Import the repository in Vercel and set the project **Root
+Directory** to `server`; the checked-in `vercel.json` rewrites the server's
+existing root routes to a catch-all Node function. Leave **Output Directory**
+unset.
+
+Set these Vercel environment variables for every environment you deploy:
+
+- `API_TOKENS`: a long random bearer token, or comma-separated tokens.
+- `PLAYER_STATE_SECRET`: at least 32 random bytes, used to encrypt expiring
+   playback sessions and provider/resource references across function instances.
+- `PUPPETEER_SKIP_DOWNLOAD`: `true`, so the build does not download another
+   Chromium binary; Vercel uses the bundled Sparticuz Chromium package.
+
+For example, generate values locally with
+`node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`.
+Keep both secrets in Vercel's environment settings, not in source control. The
+function is configured for a 120-second maximum duration; the Vercel plan must
+allow that duration for browser-based provider requests to complete.
+
+After deploying, set the Flutter app's `PLAYER_SERVER_URL` to the Vercel
+project's HTTPS **origin** (without `/api`) and set its `playerServer.token` to
+one of the matching `API_TOKENS`. The Vercel rewrite preserves the existing
+server route paths.
+
+This is an experimental serverless deployment, not a full replacement for a
+long-running host. HLS resources are proxied as individual requests, but slow
+provider extraction or long-running direct streams can exceed function limits.
+The app's in-memory catalogue caches are per function instance and are not
+shared.
+
 ### Fly.io deployment
 
 The Fly configuration and Dockerfile are in `server/`; deploy from that

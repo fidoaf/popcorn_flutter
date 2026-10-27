@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { RedirectProvider } = require('./redirectProvider');
 const { createLogger } = require('../logger');
+const { getChromiumLaunchOptions } = require('../browserPool');
 
 const DEFAULT_TIMEOUT_MS = 10000;
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -449,10 +450,10 @@ class NxshaProvider extends RedirectProvider {
       this.log.info('launching Chromium for Nxsha API transport', { origin: this.origin });
       this.browserPagePromise = (async () => {
         const puppeteer = require('puppeteer');
-        const browser = await puppeteer.launch({
+        const browser = await puppeteer.launch(await getChromiumLaunchOptions({
           headless: 'new',
           args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        });
+        }));
         this.browser = browser;
         browser.once('disconnected', () => {
           this.browser = null;

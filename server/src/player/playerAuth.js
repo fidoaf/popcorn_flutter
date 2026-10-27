@@ -5,11 +5,12 @@ const SESSION_TTL_MS = 30 * 60 * 1000;
 const MAX_SESSIONS = 10000;
 
 class PlayerAuth {
-  constructor(apiTokens, { now = Date.now, sessionTtlMs = SESSION_TTL_MS } = {}) {
+  constructor(apiTokens, { now = Date.now, sessionTtlMs, tokenCodec = null } = {}) {
     this.auth = new AuthService({ apiTokens, publicPaths: new Set() });
     this.sessions = new Map();
     this.now = now;
-    this.sessionTtlMs = sessionTtlMs;
+    this.sessionTtlMs = sessionTtlMs ?? (tokenCodec ? 12 * 60 * 60 * 1000 : SESSION_TTL_MS);
+    this.tokenCodec = tokenCodec;
   }
 
   hasBearer(request) {
@@ -21,6 +22,7 @@ class PlayerAuth {
     if (url.pathname === '/session') return this.hasBearer(request);
     if (this.hasBearer(request)) return true;
     const id = url.searchParams.get('session');
+    if (this.tokenCodec) return this.tokenCodec.decode(id, 'session', this.now()) !== null;
     const expiresAt = this.sessions.get(id);
     if (!expiresAt) return false;
     if (expiresAt <= this.now()) {
@@ -33,6 +35,9 @@ class PlayerAuth {
 
   createSession() {
     const now = this.now();
+    if (this.tokenCodec) {
+      return this.tokenCodec.encode('session', { id: randomBytes(16).toString('hex') }, now + this.sessionTtlMs);
+    }
     for (const [id, expiresAt] of this.sessions) {
       if (expiresAt <= now) this.sessions.delete(id);
     }
@@ -49,6 +54,9 @@ class PlayerAuth {
 
   pageSession(url) {
     const id = url.searchParams.get('session');
+    if (this.tokenCodec) {
+      return this.tokenCodec.decode(id, 'session', this.now()) ? id : this.auth.enabled ? this.createSession() : null;
+    }
     if (this.sessions.get(id) > this.now()) return id;
     return this.auth.enabled ? this.createSession() : null;
   }

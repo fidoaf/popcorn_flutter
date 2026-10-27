@@ -7,11 +7,12 @@ const MAX_RESOURCE_COUNT = 10000;
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 class ResourceProxy {
-  constructor({ providers, fetchImpl = globalThis.fetch, timeoutMs = DEFAULT_TIMEOUT_MS, resourceTtlMs = DEFAULT_RESOURCE_TTL_MS } = {}) {
+  constructor({ providers, fetchImpl = globalThis.fetch, timeoutMs = DEFAULT_TIMEOUT_MS, resourceTtlMs = DEFAULT_RESOURCE_TTL_MS, tokenCodec = null } = {}) {
     this.providers = providers;
     this.fetchImpl = fetchImpl;
     this.timeoutMs = timeoutMs;
     this.resourceTtlMs = resourceTtlMs;
+    this.tokenCodec = tokenCodec;
     this.resources = new Map();
   }
 
@@ -56,6 +57,10 @@ class ResourceProxy {
   }
 
   _register(url, providerId) {
+    const expiresAt = Date.now() + this.resourceTtlMs;
+    if (this.tokenCodec) {
+      return `/resource/${this.tokenCodec.encode('resource', { url, providerId }, expiresAt)}`;
+    }
     this._pruneExpired();
     if (this.resources.size >= MAX_RESOURCE_COUNT) {
       const oldestKey = this.resources.keys().next().value;
@@ -67,7 +72,7 @@ class ResourceProxy {
   }
 
   _getResource(key) {
-    const resource = this.resources.get(key);
+    const resource = this.tokenCodec ? this.tokenCodec.decode(key, 'resource') : this.resources.get(key);
     if (!resource) return null;
     if (resource.expiresAt <= Date.now()) {
       this.resources.delete(key);

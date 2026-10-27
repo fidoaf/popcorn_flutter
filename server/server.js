@@ -5,12 +5,18 @@ const { createPlayerServer } = require('./src/player/playerServer');
 const { DEFAULT_PROVIDER_ID } = require('./src/player/providerRegistry');
 const { createProviderRegistry } = require('./src/player/providerFactory');
 const { ResourceProxy } = require('./src/player/resourceProxy');
+const { createStateTokenCodec } = require('./src/player/stateTokenCodec');
+const { SourceRefStore } = require('./src/player/sourceRefStore');
+const { SubtitleRefStore } = require('./src/player/subtitleRefStore');
 
 function createDefaultProviders(options = {}) {
   return createProviderRegistry(options);
 }
 
 function createServer(initialMedia = null, dependencies = {}) {
+  const stateTokenCodec = dependencies.stateTokenCodec ?? createStateTokenCodec();
+  const sourceRefs = dependencies.sourceRefs || new SourceRefStore({ tokenCodec: stateTokenCodec });
+  const subtitleRefs = dependencies.subtitleRefs || new SubtitleRefStore({ tokenCodec: stateTokenCodec });
   const providers = dependencies.providers || createDefaultProviders({
     providerConfig: dependencies.providerConfig,
     configPath: dependencies.providerConfigPath,
@@ -23,12 +29,15 @@ function createServer(initialMedia = null, dependencies = {}) {
     fetchImpl: dependencies.fetchImpl,
     timeoutMs: dependencies.timeoutMs,
     resourceTtlMs: dependencies.resourceTtlMs,
+    tokenCodec: stateTokenCodec,
   });
   return createPlayerServer({
     initialMedia,
     providers,
     resourceProxy,
-    subtitleRefs: dependencies.subtitleRefs,
+    subtitleRefs,
+    sourceRefs,
+    stateTokenCodec,
     fetchImpl: dependencies.fetchImpl,
     apiTokens: dependencies.apiTokens,
     auth: dependencies.auth,

@@ -11,7 +11,7 @@ const { LiveTvCatalog } = require('../liveTvCatalog');
 const { LiveTvEpg } = require('../liveTvEpg');
 const { RadioCatalog } = require('../radioCatalog');
 
-function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch, apiTokens = parseTokens(process.env.API_TOKENS || process.env.AUTH_TOKEN), auth = new PlayerAuth(apiTokens), liveTvCatalog = new LiveTvCatalog({ fetchImpl }), radioCatalog = new RadioCatalog({ fetchImpl }) }) {
+function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch, apiTokens = parseTokens(process.env.API_TOKENS || process.env.AUTH_TOKEN), stateTokenCodec = null, auth = new PlayerAuth(apiTokens, { tokenCodec: stateTokenCodec }), liveTvCatalog = new LiveTvCatalog({ fetchImpl }), radioCatalog = new RadioCatalog({ fetchImpl }) }) {
   if (!providers || !resourceProxy) throw new TypeError('Player server requires providers and a resource proxy');
   const liveTvEpg = new LiveTvEpg({ fetchImpl });
 
