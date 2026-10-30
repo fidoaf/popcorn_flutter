@@ -25,6 +25,18 @@ class HomeTranslations {
 
   static const trendingTv = Translation({AppLanguage.en: 'Trending TV Series', AppLanguage.es: 'Series en tendencia', AppLanguage.ca: 'Sèries en tendència'});
 
+  static const noHomeSections = Translation({
+    AppLanguage.en: 'No home sections are enabled for this profile.',
+    AppLanguage.es: 'No hay secciones activadas para este perfil.',
+    AppLanguage.ca: 'No hi ha cap secció activada per a aquest perfil.',
+  });
+
+  static const editHomeSections = Translation({
+    AppLanguage.en: 'Choose home sections',
+    AppLanguage.es: 'Elegir secciones de inicio',
+    AppLanguage.ca: 'Tria les seccions d’inici',
+  });
+
   static const newSeason = Translation({AppLanguage.en: 'NEW SEASON', AppLanguage.es: 'NUEVA TEMPORADA', AppLanguage.ca: 'NOVA TEMPORADA'});
 
   static const seasonPremiere = Translation({
@@ -44,6 +56,7 @@ class HomeTranslations {
   });
 
   static const liveTv = Translation({AppLanguage.en: 'Live TV', AppLanguage.es: 'TV en directo', AppLanguage.ca: 'TV en directe'});
+  static const liveRadio = Translation({AppLanguage.en: 'Live radio', AppLanguage.es: 'Radio en directo', AppLanguage.ca: 'Ràdio en directe'});
   static const geoRestricted = Translation({
     AppLanguage.en: 'Geo-restricted',
     AppLanguage.es: 'Restricción geográfica',
@@ -55,11 +68,7 @@ class HomeTranslations {
     AppLanguage.ca: 'iptv-org indica restriccions geogràfiques per a aquesta emissió. Pot ser que no es reprodueixi a la teva ubicació.',
   });
   static const allCountries = Translation({AppLanguage.en: 'All countries', AppLanguage.es: 'Todos los países', AppLanguage.ca: 'Tots els països'});
-  static const broadcastArea = Translation({
-    AppLanguage.en: 'Broadcast area',
-    AppLanguage.es: 'Zona de emisión',
-    AppLanguage.ca: "Zona d'emissió",
-  });
+  static const broadcastArea = Translation({AppLanguage.en: 'Broadcast area', AppLanguage.es: 'Zona de emisión', AppLanguage.ca: "Zona d'emissió"});
   static const broadcastAreaInfo = Translation({
     AppLanguage.en: 'Intended broadcast area, not confirmed streaming availability.',
     AppLanguage.es: 'Zona de emisión prevista, no disponibilidad confirmada de la transmisión.',

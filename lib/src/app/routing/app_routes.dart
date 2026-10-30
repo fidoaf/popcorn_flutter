@@ -16,16 +16,27 @@ abstract final class AppRoutes {
   static const String privacy = '/privacy';
   static const String terms = '/terms';
   static const String accountSettings = '/account-settings';
+  static const String profileSettings = '/profile-settings';
 
-  static String liveTvDetails(String id) => '/live-tv/${Uri.encodeComponent(id)}';
+  static String editProfile(String profileId) =>
+      '$profileSettings/${Uri.encodeComponent(profileId)}';
+
+  static String liveTvDetails(String id) =>
+      '/live-tv/${Uri.encodeComponent(id)}';
   static String liveTvWatch(String id) => '${liveTvDetails(id)}/watch';
   static String radio(String id) => '/radio/${Uri.encodeComponent(id)}';
 
   static String homeSearch(String query, {MediaType type = MediaType.movie}) =>
-      query.trim().isEmpty ? home : Uri(path: home, queryParameters: {'q': query.trim(), 'type': type.name}).toString();
+      query.trim().isEmpty
+      ? home
+      : Uri(
+          path: home,
+          queryParameters: {'q': query.trim(), 'type': type.name},
+        ).toString();
 
   /// `/search/{movie|tv}?q={query}`.
-  static String search(String query, {MediaType type = MediaType.movie}) => '/search/${type.name}?q=${Uri.encodeQueryComponent(query)}';
+  static String search(String query, {MediaType type = MediaType.movie}) =>
+      '/search/${type.name}?q=${Uri.encodeQueryComponent(query)}';
 
   /// `/details/{movie|tv}/{id}`.
   static String details(MediaType type, int id) => '/details/${type.name}/$id';
@@ -36,7 +47,10 @@ abstract final class AppRoutes {
   /// `/watch/{movie|tv}/{id}` with optional `?season=&episode=` for TV.
   static String watch(MediaType type, int id, {int? season, int? episode}) {
     final path = '/watch/${type.name}/$id';
-    final query = <String, String>{if (season != null) 'season': '$season', if (episode != null) 'episode': '$episode'};
+    final query = <String, String>{
+      if (season != null) 'season': '$season',
+      if (episode != null) 'episode': '$episode',
+    };
     if (query.isEmpty) return path;
     return '$path?${query.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
   }
@@ -48,7 +62,10 @@ abstract final class AppRoutes {
     if (segments.isEmpty) return const LandingRoute();
     switch (segments.first) {
       case 'home':
-        return HomeRoute(query: uri.queryParameters['q'] ?? '', type: _parseType(uri.queryParameters['type']));
+        return HomeRoute(
+          query: uri.queryParameters['q'] ?? '',
+          type: _parseType(uri.queryParameters['type']),
+        );
       case 'favorites':
         return const FavoritesRoute();
       case 'history':
@@ -61,11 +78,20 @@ abstract final class AppRoutes {
         return const TermsRoute();
       case 'account-settings':
         return const AccountSettingsRoute();
+      case 'profile-settings':
+        return ProfileSettingsRoute(
+          profileId: segments.length > 1 ? segments[1] : null,
+        );
       case 'search':
-        return SearchRoute(query: uri.queryParameters['q'] ?? '', type: _parseType(segments.length > 1 ? segments[1] : null));
+        return SearchRoute(
+          query: uri.queryParameters['q'] ?? '',
+          type: _parseType(segments.length > 1 ? segments[1] : null),
+        );
       case 'details':
         final parsed = _parseTypeId(segments);
-        return parsed == null ? const UnknownRoute() : DetailsRoute(type: parsed.$1, id: parsed.$2);
+        return parsed == null
+            ? const UnknownRoute()
+            : DetailsRoute(type: parsed.$1, id: parsed.$2);
       case 'person':
         final id = segments.length > 1 ? int.tryParse(segments[1]) : null;
         return id == null ? const UnknownRoute() : PersonRoute(id: id);
@@ -103,7 +129,9 @@ abstract final class AppRoutes {
   /// Whether [name] resolves to a page that is reachable without signing in.
   static bool isPublic(String? name) {
     final request = parse(name);
-    return request is LandingRoute || request is PrivacyRoute || request is TermsRoute;
+    return request is LandingRoute ||
+        request is PrivacyRoute ||
+        request is TermsRoute;
   }
 }
 
@@ -148,6 +176,12 @@ class AccountSettingsRoute extends AppRouteRequest {
   const AccountSettingsRoute();
 }
 
+class ProfileSettingsRoute extends AppRouteRequest {
+  const ProfileSettingsRoute({this.profileId});
+
+  final String? profileId;
+}
+
 class SearchRoute extends AppRouteRequest {
   const SearchRoute({required this.query, required this.type});
 
@@ -169,7 +203,12 @@ class PersonRoute extends AppRouteRequest {
 }
 
 class WatchRoute extends AppRouteRequest {
-  const WatchRoute({required this.type, required this.id, this.season, this.episode});
+  const WatchRoute({
+    required this.type,
+    required this.id,
+    this.season,
+    this.episode,
+  });
 
   final MediaType type;
   final int id;

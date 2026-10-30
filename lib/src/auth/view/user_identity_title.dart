@@ -13,12 +13,20 @@ import 'package:popcorn_flutter/src/profile/view/profile_sheet.dart';
 /// switcher (pick, add, edit, sign out). Debug guest sessions show a localized
 /// "Guest" placeholder.
 class UserIdentityTitle extends StatelessWidget {
-  const UserIdentityTitle({super.key, required this.controller, required this.fallbackTitle, this.profileController, this.avatarSize = 30});
+  const UserIdentityTitle({
+    super.key,
+    required this.controller,
+    required this.fallbackTitle,
+    this.profileController,
+    this.avatarSize = 30,
+    this.compact = false,
+  });
 
   final AuthController controller;
   final ProfileController? profileController;
   final Widget fallbackTitle;
   final double avatarSize;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -33,14 +41,20 @@ class UserIdentityTitle extends StatelessWidget {
         // members never bleeds one user's avatar onto another). Only without a
         // profile do we fall back to the signed-in identity's avatar.
         final avatarUrl = profile != null ? _nonEmpty(profile.avatarUrl) : _nonEmpty(controller.avatarUrl);
-        final content = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ProfileAvatar(url: avatarUrl, initial: name.substring(0, 1).toUpperCase(), size: avatarSize),
-            const SizedBox(width: 10),
-            Flexible(child: Text(name, overflow: TextOverflow.ellipsis)),
-          ],
-        );
+        final avatar = ProfileAvatar(url: avatarUrl, initial: name.substring(0, 1).toUpperCase(), size: avatarSize);
+        final content = compact
+            ? Padding(
+                padding: const EdgeInsets.all(8),
+                child: Semantics(button: true, label: name, child: avatar),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  avatar,
+                  const SizedBox(width: 10),
+                  Flexible(child: Text(name, overflow: TextOverflow.ellipsis)),
+                ],
+              );
 
         final switcher = profileController;
         if (switcher == null) return content;

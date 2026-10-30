@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:popcorn_flutter/src/app/routing/app_routes.dart';
 import 'package:popcorn_flutter/src/app/view/app_version_footer.dart';
+import 'package:popcorn_flutter/src/auth/domain/auth_controller.dart';
 import 'package:popcorn_flutter/src/favorites/domain/favorite_media.dart';
 import 'package:popcorn_flutter/src/favorites/view/favorites_controller.dart';
 import 'package:popcorn_flutter/src/history/domain/watch_history_entry.dart';
@@ -13,10 +14,12 @@ import 'package:popcorn_flutter/src/history/view/watch_history_controller.dart';
 import 'package:popcorn_flutter/src/home/view/home_feed_controller.dart';
 import 'package:popcorn_flutter/src/home/view/home_translations.dart';
 import 'package:popcorn_flutter/src/live_tv/live_tv.dart';
-import 'package:popcorn_flutter/src/live_tv/live_tv_logo.dart';
 import 'package:popcorn_flutter/src/live_tv/live_tv_country.dart';
+import 'package:popcorn_flutter/src/live_tv/live_tv_logo.dart';
 import 'package:popcorn_flutter/src/locale/view/locale_formatting.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/profile/domain/home_section.dart';
+import 'package:popcorn_flutter/src/profile/view/profile_controller.dart';
 import 'package:popcorn_flutter/src/radio/radio_controller.dart';
 import 'package:popcorn_flutter/src/radio/radio_logo.dart';
 import 'package:popcorn_flutter/src/radio/radio_station.dart';
@@ -54,6 +57,9 @@ class BrowseHomeView extends StatefulWidget {
     required this.favoritesController,
     required this.historyController,
     required this.searchController,
+    this.profileController,
+    this.isGuest = false,
+    this.authController,
     required this.onOpenDetails,
     required this.onPlay,
     required this.onResume,
@@ -70,6 +76,9 @@ class BrowseHomeView extends StatefulWidget {
 
   /// Drives the inline search overlay (results, trending, media type).
   final MediaSearchController searchController;
+  final ProfileController? profileController;
+  final bool isGuest;
+  final AuthController? authController;
 
   /// Opens the details page for a catalogue entry.
   final void Function(MediaItem item, MediaType type) onOpenDetails;
@@ -103,12 +112,17 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
   bool _searchActive = false;
   late final LiveTvController _liveTvController;
   late final RadioController _radioController;
+  bool _liveTvLoaded = false;
+  bool _radioLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _liveTvController = LiveTvController()..load();
-    _radioController = RadioController()..load();
+    _liveTvController = LiveTvController();
+    _radioController = RadioController();
+    widget.profileController?.addListener(_syncSectionLoads);
+    widget.authController?.addListener(_syncSectionLoads);
+    _syncSectionLoads();
     widget.searchController.addListener(_syncSearchUrl);
     final query = widget.initialQuery?.trim() ?? '';
     if (query.isEmpty) {
@@ -128,18 +142,42 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
       final router = GoRouter.maybeOf(context);
       if (router == null) return;
       final uri = router.routeInformationProvider.value.uri;
-      if (uri.path != AppRoutes.home && !uri.path.startsWith('/search/')) return;
+      if (uri.path != AppRoutes.home && !uri.path.startsWith('/search/'))
+        return;
       final query = widget.searchController.query;
       final type = widget.searchController.mediaType;
-      final location = uri.path == AppRoutes.home || query.isEmpty ? AppRoutes.homeSearch(query, type: type) : AppRoutes.search(query, type: type);
-      if (uri.toString() != location) Router.neglect(context, () => router.go(location));
+      final location = uri.path == AppRoutes.home || query.isEmpty
+          ? AppRoutes.homeSearch(query, type: type)
+          : AppRoutes.search(query, type: type);
+      if (uri.toString() != location)
+        Router.neglect(context, () => router.go(location));
     });
     WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _syncSectionLoads() {
+    final controller = widget.profileController;
+    final isGuest = widget.isGuest || (widget.authController?.isGuest ?? false);
+    if (!isGuest && (controller?.isLoading ?? false)) return;
+    final sections = isGuest || controller == null
+        ? HomeSection.values.toSet()
+        : controller.activeProfile?.homeSections?.toSet() ??
+              const <HomeSection>{};
+    if (sections.contains(HomeSection.liveTv) && !_liveTvLoaded) {
+      _liveTvLoaded = true;
+      _liveTvController.load();
+    }
+    if (sections.contains(HomeSection.liveRadio) && !_radioLoaded) {
+      _radioLoaded = true;
+      _radioController.load();
+    }
   }
 
   @override
   void dispose() {
     widget.searchController.removeListener(_syncSearchUrl);
+    widget.profileController?.removeListener(_syncSectionLoads);
+    widget.authController?.removeListener(_syncSectionLoads);
     _liveTvController.dispose();
     _radioController.dispose();
     super.dispose();
@@ -170,7 +208,13 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
         child: Stack(
           children: [
             ListenableBuilder(
-              listenable: Listenable.merge([widget.feedController, widget.favoritesController, widget.historyController]),
+              listenable: Listenable.merge([
+                widget.feedController,
+                widget.favoritesController,
+                widget.historyController,
+                if (widget.profileController != null) widget.profileController!,
+                if (widget.authController != null) widget.authController!,
+              ]),
               builder: (context, _) => _buildBrowse(context),
             ),
             Positioned(
@@ -185,8 +229,12 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                 favoritesController: widget.favoritesController,
                 enableDpadFocus: widget.enableDpadFocus,
                 onClose: _closeSearch,
-                onOpenDetails: (item) => widget.onOpenDetails(item, widget.searchController.mediaType),
-                onPlay: (item) => widget.onPlay(item, widget.searchController.mediaType),
+                onOpenDetails: (item) => widget.onOpenDetails(
+                  item,
+                  widget.searchController.mediaType,
+                ),
+                onPlay: (item) =>
+                    widget.onPlay(item, widget.searchController.mediaType),
               ),
             ),
           ],
@@ -197,6 +245,33 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
 
   Widget _buildBrowse(BuildContext context) {
     final feedController = widget.feedController;
+    final profileController = widget.profileController;
+    final isGuest = widget.isGuest || (widget.authController?.isGuest ?? false);
+    if (!isGuest && (profileController?.isLoading ?? false)) {
+      return const _BrowseSkeleton();
+    }
+
+    final sections = isGuest || profileController == null
+        ? HomeSection.values
+        : profileController.activeProfile?.homeSections ??
+              const <HomeSection>[];
+    if (sections.isEmpty) {
+      return SafeArea(
+        bottom: false,
+        child: CustomScrollView(
+          slivers: [
+            const SliverToBoxAdapter(child: SizedBox(height: 60)),
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _EmptyHomeSections(
+                onOpenSettings: () => context.push(AppRoutes.profileSettings),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (feedController.isLoading) {
       return const _BrowseSkeleton();
     }
@@ -207,19 +282,29 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
 
     final history = widget.historyController.entries;
     final favorites = widget.favoritesController.favorites;
+    final showMovies = sections.contains(HomeSection.movies);
+    final showTvSeries = sections.contains(HomeSection.tvSeries);
+    final featured = showMovies && feedController.trendingMovies.isNotEmpty
+        ? feedController.trendingMovies.first
+        : showTvSeries && feedController.trendingTv.isNotEmpty
+        ? feedController.trendingTv.first
+        : null;
+    final featuredType = showMovies && feedController.trendingMovies.isNotEmpty
+        ? MediaType.movie
+        : MediaType.tv;
 
     return SafeArea(
       bottom: false,
       child: CustomScrollView(
         slivers: [
           const SliverToBoxAdapter(child: SizedBox(height: 60)),
-          if (feedController.featured != null)
+          if (featured != null)
             SliverToBoxAdapter(
               child: _HeroBanner(
-                item: feedController.featured!,
+                item: featured,
                 autofocus: widget.enableDpadFocus,
-                onPlay: () => widget.onPlay(feedController.featured!, feedController.featuredType),
-                onDetails: () => widget.onOpenDetails(feedController.featured!, feedController.featuredType),
+                onPlay: () => widget.onPlay(featured, featuredType),
+                onDetails: () => widget.onOpenDetails(featured, featuredType),
               ),
             ),
           if (history.isNotEmpty)
@@ -234,7 +319,11 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                   item: entry.item,
                   mediaType: entry.type,
                   favoritesController: widget.favoritesController,
-                  badgeLabel: _posterBadgeLabel(entry.item, entry.type, context),
+                  badgeLabel: _posterBadgeLabel(
+                    entry.item,
+                    entry.type,
+                    context,
+                  ),
                   showResumeBadge: true,
                   onTap: () => widget.onOpenDetails(entry.item, entry.type),
                   onResume: () => widget.onResume(entry),
@@ -253,12 +342,17 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                   item: favorite.item,
                   mediaType: favorite.type,
                   favoritesController: widget.favoritesController,
-                  badgeLabel: _posterBadgeLabel(favorite.item, favorite.type, context),
-                  onTap: () => widget.onOpenDetails(favorite.item, favorite.type),
+                  badgeLabel: _posterBadgeLabel(
+                    favorite.item,
+                    favorite.type,
+                    context,
+                  ),
+                  onTap: () =>
+                      widget.onOpenDetails(favorite.item, favorite.type),
                 );
               },
             ),
-          if (feedController.trendingMovies.isNotEmpty)
+          if (showMovies && feedController.trendingMovies.isNotEmpty)
             _CarouselRow(
               title: HomeTranslations.trendingMovies.trOf(context),
               itemCount: feedController.trendingMovies.length,
@@ -273,7 +367,7 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                 );
               },
             ),
-          if (feedController.trendingTv.isNotEmpty)
+          if (showTvSeries && feedController.trendingTv.isNotEmpty)
             _CarouselRow(
               title: HomeTranslations.trendingTv.trOf(context),
               itemCount: feedController.trendingTv.length,
@@ -288,7 +382,8 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                 );
               },
             ),
-          if (feedController.trendingTrailers.isNotEmpty)
+          if (sections.contains(HomeSection.trailers) &&
+              feedController.trendingTrailers.isNotEmpty)
             _CarouselRow(
               title: HomeTranslations.trendingTrailers.trOf(context),
               itemCount: feedController.trendingTrailers.length,
@@ -298,17 +393,68 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
                 return _TrailerCard(
                   item: trailer.item,
                   video: trailer.video,
-                  onDetails: () => widget.onOpenDetails(trailer.item, trailer.type),
-                  onPlay: () => context.push(AppRoutes.trailer, extra: trailer.video),
+                  onDetails: () =>
+                      widget.onOpenDetails(trailer.item, trailer.type),
+                  onPlay: () =>
+                      context.push(AppRoutes.trailer, extra: trailer.video),
                 );
               },
             ),
-          SliverToBoxAdapter(child: LiveTvSection(controller: _liveTvController)),
-          SliverToBoxAdapter(child: RadioSection(controller: _radioController)),
+          if (sections.contains(HomeSection.liveTv))
+            SliverToBoxAdapter(
+              child: LiveTvSection(controller: _liveTvController),
+            ),
+          if (sections.contains(HomeSection.liveRadio))
+            SliverToBoxAdapter(
+              child: RadioSection(controller: _radioController),
+            ),
           const SliverToBoxAdapter(
-            child: Padding(padding: EdgeInsets.fromLTRB(16, 24, 16, 20), child: AppVersionFooter()),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 24, 16, 20),
+              child: AppVersionFooter(),
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EmptyHomeSections extends StatelessWidget {
+  const _EmptyHomeSections({required this.onOpenSettings});
+
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.view_agenda_outlined,
+              color: _Palette.textSecondary,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              HomeTranslations.noHomeSections.trOf(context),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: _Palette.textSecondary,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: onOpenSettings,
+              icon: const Icon(Icons.edit_outlined),
+              label: Text(HomeTranslations.editHomeSections.trOf(context)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -360,7 +506,9 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
     super.initState();
     _liveSearch = widget.liveTvController ?? LiveTvController();
     _radioSearch = widget.radioController ?? RadioController();
-    _searchType = widget.controller.mediaType == MediaType.tv ? _SearchType.tv : _SearchType.movie;
+    _searchType = widget.controller.mediaType == MediaType.tv
+        ? _SearchType.tv
+        : _SearchType.movie;
     _queryController.text = widget.controller.query;
     _focusNode.addListener(_onFocusChanged);
     if (widget.active) {
@@ -381,7 +529,9 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
       _debounce?.cancel();
       _focusNode.unfocus();
       _queryController.clear();
-      _searchType = widget.controller.mediaType == MediaType.tv ? _SearchType.tv : _SearchType.movie;
+      _searchType = widget.controller.mediaType == MediaType.tv
+          ? _SearchType.tv
+          : _SearchType.movie;
     }
   }
 
@@ -417,7 +567,9 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
     if (type == _SearchType.liveTv || type == _SearchType.radio) {
       widget.controller.clear();
     } else {
-      widget.controller.setMediaType(type == _SearchType.tv ? MediaType.tv : MediaType.movie);
+      widget.controller.setMediaType(
+        type == _SearchType.tv ? MediaType.tv : MediaType.movie,
+      );
     }
     _search(_queryController.text);
   }
@@ -456,7 +608,9 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
             mainAxisSize: widget.active ? MainAxisSize.max : MainAxisSize.min,
             children: [
               Padding(
-                padding: widget.active ? const EdgeInsets.fromLTRB(8, 8, 12, 8) : const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                padding: widget.active
+                    ? const EdgeInsets.fromLTRB(8, 8, 12, 8)
+                    : const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Row(
                   children: [
                     if (widget.active)
@@ -467,9 +621,18 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+                            border: Border.all(
+                              color: focused
+                                  ? _Palette.focus
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
                           ),
-                          child: const Icon(Icons.arrow_back, color: _Palette.textPrimary, size: 22),
+                          child: const Icon(
+                            Icons.arrow_back,
+                            color: _Palette.textPrimary,
+                            size: 22,
+                          ),
                         ),
                       ),
                     if (widget.active) const SizedBox(width: 4),
@@ -477,10 +640,17 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
                       child: Container(
                         height: 44,
                         padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(color: _Palette.surface, borderRadius: BorderRadius.circular(22)),
+                        decoration: BoxDecoration(
+                          color: _Palette.surface,
+                          borderRadius: BorderRadius.circular(22),
+                        ),
                         child: Row(
                           children: [
-                            const Icon(Icons.search, color: _Palette.textSecondary, size: 20),
+                            const Icon(
+                              Icons.search,
+                              color: _Palette.textSecondary,
+                              size: 20,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: TextField(
@@ -492,12 +662,21 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
                                 onSubmitted: (_) => _submit(),
                                 textInputAction: TextInputAction.search,
                                 cursorColor: _Palette.accent,
-                                style: const TextStyle(color: _Palette.textPrimary, fontSize: 15),
+                                style: const TextStyle(
+                                  color: _Palette.textPrimary,
+                                  fontSize: 15,
+                                ),
                                 decoration: InputDecoration(
                                   isCollapsed: true,
                                   border: InputBorder.none,
-                                  hintText: widget.active ? SearchTranslations.searchPlaceholder.trOf(context) : HomeTranslations.search.trOf(context),
-                                  hintStyle: const TextStyle(color: _Palette.textSecondary, fontSize: 15),
+                                  hintText: widget.active
+                                      ? SearchTranslations.searchPlaceholder
+                                            .trOf(context)
+                                      : HomeTranslations.search.trOf(context),
+                                  hintStyle: const TextStyle(
+                                    color: _Palette.textSecondary,
+                                    fontSize: 15,
+                                  ),
                                 ),
                               ),
                             ),
@@ -508,8 +687,13 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
                                   : _Pressable(
                                       onTap: _clear,
                                       borderRadius: 16,
-                                      builder: (focused, hovered) =>
-                                          Icon(Icons.close, color: focused ? _Palette.textPrimary : _Palette.textSecondary, size: 20),
+                                      builder: (focused, hovered) => Icon(
+                                        Icons.close,
+                                        color: focused
+                                            ? _Palette.textPrimary
+                                            : _Palette.textSecondary,
+                                        size: 20,
+                                      ),
                                     ),
                             ),
                           ],
@@ -524,7 +708,10 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
                   listenable: widget.controller,
                   builder: (context, _) => _MediaTypeToggle(
                     selectedType: switch (_searchType) {
-                      _SearchType.movie || _SearchType.tv => widget.controller.mediaType == MediaType.tv ? _SearchType.tv : _SearchType.movie,
+                      _SearchType.movie || _SearchType.tv =>
+                        widget.controller.mediaType == MediaType.tv
+                            ? _SearchType.tv
+                            : _SearchType.movie,
                       _ => _searchType,
                     },
                     onSelected: _selectType,
@@ -533,7 +720,11 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
               if (widget.active)
                 Expanded(
                   child: ListenableBuilder(
-                    listenable: Listenable.merge([widget.controller, _liveSearch, _radioSearch]),
+                    listenable: Listenable.merge([
+                      widget.controller,
+                      _liveSearch,
+                      _radioSearch,
+                    ]),
                     builder: (context, _) => switch (_searchType) {
                       _SearchType.radio => _buildRadioResults(context),
                       _SearchType.liveTv => _buildLiveResults(context),
@@ -551,21 +742,27 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
   Widget _buildResults(BuildContext context) {
     final state = widget.controller.state;
     return switch (state) {
-      MediaSearchIdle(:final trendingItems) when trendingItems.isNotEmpty => _grid(
-        context,
-        trendingItems,
-        header: SearchTranslations.trendingTitle.trOf(context),
-      ),
+      MediaSearchIdle(:final trendingItems) when trendingItems.isNotEmpty =>
+        _grid(
+          context,
+          trendingItems,
+          header: SearchTranslations.trendingTitle.trOf(context),
+        ),
       MediaSearchIdle() => _message(SearchTranslations.idleHint.trOf(context)),
       MediaSearchLoading() => const _SearchGridSkeleton(),
       MediaSearchFailure(:final message) => _message(message),
-      MediaSearchSuccess(:final items) when items.isEmpty => _message(SearchTranslations.emptyResults.trOf(context)),
+      MediaSearchSuccess(:final items) when items.isEmpty => _message(
+        SearchTranslations.emptyResults.trOf(context),
+      ),
       MediaSearchSuccess(:final items) => _grid(context, items),
     };
   }
 
   Widget _buildLiveResults(BuildContext context) {
-    if (_liveSearch.isLoading) return const Center(child: CircularProgressIndicator(color: _Palette.accent));
+    if (_liveSearch.isLoading)
+      return const Center(
+        child: CircularProgressIndicator(color: _Palette.accent),
+      );
     if (_liveSearch.hasError) {
       return _LiveTvMessage(
         text: HomeTranslations.liveTvUnavailable.trOf(context),
@@ -573,17 +770,27 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
         onAction: () => _search(_queryController.text),
       );
     }
-    if (_liveSearch.channels.isEmpty) return _message(SearchTranslations.emptyResults.trOf(context));
+    if (_liveSearch.channels.isEmpty)
+      return _message(SearchTranslations.emptyResults.trOf(context));
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 200, mainAxisExtent: 142, mainAxisSpacing: 12, crossAxisSpacing: 12),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
+        mainAxisExtent: 142,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+      ),
       itemCount: _liveSearch.channels.length,
-      itemBuilder: (context, index) => LiveTvChannelCard(channel: _liveSearch.channels[index]),
+      itemBuilder: (context, index) =>
+          LiveTvChannelCard(channel: _liveSearch.channels[index]),
     );
   }
 
   Widget _buildRadioResults(BuildContext context) {
-    if (_radioSearch.isLoading) return const Center(child: CircularProgressIndicator(color: _Palette.accent));
+    if (_radioSearch.isLoading)
+      return const Center(
+        child: CircularProgressIndicator(color: _Palette.accent),
+      );
     if (_radioSearch.hasError) {
       return _LiveTvMessage(
         text: RadioTranslations.unavailable.trOf(context),
@@ -591,12 +798,19 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
         onAction: () => _search(_queryController.text),
       );
     }
-    if (_radioSearch.stations.isEmpty) return _message(SearchTranslations.emptyResults.trOf(context));
+    if (_radioSearch.stations.isEmpty)
+      return _message(SearchTranslations.emptyResults.trOf(context));
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 200, mainAxisExtent: 164, mainAxisSpacing: 12, crossAxisSpacing: 12),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
+        mainAxisExtent: 164,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+      ),
       itemCount: _radioSearch.stations.length,
-      itemBuilder: (context, index) => RadioStationCard(station: _radioSearch.stations[index]),
+      itemBuilder: (context, index) =>
+          RadioStationCard(station: _radioSearch.stations[index]),
     );
   }
 
@@ -620,7 +834,11 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Text(
                 header,
-                style: const TextStyle(color: _Palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  color: _Palette.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -639,7 +857,11 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
                 item: item,
                 mediaType: widget.controller.mediaType,
                 favoritesController: widget.favoritesController,
-                badgeLabel: _posterBadgeLabel(item, widget.controller.mediaType, context),
+                badgeLabel: _posterBadgeLabel(
+                  item,
+                  widget.controller.mediaType,
+                  context,
+                ),
                 autofocus: widget.enableDpadFocus && index == 0,
                 onTap: () => widget.onOpenDetails(item),
               );
@@ -653,7 +875,10 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
 
 /// Content types shown above the search results.
 class _MediaTypeToggle extends StatelessWidget {
-  const _MediaTypeToggle({required this.selectedType, required this.onSelected});
+  const _MediaTypeToggle({
+    required this.selectedType,
+    required this.onSelected,
+  });
 
   final _SearchType selectedType;
   final ValueChanged<_SearchType> onSelected;
@@ -666,10 +891,26 @@ class _MediaTypeToggle extends StatelessWidget {
         spacing: 10,
         runSpacing: 8,
         children: [
-          _chip(context, _SearchType.movie, SearchTranslations.mediaMovies.trOf(context)),
-          _chip(context, _SearchType.tv, SearchTranslations.mediaTvSeries.trOf(context)),
-          _chip(context, _SearchType.liveTv, HomeTranslations.liveTv.trOf(context)),
-          _chip(context, _SearchType.radio, RadioTranslations.title.trOf(context)),
+          _chip(
+            context,
+            _SearchType.movie,
+            SearchTranslations.mediaMovies.trOf(context),
+          ),
+          _chip(
+            context,
+            _SearchType.tv,
+            SearchTranslations.mediaTvSeries.trOf(context),
+          ),
+          _chip(
+            context,
+            _SearchType.liveTv,
+            HomeTranslations.liveTv.trOf(context),
+          ),
+          _chip(
+            context,
+            _SearchType.radio,
+            RadioTranslations.title.trOf(context),
+          ),
         ],
       ),
     );
@@ -677,7 +918,11 @@ class _MediaTypeToggle extends StatelessWidget {
 
   Widget _chip(BuildContext context, _SearchType type, String label) {
     final selected = type == selectedType;
-    return Semantics(selected: selected, button: true, child: _buildChip(type, label, selected));
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: _buildChip(type, label, selected),
+    );
   }
 
   Widget _buildChip(_SearchType type, String label, bool selected) {
@@ -689,11 +934,18 @@ class _MediaTypeToggle extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? _Palette.accent : _Palette.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+          border: Border.all(
+            color: focused ? _Palette.focus : Colors.transparent,
+            width: 2,
+          ),
         ),
         child: Text(
           label,
-          style: TextStyle(color: selected ? const Color(0xFF06202B) : _Palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: selected ? const Color(0xFF06202B) : _Palette.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -732,7 +984,10 @@ class _SearchResultCard extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2.5),
+                border: Border.all(
+                  color: focused ? _Palette.focus : Colors.transparent,
+                  width: 2.5,
+                ),
               ),
               child: Stack(
                 children: [
@@ -744,7 +999,8 @@ class _SearchResultCard extends StatelessWidget {
                               item.posterUrl.toString(),
                               fit: BoxFit.cover,
                               loadingBuilder: _imageSkeletonBuilder,
-                              errorBuilder: (context, _, _) => const _PosterPlaceholder(),
+                              errorBuilder: (context, _, _) =>
+                                  const _PosterPlaceholder(),
                             )
                           : const _PosterPlaceholder(),
                     ),
@@ -762,7 +1018,11 @@ class _SearchResultCard extends StatelessWidget {
                   Positioned(
                     right: 4,
                     bottom: 4,
-                    child: _PosterLikeButton(item: item, mediaType: mediaType, controller: favoritesController),
+                    child: _PosterLikeButton(
+                      item: item,
+                      mediaType: mediaType,
+                      controller: favoritesController,
+                    ),
                   ),
                 ],
               ),
@@ -773,7 +1033,11 @@ class _SearchResultCard extends StatelessWidget {
             item.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: _Palette.textPrimary, fontSize: 12, height: 1.2),
+            style: const TextStyle(
+              color: _Palette.textPrimary,
+              fontSize: 12,
+              height: 1.2,
+            ),
           ),
         ],
       ),
@@ -784,7 +1048,11 @@ class _SearchResultCard extends StatelessWidget {
 /// A compact heart button overlaid on a poster that toggles the item in the
 /// user's favorites.
 class _PosterLikeButton extends StatelessWidget {
-  const _PosterLikeButton({required this.item, required this.mediaType, required this.controller});
+  const _PosterLikeButton({
+    required this.item,
+    required this.mediaType,
+    required this.controller,
+  });
 
   final MediaItem item;
   final MediaType mediaType;
@@ -797,16 +1065,24 @@ class _PosterLikeButton extends StatelessWidget {
       builder: (context, _) {
         final isFavorite = controller.isFavorite(mediaType, item.id);
         return _Pressable(
-          onTap: () => controller.toggle(FavoriteMedia(item: item, type: mediaType)),
+          onTap: () =>
+              controller.toggle(FavoriteMedia(item: item, type: mediaType)),
           borderRadius: 16,
           builder: (focused, hovered) => Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.55),
               shape: BoxShape.circle,
-              border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+              border: Border.all(
+                color: focused ? _Palette.focus : Colors.transparent,
+                width: 2,
+              ),
             ),
-            child: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? _Palette.accent : _Palette.textPrimary, size: 18),
+            child: Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: isFavorite ? _Palette.accent : _Palette.textPrimary,
+              size: 18,
+            ),
           ),
         );
       },
@@ -816,7 +1092,12 @@ class _PosterLikeButton extends StatelessWidget {
 
 /// The full-bleed featured banner at the top of the home screen.
 class _HeroBanner extends StatelessWidget {
-  const _HeroBanner({required this.item, required this.onPlay, required this.onDetails, this.autofocus = false});
+  const _HeroBanner({
+    required this.item,
+    required this.onPlay,
+    required this.onDetails,
+    this.autofocus = false,
+  });
 
   final MediaItem item;
   final VoidCallback onPlay;
@@ -842,7 +1123,8 @@ class _HeroBanner extends StatelessWidget {
               fit: BoxFit.cover,
               alignment: Alignment.topCenter,
               loadingBuilder: _imageSkeletonBuilder,
-              errorBuilder: (context, _, _) => const ColoredBox(color: _Palette.surface),
+              errorBuilder: (context, _, _) =>
+                  const ColoredBox(color: _Palette.surface),
             )
           else
             const ColoredBox(color: _Palette.surface),
@@ -851,7 +1133,11 @@ class _HeroBanner extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0x00000000), Color(0x330F171E), Color(0xFF0F171E)],
+                colors: [
+                  Color(0x00000000),
+                  Color(0x330F171E),
+                  Color(0xFF0F171E),
+                ],
                 stops: [0.35, 0.7, 1.0],
               ),
             ),
@@ -868,7 +1154,12 @@ class _HeroBanner extends StatelessWidget {
                   item.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _Palette.textPrimary, fontSize: 30, fontWeight: FontWeight.w800, height: 1.1),
+                  style: const TextStyle(
+                    color: _Palette.textPrimary,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -876,10 +1167,23 @@ class _HeroBanner extends StatelessWidget {
                     if (rating != null) ...[
                       const Icon(Icons.star, color: _Palette.accent, size: 16),
                       const SizedBox(width: 4),
-                      Text(context.formatDecimal(rating), style: const TextStyle(color: _Palette.textSecondary, fontSize: 13)),
+                      Text(
+                        context.formatDecimal(rating),
+                        style: const TextStyle(
+                          color: _Palette.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
                       const SizedBox(width: 12),
                     ],
-                    if (year != null) Text('$year', style: const TextStyle(color: _Palette.textSecondary, fontSize: 13)),
+                    if (year != null)
+                      Text(
+                        '$year',
+                        style: const TextStyle(
+                          color: _Palette.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
                   ],
                 ),
                 if (item.overview.isNotEmpty) ...[
@@ -888,7 +1192,11 @@ class _HeroBanner extends StatelessWidget {
                     item.overview,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _Palette.textSecondary, fontSize: 14, height: 1.3),
+                    style: const TextStyle(
+                      color: _Palette.textSecondary,
+                      fontSize: 14,
+                      height: 1.3,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 16),
@@ -922,7 +1230,13 @@ class _HeroBanner extends StatelessWidget {
 }
 
 class _HeroButton extends StatelessWidget {
-  const _HeroButton({required this.label, required this.icon, required this.filled, required this.onTap, this.autofocus = false});
+  const _HeroButton({
+    required this.label,
+    required this.icon,
+    required this.filled,
+    required this.onTap,
+    this.autofocus = false,
+  });
 
   final String label;
   final IconData icon;
@@ -937,14 +1251,23 @@ class _HeroButton extends StatelessWidget {
       autofocus: autofocus,
       borderRadius: 6,
       builder: (focused, hovered) {
-        final background = filled ? _Palette.accent : (hovered ? _Palette.surface.withValues(alpha: 0.9) : _Palette.surface.withValues(alpha: 0.7));
-        final foreground = filled ? const Color(0xFF06202B) : _Palette.textPrimary;
+        final background = filled
+            ? _Palette.accent
+            : (hovered
+                  ? _Palette.surface.withValues(alpha: 0.9)
+                  : _Palette.surface.withValues(alpha: 0.7));
+        final foreground = filled
+            ? const Color(0xFF06202B)
+            : _Palette.textPrimary;
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
           decoration: BoxDecoration(
             color: background,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+            border: Border.all(
+              color: focused ? _Palette.focus : Colors.transparent,
+              width: 2,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -953,7 +1276,11 @@ class _HeroButton extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 label,
-                style: TextStyle(color: foreground, fontSize: 15, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -965,7 +1292,14 @@ class _HeroButton extends StatelessWidget {
 
 /// A titled horizontal carousel of poster cards.
 class _CarouselRow extends StatelessWidget {
-  const _CarouselRow({required this.title, required this.itemCount, required this.cardBuilder, this.onSeeAll, this.seeAllLabel, this.cardHeight = 188});
+  const _CarouselRow({
+    required this.title,
+    required this.itemCount,
+    required this.cardBuilder,
+    this.onSeeAll,
+    this.seeAllLabel,
+    this.cardHeight = 188,
+  });
 
   final String title;
   final int itemCount;
@@ -992,7 +1326,11 @@ class _CarouselRow extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: _Palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        color: _Palette.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   if (onSeeAll != null && seeAllLabel != null)
@@ -1000,14 +1338,28 @@ class _CarouselRow extends StatelessWidget {
                       onTap: onSeeAll,
                       borderRadius: 4,
                       builder: (focused, hovered) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 1.5),
+                          border: Border.all(
+                            color: focused
+                                ? _Palette.focus
+                                : Colors.transparent,
+                            width: 1.5,
+                          ),
                         ),
                         child: Text(
                           seeAllLabel!,
-                          style: TextStyle(color: hovered ? _Palette.textPrimary : _Palette.accent, fontSize: 13, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: hovered
+                                ? _Palette.textPrimary
+                                : _Palette.accent,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -1032,7 +1384,12 @@ class _CarouselRow extends StatelessWidget {
 }
 
 class _TrailerCard extends StatelessWidget {
-  const _TrailerCard({required this.item, required this.video, required this.onDetails, required this.onPlay});
+  const _TrailerCard({
+    required this.item,
+    required this.video,
+    required this.onDetails,
+    required this.onPlay,
+  });
 
   final MediaItem item;
   final MediaVideo video;
@@ -1041,7 +1398,9 @@ class _TrailerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final thumbnail = video.site == 'YouTube' ? Uri.https('i.ytimg.com', '/vi/${video.key}/hqdefault.jpg') : item.posterUrl;
+    final thumbnail = video.site == 'YouTube'
+        ? Uri.https('i.ytimg.com', '/vi/${video.key}/hqdefault.jpg')
+        : item.posterUrl;
     final playLabel = '${HomeTranslations.play.trOf(context)}: ${item.title}';
     return SizedBox(
       width: 280,
@@ -1060,7 +1419,8 @@ class _TrailerCard extends StatelessWidget {
                       thumbnail.toString(),
                       fit: BoxFit.cover,
                       loadingBuilder: _imageSkeletonBuilder,
-                      errorBuilder: (context, _, _) => const _PosterPlaceholder(),
+                      errorBuilder: (context, _, _) =>
+                          const _PosterPlaceholder(),
                     )
                   else
                     const _PosterPlaceholder(),
@@ -1078,11 +1438,20 @@ class _TrailerCard extends StatelessWidget {
                             width: 56,
                             height: 56,
                             decoration: BoxDecoration(
-                              color: hovered || focused ? _Palette.accent : const Color(0xCC000000),
+                              color: hovered || focused
+                                  ? _Palette.accent
+                                  : const Color(0xCC000000),
                               shape: BoxShape.circle,
-                              border: Border.all(color: _Palette.focus, width: focused ? 3 : 1),
+                              border: Border.all(
+                                color: _Palette.focus,
+                                width: focused ? 3 : 1,
+                              ),
                             ),
-                            child: const Icon(Icons.play_arrow, color: _Palette.textPrimary, size: 34),
+                            child: const Icon(
+                              Icons.play_arrow,
+                              color: _Palette.textPrimary,
+                              size: 34,
+                            ),
                           ),
                         ),
                       ),
@@ -1100,7 +1469,13 @@ class _TrailerCard extends StatelessWidget {
               item.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: focused || hovered ? _Palette.accent : _Palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: focused || hovered
+                    ? _Palette.accent
+                    : _Palette.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -1150,11 +1525,16 @@ class _PosterCard extends StatelessWidget {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           width: _width,
-          transform: hovered ? (Matrix4.identity()..scaleByDouble(1.04, 1.04, 1.04, 1.0)) : Matrix4.identity(),
+          transform: hovered
+              ? (Matrix4.identity()..scaleByDouble(1.04, 1.04, 1.04, 1.0))
+              : Matrix4.identity(),
           transformAlignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2.5),
+            border: Border.all(
+              color: focused ? _Palette.focus : Colors.transparent,
+              width: 2.5,
+            ),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(6),
@@ -1189,22 +1569,39 @@ class _PosterCard extends StatelessWidget {
                     bottom: 0,
                     child: Container(
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0xCC000000)]),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0x00000000), Color(0xCC000000)],
+                        ),
                       ),
                       padding: const EdgeInsets.all(8),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: onResume == null
-                            ? const Icon(Icons.play_circle_fill, color: _Palette.textPrimary, size: 26)
+                            ? const Icon(
+                                Icons.play_circle_fill,
+                                color: _Palette.textPrimary,
+                                size: 26,
+                              )
                             : _Pressable(
                                 onTap: onResume,
                                 borderRadius: 20,
                                 builder: (focused, hovered) => Container(
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+                                    border: Border.all(
+                                      color: focused
+                                          ? _Palette.focus
+                                          : Colors.transparent,
+                                      width: 2,
+                                    ),
                                   ),
-                                  child: const Icon(Icons.play_circle_fill, color: _Palette.textPrimary, size: 26),
+                                  child: const Icon(
+                                    Icons.play_circle_fill,
+                                    color: _Palette.textPrimary,
+                                    size: 26,
+                                  ),
                                 ),
                               ),
                       ),
@@ -1213,7 +1610,11 @@ class _PosterCard extends StatelessWidget {
                 Positioned(
                   right: 4,
                   bottom: 4,
-                  child: _PosterLikeButton(item: item, mediaType: mediaType, controller: favoritesController),
+                  child: _PosterLikeButton(
+                    item: item,
+                    mediaType: mediaType,
+                    controller: favoritesController,
+                  ),
                 ),
               ],
             ),
@@ -1246,7 +1647,12 @@ class _PosterBadge extends StatelessWidget {
             label,
             maxLines: 1,
             softWrap: false,
-            style: const TextStyle(color: Color(0xFF111111), fontSize: 10, fontWeight: FontWeight.w800, height: 1),
+            style: const TextStyle(
+              color: Color(0xFF111111),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
           ),
         ),
       ),
@@ -1254,23 +1660,38 @@ class _PosterBadge extends StatelessWidget {
   }
 }
 
-String? _posterBadgeLabel(MediaItem item, MediaType mediaType, BuildContext context) {
+String? _posterBadgeLabel(
+  MediaItem item,
+  MediaType mediaType,
+  BuildContext context,
+) {
   final now = DateTime.now();
   final cutoff = now.subtract(const Duration(days: 30));
-  bool isRecent(DateTime? date) => date != null && !date.isAfter(now) && !date.isBefore(cutoff);
+  bool isRecent(DateTime? date) =>
+      date != null && !date.isAfter(now) && !date.isBefore(cutoff);
 
   if (mediaType == MediaType.movie) {
-    return isRecent(item.releaseDate) ? HomeTranslations.newMovie.trOf(context) : null;
+    return isRecent(item.releaseDate)
+        ? HomeTranslations.newMovie.trOf(context)
+        : null;
   }
 
-  if (isRecent(item.releaseDate)) return HomeTranslations.newSeries.trOf(context);
-  final hasOnlyOneReleasedSeason = item.releasedSeasonCount == 1 || (item.releasedSeasonCount == null && item.numberOfSeasons == 1);
-  if (hasOnlyOneReleasedSeason && (isRecent(item.latestSeasonAirDate) || isRecent(item.latestEpisodeAirDate))) {
+  if (isRecent(item.releaseDate))
+    return HomeTranslations.newSeries.trOf(context);
+  final hasOnlyOneReleasedSeason =
+      item.releasedSeasonCount == 1 ||
+      (item.releasedSeasonCount == null && item.numberOfSeasons == 1);
+  if (hasOnlyOneReleasedSeason &&
+      (isRecent(item.latestSeasonAirDate) ||
+          isRecent(item.latestEpisodeAirDate))) {
     return HomeTranslations.newSeries.trOf(context);
   }
-  if (isRecent(item.latestSeasonAirDate)) return HomeTranslations.seasonPremiere.trOf(context);
+  if (isRecent(item.latestSeasonAirDate))
+    return HomeTranslations.seasonPremiere.trOf(context);
   if (isRecent(item.latestEpisodeAirDate)) {
-    return item.latestEpisodeNumber == 1 ? HomeTranslations.seasonPremiere.trOf(context) : HomeTranslations.newSeason.trOf(context);
+    return item.latestEpisodeNumber == 1
+        ? HomeTranslations.seasonPremiere.trOf(context)
+        : HomeTranslations.newSeason.trOf(context);
   }
   return null;
 }
@@ -1282,7 +1703,13 @@ class _PosterPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return const ColoredBox(
       color: _Palette.surface,
-      child: Center(child: Icon(Icons.movie_outlined, color: _Palette.textSecondary, size: 32)),
+      child: Center(
+        child: Icon(
+          Icons.movie_outlined,
+          color: _Palette.textSecondary,
+          size: 32,
+        ),
+      ),
     );
   }
 }
@@ -1298,11 +1725,23 @@ class _ErrorState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.error_outline, color: _Palette.textSecondary, size: 44),
+          const Icon(
+            Icons.error_outline,
+            color: _Palette.textSecondary,
+            size: 44,
+          ),
           const SizedBox(height: 12),
-          Text(HomeTranslations.loadError.trOf(context), style: const TextStyle(color: _Palette.textSecondary, fontSize: 15)),
+          Text(
+            HomeTranslations.loadError.trOf(context),
+            style: const TextStyle(color: _Palette.textSecondary, fontSize: 15),
+          ),
           const SizedBox(height: 16),
-          _HeroButton(label: HomeTranslations.retry.trOf(context), icon: Icons.refresh, filled: true, onTap: onRetry),
+          _HeroButton(
+            label: HomeTranslations.retry.trOf(context),
+            icon: Icons.refresh,
+            filled: true,
+            onTap: onRetry,
+          ),
         ],
       ),
     );
@@ -1320,8 +1759,12 @@ class _Shimmer extends StatefulWidget {
   State<_Shimmer> createState() => _ShimmerState();
 }
 
-class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
 
   @override
   void dispose() {
@@ -1341,7 +1784,11 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
           shaderCallback: (bounds) => LinearGradient(
             begin: Alignment(slide - 1, 0),
             end: Alignment(slide + 1, 0),
-            colors: const [_Palette.surface, Color(0xFF2A3A49), _Palette.surface],
+            colors: const [
+              _Palette.surface,
+              Color(0xFF2A3A49),
+              _Palette.surface,
+            ],
             stops: const [0.35, 0.5, 0.65],
           ).createShader(bounds),
           child: child,
@@ -1364,13 +1811,20 @@ class _SkeletonBox extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      decoration: BoxDecoration(color: _Palette.surface, borderRadius: BorderRadius.circular(radius)),
+      decoration: BoxDecoration(
+        color: _Palette.surface,
+        borderRadius: BorderRadius.circular(radius),
+      ),
     );
   }
 }
 
 /// Loading placeholder shown in place of a not-yet-decoded network image.
-Widget _imageSkeletonBuilder(BuildContext context, Widget child, ImageChunkEvent? progress) {
+Widget _imageSkeletonBuilder(
+  BuildContext context,
+  Widget child,
+  ImageChunkEvent? progress,
+) {
   if (progress == null) return child;
   return const _Shimmer(child: SizedBox.expand(child: _SkeletonBox(radius: 0)));
 }
@@ -1382,7 +1836,9 @@ class _BrowseSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final heroHeight = (MediaQuery.sizeOf(context).height.clamp(0, 900) * 0.58).toDouble().clamp(360.0, 560.0);
+    final heroHeight = (MediaQuery.sizeOf(context).height.clamp(0, 900) * 0.58)
+        .toDouble()
+        .clamp(360.0, 560.0);
     return SafeArea(
       bottom: false,
       child: _Shimmer(
@@ -1390,7 +1846,10 @@ class _BrowseSkeleton extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           padding: EdgeInsets.zero,
           children: [
-            const Padding(padding: EdgeInsets.fromLTRB(16, 12, 16, 4), child: _SkeletonBox(height: 44, radius: 22)),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: _SkeletonBox(height: 44, radius: 22),
+            ),
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: _SkeletonBox(height: heroHeight, radius: 0),
@@ -1413,7 +1872,10 @@ class _SkeletonRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 10), child: _SkeletonBox(width: 160, height: 18, radius: 6)),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
+          child: _SkeletonBox(width: 160, height: 18, radius: 6),
+        ),
         SizedBox(
           height: 188,
           child: ListView.separated(
@@ -1422,7 +1884,8 @@ class _SkeletonRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: 6,
             separatorBuilder: (context, _) => const SizedBox(width: 12),
-            itemBuilder: (context, _) => const _SkeletonBox(width: 125, height: 188),
+            itemBuilder: (context, _) =>
+                const _SkeletonBox(width: 125, height: 188),
           ),
         ),
       ],
@@ -1482,22 +1945,39 @@ class RadioSection extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
-                  RadioTranslations.title.trOf(context),
-                  style: const TextStyle(color: _Palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+                  HomeTranslations.liveRadio.trOf(context),
+                  style: const TextStyle(
+                    color: _Palette.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                _CountrySelector(countries: controller.countries, selectedCountry: controller.selectedCountry, onSelected: controller.selectCountry),
+                _CountrySelector(
+                  countries: controller.countries,
+                  selectedCountry: controller.selectedCountry,
+                  onSelected: controller.selectCountry,
+                ),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Text(RadioTranslations.attribution.trOf(context), style: const TextStyle(color: _Palette.textSecondary, fontSize: 12)),
+            child: Text(
+              RadioTranslations.attribution.trOf(context),
+              style: const TextStyle(
+                color: _Palette.textSecondary,
+                fontSize: 12,
+              ),
+            ),
           ),
           if (controller.isLoading)
             SizedBox(
               height: 88,
               child: Center(
-                child: CircularProgressIndicator(color: _Palette.accent, semanticsLabel: RadioTranslations.loading.trOf(context)),
+                child: CircularProgressIndicator(
+                  color: _Palette.accent,
+                  semanticsLabel: RadioTranslations.loading.trOf(context),
+                ),
               ),
             )
           else if (controller.hasError)
@@ -1517,7 +1997,8 @@ class RadioSection extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: controller.stations.length,
                 separatorBuilder: (context, _) => const SizedBox(width: 12),
-                itemBuilder: (context, index) => RadioStationCard(station: controller.stations[index]),
+                itemBuilder: (context, index) =>
+                    RadioStationCard(station: controller.stations[index]),
               ),
             ),
         ],
@@ -1558,7 +2039,15 @@ class RadioStationCard extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned.fill(child: RadioLogo(station: station)),
-                  const Positioned(bottom: 0, left: 0, child: Icon(Icons.play_circle_fill, color: _Palette.textPrimary, size: 30)),
+                  const Positioned(
+                    bottom: 0,
+                    left: 0,
+                    child: Icon(
+                      Icons.play_circle_fill,
+                      color: _Palette.textPrimary,
+                      size: 30,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1567,13 +2056,20 @@ class RadioStationCard extends StatelessWidget {
               station.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _Palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: _Palette.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             Text(
               station.country,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _Palette.textSecondary, fontSize: 11),
+              style: const TextStyle(
+                color: _Palette.textSecondary,
+                fontSize: 11,
+              ),
             ),
           ],
         ),
@@ -1605,7 +2101,11 @@ class LiveTvSection extends StatelessWidget {
                 children: [
                   Text(
                     HomeTranslations.liveTv.trOf(context),
-                    style: const TextStyle(color: _Palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      color: _Palette.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   _CountrySelector(
                     countries: controller.countries,
@@ -1617,13 +2117,24 @@ class LiveTvSection extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: Text(HomeTranslations.liveTvAttribution.trOf(context), style: const TextStyle(color: _Palette.textSecondary, fontSize: 12)),
+              child: Text(
+                HomeTranslations.liveTvAttribution.trOf(context),
+                style: const TextStyle(
+                  color: _Palette.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
             ),
             if (controller.isLoading)
               SizedBox(
                 height: 88,
                 child: Center(
-                  child: CircularProgressIndicator(color: _Palette.accent, semanticsLabel: HomeTranslations.liveTvLoading.trOf(context)),
+                  child: CircularProgressIndicator(
+                    color: _Palette.accent,
+                    semanticsLabel: HomeTranslations.liveTvLoading.trOf(
+                      context,
+                    ),
+                  ),
                 ),
               )
             else if (controller.hasError)
@@ -1633,7 +2144,9 @@ class LiveTvSection extends StatelessWidget {
                 onAction: controller.load,
               )
             else if (channels.isEmpty)
-              _LiveTvMessage(text: HomeTranslations.noLiveChannels.trOf(context))
+              _LiveTvMessage(
+                text: HomeTranslations.noLiveChannels.trOf(context),
+              )
             else
               SizedBox(
                 height: 142,
@@ -1643,7 +2156,8 @@ class LiveTvSection extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: channels.length,
                   separatorBuilder: (context, _) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) => LiveTvChannelCard(channel: channels[index]),
+                  itemBuilder: (context, index) =>
+                      LiveTvChannelCard(channel: channels[index]),
                 ),
               ),
           ],
@@ -1654,7 +2168,11 @@ class LiveTvSection extends StatelessWidget {
 }
 
 class _CountrySelector extends StatelessWidget {
-  const _CountrySelector({required this.countries, required this.selectedCountry, required this.onSelected});
+  const _CountrySelector({
+    required this.countries,
+    required this.selectedCountry,
+    required this.onSelected,
+  });
 
   final List<LiveTvCountry> countries;
   final String? selectedCountry;
@@ -1663,14 +2181,24 @@ class _CountrySelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
-    final isWindows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
-    final sortedCountries = countries.toList()..sort((first, second) => first.localizedName(locale).compareTo(second.localizedName(locale)));
+    final isWindows =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+    final sortedCountries = countries.toList()
+      ..sort(
+        (first, second) =>
+            first.localizedName(locale).compareTo(second.localizedName(locale)),
+      );
     return SizedBox(
       width: 240,
       child: Semantics(
         label: HomeTranslations.country.trOf(context),
         child: Theme(
-          data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: _Palette.accent, surface: _Palette.surface)),
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: _Palette.accent,
+              surface: _Palette.surface,
+            ),
+          ),
           child: DropdownMenu<String>(
             key: ValueKey(locale.toLanguageTag()),
             width: 240,
@@ -1679,14 +2207,26 @@ class _CountrySelector extends StatelessWidget {
             enableFilter: true,
             requestFocusOnTap: true,
             enabled: countries.isNotEmpty,
-            textStyle: const TextStyle(color: _Palette.textPrimary, fontSize: 14),
+            textStyle: const TextStyle(
+              color: _Palette.textPrimary,
+              fontSize: 14,
+            ),
             filterCallback: (entries, query) {
               final search = query.trim().toLowerCase();
-              return entries.where((entry) =>
-                entry.value.isEmpty || entry.label.toLowerCase().contains(search) || entry.value.toLowerCase().contains(search)).toList();
+              return entries
+                  .where(
+                    (entry) =>
+                        entry.value.isEmpty ||
+                        entry.label.toLowerCase().contains(search) ||
+                        entry.value.toLowerCase().contains(search),
+                  )
+                  .toList();
             },
             dropdownMenuEntries: [
-              DropdownMenuEntry(value: '', label: HomeTranslations.allCountries.trOf(context)),
+              DropdownMenuEntry(
+                value: '',
+                label: HomeTranslations.allCountries.trOf(context),
+              ),
               for (final country in sortedCountries)
                 if (isWindows)
                   // Windows has no flag emoji glyphs, so render flag images instead.
@@ -1697,12 +2237,18 @@ class _CountrySelector extends StatelessWidget {
                       width: 24,
                       child: Image.network(
                         'https://flagcdn.com/w40/${country.code.toLowerCase()}.png',
-                        errorBuilder: (_, _, _) => Text(country.code, style: const TextStyle(fontSize: 11)),
+                        errorBuilder: (_, _, _) => Text(
+                          country.code,
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
                     ),
                   )
                 else
-                  DropdownMenuEntry(value: country.code, label: '${country.flag}  ${country.localizedName(locale)}'),
+                  DropdownMenuEntry(
+                    value: country.code,
+                    label: '${country.flag}  ${country.localizedName(locale)}',
+                  ),
             ],
             onSelected: (value) {
               if (value != null) onSelected(value.isEmpty ? null : value);
@@ -1728,22 +2274,40 @@ class _LiveTvMessage extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(text, style: const TextStyle(color: _Palette.textSecondary, fontSize: 14)),
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: _Palette.textSecondary,
+                fontSize: 14,
+              ),
+            ),
           ),
           if (actionLabel != null && onAction != null)
             _Pressable(
               onTap: onAction,
               borderRadius: 18,
               builder: (focused, hovered) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
-                  color: hovered || focused ? _Palette.accent : _Palette.surface,
+                  color: hovered || focused
+                      ? _Palette.accent
+                      : _Palette.surface,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+                  border: Border.all(
+                    color: focused ? _Palette.focus : Colors.transparent,
+                    width: 2,
+                  ),
                 ),
                 child: Text(
                   actionLabel!,
-                  style: const TextStyle(color: _Palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: _Palette.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -1764,9 +2328,12 @@ class LiveTvChannelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subtitle = channel.categories.isNotEmpty ? channel.categories.take(2).join(' · ') : channel.country;
+    final subtitle = channel.categories.isNotEmpty
+        ? channel.categories.take(2).join(' · ')
+        : channel.country;
     return _Pressable(
-      onTap: () => context.push(AppRoutes.liveTvDetails(channel.id), extra: channel),
+      onTap: () =>
+          context.push(AppRoutes.liveTvDetails(channel.id), extra: channel),
       borderRadius: 8,
       builder: (focused, hovered) => AnimatedContainer(
         duration: const Duration(milliseconds: 120),
@@ -1795,7 +2362,8 @@ class LiveTvChannelCard extends StatelessWidget {
                     bottom: 0,
                     left: 0,
                     child: Semantics(
-                      label: '${HomeTranslations.play.trOf(context)} ${channel.name}',
+                      label:
+                          '${HomeTranslations.play.trOf(context)} ${channel.name}',
                       button: true,
                       child: Tooltip(
                         message: HomeTranslations.play.trOf(context),
@@ -1805,11 +2373,22 @@ class LiveTvChannelCard extends StatelessWidget {
                           builder: (focused, hovered) => Container(
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
-                              color: hovered ? _Palette.accent : const Color(0xCC000000),
+                              color: hovered
+                                  ? _Palette.accent
+                                  : const Color(0xCC000000),
                               shape: BoxShape.circle,
-                              border: Border.all(color: focused ? _Palette.focus : Colors.transparent, width: 2),
+                              border: Border.all(
+                                color: focused
+                                    ? _Palette.focus
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
                             ),
-                            child: const Icon(Icons.play_circle_fill, color: _Palette.textPrimary, size: 28),
+                            child: const Icon(
+                              Icons.play_circle_fill,
+                              color: _Palette.textPrimary,
+                              size: 28,
+                            ),
                           ),
                         ),
                       ),
@@ -1819,11 +2398,22 @@ class LiveTvChannelCard extends StatelessWidget {
                     top: 0,
                     left: 0,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(color: const Color(0xFFE53935), borderRadius: BorderRadius.circular(4)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE53935),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                       child: Text(
                         HomeTranslations.liveLabel.trOf(context),
-                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, height: 1),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                        ),
                       ),
                     ),
                   ),
@@ -1835,14 +2425,21 @@ class LiveTvChannelCard extends StatelessWidget {
               channel.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _Palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: _Palette.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             if (subtitle.isNotEmpty)
               Text(
                 subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _Palette.textSecondary, fontSize: 11),
+                style: const TextStyle(
+                  color: _Palette.textSecondary,
+                  fontSize: 11,
+                ),
               ),
             if (channel.isGeoBlocked)
               Tooltip(
@@ -1856,7 +2453,10 @@ class LiveTvChannelCard extends StatelessWidget {
                         HomeTranslations.geoRestricted.trOf(context),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.amber, fontSize: 10),
+                        style: const TextStyle(
+                          color: Colors.amber,
+                          fontSize: 10,
+                        ),
                       ),
                     ),
                   ],
@@ -1873,7 +2473,12 @@ class LiveTvChannelCard extends StatelessWidget {
 /// and exposes focus/hover state to its [builder]. Avoids Material's [InkWell]
 /// so it can be used inside the Fluent and macOS shells too.
 class _Pressable extends StatefulWidget {
-  const _Pressable({required this.builder, required this.onTap, this.autofocus = false, this.borderRadius = 8});
+  const _Pressable({
+    required this.builder,
+    required this.onTap,
+    this.autofocus = false,
+    this.borderRadius = 8,
+  });
 
   final Widget Function(bool focused, bool hovered) builder;
   final VoidCallback? onTap;
@@ -1896,7 +2501,8 @@ class _PressableState extends State<_Pressable> {
   };
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent)
+      return KeyEventResult.ignored;
     if (widget.onTap != null && _activationKeys.contains(event.logicalKey)) {
       widget.onTap!();
       return KeyEventResult.handled;
@@ -1913,7 +2519,11 @@ class _PressableState extends State<_Pressable> {
         autofocus: widget.autofocus,
         onFocusChange: (value) => setState(() => _focused = value),
         onKeyEvent: _onKey,
-        child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: widget.onTap, child: widget.builder(_focused, _hovered)),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: widget.builder(_focused, _hovered),
+        ),
       ),
     );
   }

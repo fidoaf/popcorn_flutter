@@ -30,7 +30,16 @@ function createProviderRegistry(options = {}) {
     if (ids.has(id)) throw new TypeError(`Duplicate media source provider: ${definition.name}`);
     ids.add(id);
 
-    if (id === DEFAULT_PROVIDER_ID) {
+    if (definition.strategy === 'redirect') {
+      providers.push(new RedirectProvider({
+        id,
+        label: definition.name,
+        scheme: definition.scheme,
+        host: definition.host,
+        path: definition.path,
+        parameters: definition.parameters,
+      }));
+    } else if (id === DEFAULT_PROVIDER_ID) {
       providers.push(new VidSrcBuzzProvider({ fetchImpl: options.fetchImpl, timeoutMs: options.timeoutMs }));
     } else if (id === 'cinesrc') {
       providers.push(new CinesrcProvider({

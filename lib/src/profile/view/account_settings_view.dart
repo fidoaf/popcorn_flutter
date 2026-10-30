@@ -20,7 +20,8 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   bool? _localServer;
   bool _savingLocalServer = false;
   String? _localServerError;
-  bool get _isWindows => !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+  bool get _isWindows =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   @override
   void initState() {
@@ -69,7 +70,9 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
       context: context,
       favorite: [_region],
       // Windows has no flag emoji glyphs, so render flag images instead.
-      customFlagBuilder: _isWindows ? (country) => _flagImage(country.countryCode, 28) : null,
+      customFlagBuilder: _isWindows
+          ? (country) => _flagImage(country.countryCode, 28)
+          : null,
       onSelect: (country) => _saveRegion(country.countryCode),
     );
   }
@@ -81,7 +84,8 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
         'https://flagcdn.com/w80/${code.toLowerCase()}.png',
         width: width,
         fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => Text(code, style: const TextStyle(fontWeight: FontWeight.bold)),
+        errorBuilder: (_, _, _) =>
+            Text(code, style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -99,7 +103,8 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   Widget build(BuildContext context) {
     final country = Country.tryParse(_region);
     final regionName = country?.name ?? _region;
-    final regionValue = '${_isWindows ? '' : country?.flagEmoji ?? ''} $regionName${_usesDeviceRegion ? ' · ${ProfileTranslations.deviceRegion.trOf(context)}' : ''}';
+    final regionValue =
+        '${_isWindows ? '' : country?.flagEmoji ?? ''} $regionName${_usesDeviceRegion ? ' · ${ProfileTranslations.deviceRegion.trOf(context)}' : ''}';
     return Material(
       type: MaterialType.transparency,
       child: ListView(
@@ -109,13 +114,27 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
               secondary: const Icon(Icons.computer),
               title: Text(ProfileTranslations.localPlayerServer.trOf(context)),
               subtitle: Text(
-                PlayerServerConfig.usesDefinedServer ? PlayerServerConfig.serverUrl : _localServerError ?? ProfileTranslations.localPlayerServerHint.trOf(context),
+                PlayerServerConfig.usesDefinedServer
+                    ? PlayerServerConfig.serverUrl
+                    : _localServerError ??
+                          ProfileTranslations.localPlayerServerHint.trOf(
+                            context,
+                          ),
               ),
-              value: PlayerServerConfig.usesDefinedServer || (_localServer ?? false),
-              onChanged: PlayerServerConfig.usesDefinedServer || _localServer == null || _savingLocalServer ? null : _saveLocalServer,
+              value:
+                  PlayerServerConfig.usesDefinedServer ||
+                  (_localServer ?? false),
+              onChanged:
+                  PlayerServerConfig.usesDefinedServer ||
+                      _localServer == null ||
+                      _savingLocalServer
+                  ? null
+                  : _saveLocalServer,
             ),
           ListTile(
-            leading: _isWindows && country != null ? _flagImage(country.countryCode, 32) : const Icon(Icons.public),
+            leading: _isWindows && country != null
+                ? _flagImage(country.countryCode, 32)
+                : const Icon(Icons.public),
             title: Text(ProfileTranslations.countryOrRegion.trOf(context)),
             subtitle: Text(regionValue),
             trailing: Row(

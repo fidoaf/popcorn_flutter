@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:popcorn_flutter/src/profile/domain/home_section.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -117,6 +118,19 @@ class SupabaseProfileRepository implements ProfileRepository {
   Future<Profile> updateProfile(String profileId, {String? displayName, String? avatarUrl}) async {
     final patch = <String, dynamic>{if (displayName != null) 'display_name': displayName, if (avatarUrl != null) 'avatar_url': avatarUrl};
     final row = await _client.from(_profiles).update(patch).eq('id', profileId).select().single();
+    final profile = Profile.fromRow(row);
+    if (_activeCache?.id == profileId) _activeCache = profile;
+    return profile;
+  }
+
+  @override
+  Future<Profile> updateHomeSections(String profileId, List<HomeSection> sections) async {
+    final row = await _client
+        .from(_profiles)
+        .update({'home_sections': sections.map((section) => section.databaseValue).toList()})
+        .eq('id', profileId)
+        .select()
+        .single();
     final profile = Profile.fromRow(row);
     if (_activeCache?.id == profileId) _activeCache = profile;
     return profile;

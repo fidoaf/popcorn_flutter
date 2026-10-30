@@ -3,7 +3,9 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:flutter/material.dart' as material show Colors, Theme, ThemeData;
+import 'package:flutter/material.dart'
+    as material
+    show Colors, Theme, ThemeData;
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -31,6 +33,7 @@ import 'package:popcorn_flutter/src/player/infrastructure/local_server_preferenc
 import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/windows_local_server.dart';
 import 'package:popcorn_flutter/src/profile/view/account_settings_view.dart';
+import 'package:popcorn_flutter/src/profile/view/profile_settings_view.dart';
 import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,7 +53,11 @@ void main(List<String> args) async {
     final prefs = await SharedPreferences.getInstance();
     final savedBounds = _WindowStatePersistence.readBounds(prefs);
     final wasMaximized = _WindowStatePersistence.readMaximized(prefs);
-    final WindowOptions windowOptions = WindowOptions(title: 'Popcorn', center: savedBounds == null, size: savedBounds?.size ?? const Size(800, 600));
+    final WindowOptions windowOptions = WindowOptions(
+      title: 'Popcorn',
+      center: savedBounds == null,
+      size: savedBounds?.size ?? const Size(800, 600),
+    );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       if (savedBounds != null) {
         await windowManager.setBounds(savedBounds);
@@ -64,7 +71,12 @@ void main(List<String> args) async {
     windowManager.addListener(_WindowStatePersistence(prefs));
     runApp(const _PopcornWindowsApp());
   } catch (error, stack) {
-    runApp(StartupErrorApp(message: 'Unable to start the app. Please check your configuration.', details: '$error\n$stack'));
+    runApp(
+      StartupErrorApp(
+        message: 'Unable to start the app. Please check your configuration.',
+        details: '$error\n$stack',
+      ),
+    );
     // ignore: avoid_print
     print('Startup error: $error\n$stack');
   }
@@ -93,7 +105,8 @@ class _WindowStatePersistence extends WindowListener {
     return Rect.fromLTWH(x, y, width, height);
   }
 
-  static bool readMaximized(SharedPreferences prefs) => prefs.getBool(_keyMaximized) ?? false;
+  static bool readMaximized(SharedPreferences prefs) =>
+      prefs.getBool(_keyMaximized) ?? false;
 
   Future<void> _saveState() async {
     final isMaximized = await windowManager.isMaximized();
@@ -161,7 +174,9 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           setState(() {
             _servicesOrNull = services;
             _router = router;
-            _location = RouterLocationListenable(router.routeInformationProvider);
+            _location = RouterLocationListenable(
+              router.routeInformationProvider,
+            );
           });
         })
         .catchError((Object error) {
@@ -170,11 +185,15 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
   }
 
   Future<AppServices> _createServices() async {
-    if (!PlayerServerConfig.usesDefinedServer && await LocalServerPreference.isEnabled()) {
+    if (!PlayerServerConfig.usesDefinedServer &&
+        await LocalServerPreference.isEnabled()) {
       final prefs = await SharedPreferences.getInstance();
       final token = await WindowsLocalServer.loadToken(prefs);
-      if (!mounted) throw StateError('Application closed during local server startup.');
-      final bundle = Directory('${File(Platform.resolvedExecutable).parent.path}\\local_server');
+      if (!mounted)
+        throw StateError('Application closed during local server startup.');
+      final bundle = Directory(
+        '${File(Platform.resolvedExecutable).parent.path}\\local_server',
+      );
       final server = WindowsLocalServer(
         bundleDirectory: bundle,
         token: token,
@@ -182,7 +201,9 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           if (mounted) {
             setState(() {
               _localServerFailed = true;
-              _startupError = StateError('Local player server exited with code $code.');
+              _startupError = StateError(
+                'Local player server exited with code $code.',
+              );
             });
           }
         },
@@ -194,7 +215,10 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           await server.stop();
           throw StateError('Application closed during local server startup.');
         }
-        PlayerServerConfig.useLocalServer(url: server.serverUrl, token: server.token);
+        PlayerServerConfig.useLocalServer(
+          url: server.serverUrl,
+          token: server.token,
+        );
       } catch (_) {
         _localServerFailed = true;
         rethrow;
@@ -221,7 +245,11 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
 
   @override
   void dispose() {
-    unawaited(_localServer?.stop().catchError((Object error) => debugPrint('[LocalServer] Shutdown failed: $error')));
+    unawaited(
+      _localServer?.stop().catchError(
+        (Object error) => debugPrint('[LocalServer] Shutdown failed: $error'),
+      ),
+    );
     _location?.dispose();
     _router?.dispose();
     _servicesOrNull?.dispose();
@@ -232,7 +260,11 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
     onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
     locale: PlatformDispatcher.instance.locale,
     supportedLocales: AppLanguage.values.map((lang) => lang.locale),
-    localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+    localizationsDelegates: const [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
     themeMode: ThemeMode.system,
     theme: FluentThemeData.light(),
     darkTheme: FluentThemeData.dark(),
@@ -249,9 +281,19 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(ProfileTranslations.localPlayerServerFailed.trOf(context)),
-                  Padding(padding: const EdgeInsets.all(16), child: Text(_startupError.toString())),
-                  Button(onPressed: _recovering ? null : _useHostedServer, child: Text(ProfileTranslations.useHostedServer.trOf(context))),
+                  Text(
+                    ProfileTranslations.localPlayerServerFailed.trOf(context),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(_startupError.toString()),
+                  ),
+                  Button(
+                    onPressed: _recovering ? null : _useHostedServer,
+                    child: Text(
+                      ProfileTranslations.useHostedServer.trOf(context),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -260,12 +302,17 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
       );
     }
     if (_startupError != null) return _bootstrapApp(const MaintenancePage());
-    if (_servicesOrNull == null || _router == null) return _bootstrapApp(const PopcornFluentSplashScreen());
+    if (_servicesOrNull == null || _router == null)
+      return _bootstrapApp(const PopcornFluentSplashScreen());
     return FluentApp.router(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       locale: PlatformDispatcher.instance.locale,
       supportedLocales: AppLanguage.values.map((lang) => lang.locale),
-      localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       themeMode: ThemeMode.system,
       theme: FluentThemeData.light(),
       darkTheme: FluentThemeData.dark(),
@@ -290,37 +337,70 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
   /// FluentApp provides no Material theme, so Material surfaces such as bottom
   /// sheets would be transparent without one.
   material.ThemeData _materialThemeFor(Brightness brightness) =>
-      material.ThemeData(brightness: brightness, colorSchemeSeed: material.Colors.deepOrange, useMaterial3: true);
+      material.ThemeData(
+        brightness: brightness,
+        colorSchemeSeed: material.Colors.deepOrange,
+        useMaterial3: true,
+      );
 
-  Page<void> _buildPage(BuildContext context, GoRouterState state, AppRouteRequest request) =>
-      _FluentPage(key: state.pageKey, child: _pageFor(context, request, state.extra));
+  Page<void> _buildPage(
+    BuildContext context,
+    GoRouterState state,
+    AppRouteRequest request,
+  ) => _FluentPage(
+    key: state.pageKey,
+    child: _pageFor(context, request, state.extra),
+  );
 
-  Widget _pageFor(BuildContext context, AppRouteRequest request, Object? arguments) {
+  Widget _pageFor(
+    BuildContext context,
+    AppRouteRequest request,
+    Object? arguments,
+  ) {
     switch (request) {
       case LandingRoute():
         return _landingPage(context);
       case HomeRoute(:final query, :final type):
-        return _WindowsHomeView(services: _services, browse: true, initialQuery: query, initialMediaType: type);
+        return _WindowsHomeView(
+          services: _services,
+          browse: true,
+          initialQuery: query,
+          initialMediaType: type,
+        );
       case UnknownRoute():
         return _WindowsHomeView(services: _services, browse: true);
       case SearchRoute(:final query, :final type):
-        return _WindowsHomeView(services: _services, initialQuery: query, initialMediaType: type);
+        return _WindowsHomeView(
+          services: _services,
+          initialQuery: query,
+          initialMediaType: type,
+        );
       case FavoritesRoute():
         return _favoritesPage(context);
       case HistoryRoute():
         return _historyPage(context);
       case DetailsRoute(:final type, :final id):
-        return _detailsPage(type, id, arguments is MediaItem ? arguments : null);
+        return _detailsPage(
+          type,
+          id,
+          arguments is MediaItem ? arguments : null,
+        );
       case PersonRoute(:final id):
         return _PopOnEscape(
           child: PersonDetailsPage(
             personId: id,
             repository: _services.repository,
-            onCreditSelected: (credit) => context.push(AppRoutes.details(credit.type, credit.item.id), extra: credit.item),
+            onCreditSelected: (credit) => context.push(
+              AppRoutes.details(credit.type, credit.item.id),
+              extra: credit.item,
+            ),
             pageBuilder: (context, title, body) => PopcornFluentSplashScreen(
               child: ScaffoldPage(
                 header: PageHeader(
-                  leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+                  leading: IconButton(
+                    icon: const Icon(FluentIcons.back),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   title: Text(title),
                   commandBar: const PopcornAppBarLogo(),
                 ),
@@ -330,16 +410,26 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
           ),
         );
       case WatchRoute(:final type, :final id, :final season, :final episode):
-        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null);
+        return _watchPage(
+          type,
+          id,
+          season,
+          episode,
+          arguments is MediaItem ? arguments : null,
+        );
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
-        return video == null ? _WindowsHomeView(services: _services, browse: true) : _trailerPage(video);
+        return video == null
+            ? _WindowsHomeView(services: _services, browse: true)
+            : _trailerPage(video);
       case PrivacyRoute():
         return _legalPage(context, LegalTranslations.privacyPolicy);
       case TermsRoute():
         return _legalPage(context, LegalTranslations.termsOfService);
       case AccountSettingsRoute():
         return _accountSettingsPage(context);
+      case ProfileSettingsRoute(:final profileId):
+        return _profileSettingsPage(context, profileId: profileId);
     }
   }
 
@@ -348,7 +438,10 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
       child: Builder(
         builder: (context) => ScaffoldPage(
           header: PageHeader(
-            leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+            leading: IconButton(
+              icon: const Icon(FluentIcons.back),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
             title: Text(ProfileTranslations.accountSettings.trOf(context)),
             commandBar: const PopcornAppBarLogo(),
           ),
@@ -358,20 +451,46 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
     ),
   );
 
-  Widget _legalPage(BuildContext context, LegalDocument document) => _PopOnEscape(
-    child: PopcornFluentSplashScreen(
-      child: Builder(
-        builder: (context) => ScaffoldPage(
-          header: PageHeader(
-            leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
-            title: Text(document.title.trOf(context)),
-            commandBar: const PopcornAppBarLogo(),
+  Widget _profileSettingsPage(BuildContext context, {String? profileId}) =>
+      _PopOnEscape(
+        child: PopcornFluentSplashScreen(
+          child: Builder(
+            builder: (context) => ScaffoldPage(
+              header: PageHeader(
+                leading: IconButton(
+                  icon: const Icon(FluentIcons.back),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                title: Text(ProfileTranslations.profileSettings.trOf(context)),
+                commandBar: const PopcornAppBarLogo(),
+              ),
+              content: ProfileSettingsView(
+                profileController: _services.profileController,
+                profileId: profileId,
+              ),
+            ),
           ),
-          content: LegalDocumentView(document: document),
         ),
-      ),
-    ),
-  );
+      );
+
+  Widget _legalPage(BuildContext context, LegalDocument document) =>
+      _PopOnEscape(
+        child: PopcornFluentSplashScreen(
+          child: Builder(
+            builder: (context) => ScaffoldPage(
+              header: PageHeader(
+                leading: IconButton(
+                  icon: const Icon(FluentIcons.back),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                title: Text(document.title.trOf(context)),
+                commandBar: const PopcornAppBarLogo(),
+              ),
+              content: LegalDocumentView(document: document),
+            ),
+          ),
+        ),
+      );
 
   Widget _landingPage(BuildContext context) => PopcornFluentSplashScreen(
     child: PopcornLandingView(
@@ -390,7 +509,10 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
             top: 8,
             left: 8,
             child: PlayerOverlayControls(
-              child: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).pop()),
+              child: IconButton(
+                icon: const Icon(FluentIcons.back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
             ),
           ),
         ],
@@ -402,7 +524,10 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
     child: PopcornFluentSplashScreen(
       child: FluentFavoritesView(
         controller: _services.favoritesController,
-        onMediaSelected: (favorite) => context.push(AppRoutes.details(favorite.type, favorite.item.id), extra: favorite.item),
+        onMediaSelected: (favorite) => context.push(
+          AppRoutes.details(favorite.type, favorite.item.id),
+          extra: favorite.item,
+        ),
       ),
     ),
   );
@@ -411,29 +536,48 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
     child: PopcornFluentSplashScreen(
       child: FluentContinueWatchingView(
         controller: _services.historyController,
-        onMediaSelected: (entry) => context.push(AppRoutes.details(entry.type, entry.item.id), extra: entry.item),
+        onMediaSelected: (entry) => context.push(
+          AppRoutes.details(entry.type, entry.item.id),
+          extra: entry.item,
+        ),
         onMediaPlay: (entry) => context.push(
-          AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+          AppRoutes.watch(
+            entry.type,
+            entry.item.id,
+            season: entry.season,
+            episode: entry.episode,
+          ),
           extra: entry.item,
         ),
       ),
     ),
   );
 
-  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item) => MediaPlaybackScaffold(
+  Widget _watchPage(
+    MediaType type,
+    int id,
+    int? season,
+    int? episode,
+    MediaItem? item,
+  ) => MediaPlaybackScaffold(
     id: id,
     type: type,
     season: season,
     episode: episode,
     item: item,
     services: _services,
-    loadingBuilder: (context) => _playerPage(context, const Center(child: ProgressRing())),
+    loadingBuilder: (context) =>
+        _playerPage(context, const Center(child: ProgressRing())),
     builder: (context, source, resolved, onUrlChanged) => _playerPage(
       context,
       MediaXRayOverlay(
         item: resolved,
         detailsLoader: () => _services.repository.details(id, type),
-        child: VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged, engine: VideoPlayerEngine.mediaKit),
+        child: VideoPlayerFactory.create(
+          source: source,
+          onUrlChanged: onUrlChanged,
+          engine: VideoPlayerEngine.mediaKit,
+        ),
       ),
     ),
   );
@@ -447,55 +591,89 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
     ),
   );
 
-  Widget _detailsPage(MediaType type, int id, MediaItem? item) => MediaDetailsScaffold(
-    id: id,
-    type: type,
-    item: item,
-    repository: _services.repository,
-    loadingBuilder: (context) => const _PopOnEscape(
-      child: PopcornFluentSplashScreen(child: Center(child: ProgressRing())),
-    ),
-    errorBuilder: (context, error) => _PopOnEscape(
-      child: PopcornFluentSplashScreen(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text('$error', textAlign: TextAlign.center),
+  Widget _detailsPage(MediaType type, int id, MediaItem? item) =>
+      MediaDetailsScaffold(
+        id: id,
+        type: type,
+        item: item,
+        repository: _services.repository,
+        loadingBuilder: (context) => const _PopOnEscape(
+          child: PopcornFluentSplashScreen(
+            child: Center(child: ProgressRing()),
           ),
         ),
-      ),
-    ),
-    builder: (context, bundle) => _PopOnEscape(
-      child: PopcornFluentSplashScreen(
-        child: FluentMediaDetailsView(
-          item: bundle.item,
-          details: bundle.details,
-          videos: bundle.videos,
-          providers: bundle.providers,
-          related: bundle.related,
-          favoritesController: _services.favoritesController,
-          historyController: _services.historyController,
-          mediaType: bundle.type,
-          onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id), extra: playItem),
-          onResume: (playItem, {season, episode}) => context.push(
-            AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode),
-            extra: playItem,
-          ),
-          onVideoPlay: (video) => context.push(AppRoutes.trailer, extra: video),
-          onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
-          episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
-          onPlayEpisode: (season, episode) => context.push(
-            AppRoutes.watch(bundle.type, bundle.item.id, season: season.seasonNumber, episode: episode.episodeNumber),
-            extra: bundle.item,
+        errorBuilder: (context, error) => _PopOnEscape(
+          child: PopcornFluentSplashScreen(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('$error', textAlign: TextAlign.center),
+              ),
+            ),
           ),
         ),
-      ),
-    ),
-  );
+        builder: (context, bundle) => _PopOnEscape(
+          child: PopcornFluentSplashScreen(
+            child: FluentMediaDetailsView(
+              item: bundle.item,
+              details: bundle.details,
+              videos: bundle.videos,
+              providers: bundle.providers,
+              related: bundle.related,
+              favoritesController: _services.favoritesController,
+              historyController: _services.historyController,
+              profileSwitcher: UserIdentityTitle(
+                controller: _services.authController,
+                profileController: _services.profileController,
+                fallbackTitle: const SizedBox.shrink(),
+                compact: true,
+              ),
+              mediaType: bundle.type,
+              onPlay: (playItem) => context.push(
+                AppRoutes.watch(bundle.type, playItem.id),
+                extra: playItem,
+              ),
+              onResume: (playItem, {season, episode}) => context.push(
+                AppRoutes.watch(
+                  bundle.type,
+                  playItem.id,
+                  season: season,
+                  episode: episode,
+                ),
+                extra: playItem,
+              ),
+              onVideoPlay: (video) =>
+                  context.push(AppRoutes.trailer, extra: video),
+              onRelatedSelected: (related) => context.push(
+                AppRoutes.details(bundle.type, related.id),
+                extra: related,
+              ),
+              episodesLoader: (season) => _services.repository.episodes(
+                bundle.item.id,
+                season.seasonNumber,
+              ),
+              onPlayEpisode: (season, episode) => context.push(
+                AppRoutes.watch(
+                  bundle.type,
+                  bundle.item.id,
+                  season: season.seasonNumber,
+                  episode: episode.episodeNumber,
+                ),
+                extra: bundle.item,
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class _WindowsHomeView extends StatelessWidget {
-  const _WindowsHomeView({required this.services, this.initialQuery, this.initialMediaType, this.browse = false});
+  const _WindowsHomeView({
+    required this.services,
+    this.initialQuery,
+    this.initialMediaType,
+    this.browse = false,
+  });
 
   final AppServices services;
   final String? initialQuery;
@@ -523,7 +701,9 @@ class _WindowsHomeView extends StatelessWidget {
                   UserIdentityTitle(
                     controller: services.authController,
                     profileController: services.profileController,
-                    fallbackTitle: Text(SearchTranslations.pageTitle.trOf(context)),
+                    fallbackTitle: Text(
+                      SearchTranslations.pageTitle.trOf(context),
+                    ),
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -535,12 +715,22 @@ class _WindowsHomeView extends StatelessWidget {
             favoritesController: services.favoritesController,
             historyController: services.historyController,
             searchController: services.searchController,
+            profileController: services.profileController,
+            isGuest: services.authController.isGuest,
+            authController: services.authController,
             initialQuery: initialQuery,
             initialMediaType: initialMediaType,
-            onOpenDetails: (media, type) => context.push(AppRoutes.details(type, media.id), extra: media),
-            onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id), extra: media),
+            onOpenDetails: (media, type) =>
+                context.push(AppRoutes.details(type, media.id), extra: media),
+            onPlay: (media, type) =>
+                context.push(AppRoutes.watch(type, media.id), extra: media),
             onResume: (entry) => context.push(
-              AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+              AppRoutes.watch(
+                entry.type,
+                entry.item.id,
+                season: entry.season,
+                episode: entry.episode,
+              ),
               extra: entry.item,
             ),
             onSeeAllFavorites: () => context.push(AppRoutes.favorites),
@@ -557,8 +747,14 @@ class _WindowsHomeView extends StatelessWidget {
         profileController: services.profileController,
         initialQuery: initialQuery,
         initialMediaType: initialMediaType,
-        onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
-        onMediaPlay: (media) => context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
+        onMediaSelected: (media) => context.push(
+          AppRoutes.details(services.searchController.mediaType, media.id),
+          extra: media,
+        ),
+        onMediaPlay: (media) => context.push(
+          AppRoutes.watch(services.searchController.mediaType, media.id),
+          extra: media,
+        ),
         onOpenFavorites: () => context.push(AppRoutes.favorites),
         onOpenContinueWatching: () => context.push(AppRoutes.history),
       ),
@@ -574,7 +770,8 @@ class _FluentPage extends Page<void> {
   final Widget child;
 
   @override
-  Route<void> createRoute(BuildContext context) => FluentPageRoute<void>(settings: this, builder: (_) => child);
+  Route<void> createRoute(BuildContext context) =>
+      FluentPageRoute<void>(settings: this, builder: (_) => child);
 }
 
 /// Pops the current route when the Escape key is pressed.
@@ -588,7 +785,8 @@ class _PopOnEscape extends StatelessWidget {
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
           Navigator.of(context).maybePop();
           return KeyEventResult.handled;
         }

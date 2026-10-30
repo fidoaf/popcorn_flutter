@@ -39,6 +39,7 @@ class FluentMediaDetailsView extends StatelessWidget {
     this.onPlayEpisode,
     this.favoritesController,
     this.historyController,
+    this.profileSwitcher,
     this.mediaType,
   });
 
@@ -82,6 +83,9 @@ class FluentMediaDetailsView extends StatelessWidget {
   /// Supplies watch history so the play button can switch to "Resume".
   final WatchHistoryController? historyController;
 
+  /// Opens the active profile switcher from the page header.
+  final Widget? profileSwitcher;
+
   /// The [MediaType] of [item], needed to persist the favorite.
   final MediaType? mediaType;
 
@@ -92,12 +96,7 @@ class FluentMediaDetailsView extends StatelessWidget {
     final overview = item.overview.trim();
 
     return ScaffoldPage(
-      header: PageHeader(
-        padding: 16,
-        leading: IconButton(icon: const Icon(FluentIcons.back), onPressed: () => Navigator.of(context).maybePop()),
-        title: Text(item.title),
-        commandBar: const PopcornAppBarLogo(),
-      ),
+      header: PageHeader(padding: 16, leading: const PopcornAppBarLogo(), title: Text(item.title), commandBar: profileSwitcher),
       content: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:popcorn_flutter/src/profile/domain/home_section.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile.dart';
 
 /// Manages the profiles of the signed-in user's account and tracks which one is
@@ -24,6 +25,9 @@ abstract interface class ProfileRepository {
 
   /// Updates [profileId]'s display name and/or avatar and returns the result.
   Future<Profile> updateProfile(String profileId, {String? displayName, String? avatarUrl});
+
+  /// Saves the home sections shown for [profileId] and returns the updated profile.
+  Future<Profile> updateHomeSections(String profileId, List<HomeSection> sections);
 
   /// Uploads [bytes] as [profileId]'s picture and returns its public URL.
   Future<String> uploadAvatar(String profileId, Uint8List bytes, {required String fileExtension});

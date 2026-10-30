@@ -14,7 +14,11 @@ import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 
 /// Opens the profile switcher: pick a profile, add one, edit the active one, or
 /// sign out.
-Future<void> showProfileSheet(BuildContext context, {required ProfileController profileController, required AuthController authController}) async {
+Future<void> showProfileSheet(
+  BuildContext context, {
+  required ProfileController profileController,
+  required AuthController authController,
+}) async {
   final router = GoRouter.of(context);
   var openAccountSettings = false;
   await showModalBottomSheet<void>(
@@ -30,11 +34,17 @@ Future<void> showProfileSheet(BuildContext context, {required ProfileController 
       },
     ),
   );
-  if (openAccountSettings && context.mounted) await router.push<void>(AppRoutes.accountSettings);
+  if (openAccountSettings && context.mounted) {
+    await router.push<void>(AppRoutes.accountSettings);
+  }
 }
 
 class _ProfileSheet extends StatefulWidget {
-  const _ProfileSheet({required this.profileController, required this.authController, required this.onOpenAccountSettings});
+  const _ProfileSheet({
+    required this.profileController,
+    required this.authController,
+    required this.onOpenAccountSettings,
+  });
 
   final ProfileController profileController;
   final AuthController authController;
@@ -70,35 +80,58 @@ class _ProfileSheetState extends State<_ProfileSheet> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                  child: Text(ProfileTranslations.whosWatching.trOf(context), style: Theme.of(context).textTheme.titleLarge),
+                  child: Text(
+                    ProfileTranslations.whosWatching.trOf(context),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                 ),
                 for (final profile in profileController.profiles)
                   ListTile(
                     enabled: !switching,
-                    leading: ProfileAvatar(url: profile.avatarUrl, initial: _initialOf(profile), size: 36),
+                    selected: profile.id == activeId,
+                    selectedTileColor: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: 0.12),
+                    leading: ProfileAvatar(
+                      url: profile.avatarUrl,
+                      initial: _initialOf(profile),
+                      size: 36,
+                    ),
                     title: Text(profile.displayName),
-                    trailing: _switchingId == profile.id
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : profile.id == activeId
-                        ? const Icon(Icons.check_circle, color: Colors.deepOrange)
-                        : IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: ProfileTranslations.editProfile.trOf(context),
-                            onPressed: switching ? null : () => showProfileEditDialog(context, profileController: profileController, profile: profile),
-                          ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: ProfileTranslations.editProfile.trOf(context),
+                      onPressed: switching
+                          ? null
+                          : () {
+                              Navigator.of(context).pop();
+                              GoRouter.of(
+                                context,
+                              ).push<void>(AppRoutes.editProfile(profile.id));
+                            },
+                    ),
                     onTap: switching ? null : () => _switchTo(profile.id),
                   ),
                 ListTile(
                   enabled: !switching,
-                  leading: const CircleAvatar(radius: 18, child: Icon(Icons.add)),
+                  leading: const CircleAvatar(
+                    radius: 18,
+                    child: Icon(Icons.add),
+                  ),
                   title: Text(ProfileTranslations.addProfile.trOf(context)),
-                  onTap: switching ? null : () => showProfileEditDialog(context, profileController: profileController),
+                  onTap: switching
+                      ? null
+                      : () => showProfileEditDialog(
+                          context,
+                          profileController: profileController,
+                        ),
                 ),
                 const Divider(height: 8),
                 ListTile(
                   enabled: !switching,
                   leading: const Icon(Icons.settings_outlined),
-                  title: Text(ProfileTranslations.accountSettings.trOf(context)),
+                  title: Text(
+                    ProfileTranslations.accountSettings.trOf(context),
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: switching ? null : widget.onOpenAccountSettings,
                 ),
@@ -127,10 +160,17 @@ class _ProfileSheetState extends State<_ProfileSheet> {
 
 /// Opens the create/edit dialog. When [profile] is `null`, a new profile is
 /// created; otherwise [profile] is edited (rename and/or change picture).
-Future<void> showProfileEditDialog(BuildContext context, {required ProfileController profileController, Profile? profile}) {
+Future<void> showProfileEditDialog(
+  BuildContext context, {
+  required ProfileController profileController,
+  Profile? profile,
+}) {
   return showDialog<void>(
     context: context,
-    builder: (dialogContext) => _ProfileEditDialog(profileController: profileController, profile: profile),
+    builder: (dialogContext) => _ProfileEditDialog(
+      profileController: profileController,
+      profile: profile,
+    ),
   );
 }
 
@@ -145,7 +185,9 @@ class _ProfileEditDialog extends StatefulWidget {
 }
 
 class _ProfileEditDialogState extends State<_ProfileEditDialog> {
-  late final TextEditingController _name = TextEditingController(text: widget.profile?.displayName ?? '');
+  late final TextEditingController _name = TextEditingController(
+    text: widget.profile?.displayName ?? '',
+  );
   bool _busy = false;
   bool _uploadingPhoto = false;
   Uint8List? _pendingBytes;
@@ -157,7 +199,9 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
   Profile? get _current {
     final id = widget.profile?.id;
     if (id == null) return null;
-    final match = widget.profileController.profiles.where((profile) => profile.id == id);
+    final match = widget.profileController.profiles.where(
+      (profile) => profile.id == id,
+    );
     return match.isNotEmpty ? match.first : widget.profile;
   }
 
@@ -170,7 +214,10 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
   Future<void> _changePicture() async {
     final profile = widget.profile;
     if (profile == null) return;
-    const typeGroup = XTypeGroup(label: 'images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif']);
+    const typeGroup = XTypeGroup(
+      label: 'images',
+      extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
+    );
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file == null) return;
     final picked = await file.readAsBytes();
@@ -184,7 +231,11 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
     });
     try {
       // cropCircle() always outputs PNG.
-      await widget.profileController.changeAvatar(profile.id, cropped, fileExtension: 'png');
+      await widget.profileController.changeAvatar(
+        profile.id,
+        cropped,
+        fileExtension: 'png',
+      );
     } catch (_) {
       if (mounted) setState(() => _uploadingPhoto = false);
       return;
@@ -214,9 +265,18 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
     final pending = _pendingBytes;
     final Widget avatar = pending != null
         ? ClipOval(
-            child: Image.memory(pending, width: size, height: size, fit: BoxFit.cover),
+            child: Image.memory(
+              pending,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+            ),
           )
-        : ProfileAvatar(url: _current?.avatarUrl, initial: _initialOf(_current ?? widget.profile!), size: size);
+        : ProfileAvatar(
+            url: _current?.avatarUrl,
+            initial: _initialOf(_current ?? widget.profile!),
+            size: size,
+          );
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -225,9 +285,19 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
           Container(
             width: size,
             height: size,
-            decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black54),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black54,
+            ),
             child: const Center(
-              child: SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+              child: SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
       ],
@@ -236,7 +306,9 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final title = _isEditing ? ProfileTranslations.editProfile : ProfileTranslations.newProfile;
+    final title = _isEditing
+        ? ProfileTranslations.editProfile
+        : ProfileTranslations.newProfile;
     return AlertDialog(
       title: Text(title.trOf(context)),
       content: Column(
@@ -247,7 +319,9 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
             controller: _name,
             autofocus: true,
             enabled: !_locked,
-            decoration: InputDecoration(labelText: ProfileTranslations.profileName.trOf(context)),
+            decoration: InputDecoration(
+              labelText: ProfileTranslations.profileName.trOf(context),
+            ),
             onSubmitted: (_) => _submit(),
           ),
           if (_isEditing) ...[
@@ -261,12 +335,24 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
         ],
       ),
       actions: [
-        TextButton(onPressed: _locked ? null : () => Navigator.of(context).pop(), child: Text(ProfileTranslations.cancel.trOf(context))),
+        TextButton(
+          onPressed: _locked ? null : () => Navigator.of(context).pop(),
+          child: Text(ProfileTranslations.cancel.trOf(context)),
+        ),
         FilledButton(
           onPressed: _locked ? null : _submit,
           child: _busy
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : Text((_isEditing ? ProfileTranslations.save : ProfileTranslations.create).trOf(context)),
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  (_isEditing
+                          ? ProfileTranslations.save
+                          : ProfileTranslations.create)
+                      .trOf(context),
+                ),
         ),
       ],
     );

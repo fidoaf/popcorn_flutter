@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:popcorn_flutter/src/auth/auth.dart';
 import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
@@ -26,11 +27,21 @@ final class AppServices {
     final services = AppServices._(
       repository: repository,
       searchController: MediaSearchController(repository: repository),
-      homeFeedController: HomeFeedController(repository: repository),
+      homeFeedController: HomeFeedController(
+        repository: repository,
+        enabledSections: const {},
+      ),
       mediaSourceProvider: await MediaSourceProviderFactory.createFromAsset(),
-      favoritesController: FavoritesController(repository: FavoritesRepositoryFactory.create(profileRepository: profileRepository)),
+      favoritesController: FavoritesController(
+        repository: FavoritesRepositoryFactory.create(
+          profileRepository: profileRepository,
+        ),
+      ),
       historyController: WatchHistoryController(
-        repository: WatchHistoryRepositoryFactory.create(profileRepository: profileRepository, mediaRepository: repository),
+        repository: WatchHistoryRepositoryFactory.create(
+          profileRepository: profileRepository,
+          mediaRepository: repository,
+        ),
       ),
       authController: AuthController(),
       profileController: ProfileController(repository: profileRepository),
@@ -50,6 +61,7 @@ final class AppServices {
 
   bool _wasSignedIn = false;
   String? _lastActiveProfileId;
+  Set<HomeSection> _lastHomeSections = const {};
 
   // Sign-in changes reload the account's profiles; switching the active profile
   // (which also happens right after sign-in) reloads its favorites and history.
@@ -58,21 +70,38 @@ final class AppServices {
     _lastActiveProfileId = profileController.activeProfileId;
     authController.addListener(_handleAuthChange);
     profileController.addListener(_handleProfileChange);
+    _handleProfileChange();
   }
 
   void _handleAuthChange() {
     final signedIn = authController.isSignedIn;
-    if (signedIn == _wasSignedIn) return;
+    if (signedIn == _wasSignedIn) {
+      _updateHomeSections();
+      return;
+    }
     _wasSignedIn = signedIn;
+    _updateHomeSections();
     profileController.reload();
   }
 
   void _handleProfileChange() {
+    _updateHomeSections();
     final activeId = profileController.activeProfileId;
     if (activeId == _lastActiveProfileId) return;
     _lastActiveProfileId = activeId;
     favoritesController.reload();
     historyController.reload();
+  }
+
+  void _updateHomeSections() {
+    final sections = authController.isGuest
+        ? HomeSection.values.toSet()
+        : profileController.activeProfile?.homeSections?.toSet() ??
+              const <HomeSection>{};
+    if (!setEquals(_lastHomeSections, sections)) {
+      _lastHomeSections = sections;
+      homeFeedController.setEnabledSections(sections);
+    }
   }
 
   void dispose() {

@@ -25,6 +25,7 @@ import 'package:popcorn_flutter/src/locale/domain/app_language.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
 import 'package:popcorn_flutter/src/profile/view/account_settings_view.dart';
+import 'package:popcorn_flutter/src/profile/view/profile_settings_view.dart';
 import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
@@ -53,7 +54,12 @@ void main(List<String> args) async {
     await AuthController.ensureInitialized();
     runApp(const _PopcornAndroidApp());
   } catch (error, stack) {
-    runApp(StartupErrorApp(message: 'Unable to start the app. Please check your configuration.', details: '$error\n$stack'));
+    runApp(
+      StartupErrorApp(
+        message: 'Unable to start the app. Please check your configuration.',
+        details: '$error\n$stack',
+      ),
+    );
     // ignore: avoid_print
     print('Startup error: $error\n$stack');
   }
@@ -91,7 +97,9 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
           setState(() {
             _servicesOrNull = services;
             _router = router;
-            _location = RouterLocationListenable(router.routeInformationProvider);
+            _location = RouterLocationListenable(
+              router.routeInformationProvider,
+            );
           });
         })
         .catchError((Object error) {
@@ -111,25 +119,50 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
     onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
     locale: PlatformDispatcher.instance.locale,
     supportedLocales: AppLanguage.values.map((lang) => lang.locale),
-    localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+    localizationsDelegates: const [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
     themeMode: ThemeMode.system,
-    theme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.light),
-    darkTheme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.dark),
+    theme: ThemeData(
+      colorSchemeSeed: Colors.deepOrange,
+      useMaterial3: true,
+      brightness: Brightness.light,
+    ),
+    darkTheme: ThemeData(
+      colorSchemeSeed: Colors.deepOrange,
+      useMaterial3: true,
+      brightness: Brightness.dark,
+    ),
     home: home,
   );
 
   @override
   Widget build(BuildContext context) {
     if (_startupError != null) return _bootstrapApp(const MaintenancePage());
-    if (_servicesOrNull == null || _router == null) return _bootstrapApp(const PopcornMaterialSplashScreen());
+    if (_servicesOrNull == null || _router == null)
+      return _bootstrapApp(const PopcornMaterialSplashScreen());
     return MaterialApp.router(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       locale: PlatformDispatcher.instance.locale,
       supportedLocales: AppLanguage.values.map((lang) => lang.locale),
-      localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       themeMode: ThemeMode.system,
-      theme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.light),
-      darkTheme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true, brightness: Brightness.dark),
+      theme: ThemeData(
+        colorSchemeSeed: Colors.deepOrange,
+        useMaterial3: true,
+        brightness: Brightness.light,
+      ),
+      darkTheme: ThemeData(
+        colorSchemeSeed: Colors.deepOrange,
+        useMaterial3: true,
+        brightness: Brightness.dark,
+      ),
       routerConfig: _router!,
       builder: (context, child) => SystemBarsBackground(
         child: AuthGate(
@@ -147,64 +180,127 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
     );
   }
 
-  Page<void> _buildPage(BuildContext context, GoRouterState state, AppRouteRequest request) =>
-      MaterialPage<void>(key: state.pageKey, child: _pageFor(context, request, state.extra));
+  Page<void> _buildPage(
+    BuildContext context,
+    GoRouterState state,
+    AppRouteRequest request,
+  ) => MaterialPage<void>(
+    key: state.pageKey,
+    child: _pageFor(context, request, state.extra),
+  );
 
-  Widget _pageFor(BuildContext context, AppRouteRequest request, Object? arguments) {
+  Widget _pageFor(
+    BuildContext context,
+    AppRouteRequest request,
+    Object? arguments,
+  ) {
     switch (request) {
       case LandingRoute():
         return _landingPage(context);
       case HomeRoute(:final query, :final type):
-        return _AndroidHomeView(services: _services, browse: true, initialQuery: query, initialMediaType: type);
+        return _AndroidHomeView(
+          services: _services,
+          browse: true,
+          initialQuery: query,
+          initialMediaType: type,
+        );
       case UnknownRoute():
         return _AndroidHomeView(services: _services, browse: true);
       case SearchRoute(:final query, :final type):
-        return _AndroidHomeView(services: _services, initialQuery: query, initialMediaType: type);
+        return _AndroidHomeView(
+          services: _services,
+          initialQuery: query,
+          initialMediaType: type,
+        );
       case FavoritesRoute():
         return _favoritesPage(context);
       case HistoryRoute():
         return _historyPage(context);
       case DetailsRoute(:final type, :final id):
-        return _detailsPage(type, id, arguments is MediaItem ? arguments : null);
+        return _detailsPage(
+          type,
+          id,
+          arguments is MediaItem ? arguments : null,
+        );
       case PersonRoute(:final id):
         return PersonDetailsPage(
           personId: id,
           repository: _services.repository,
-          onCreditSelected: (credit) => context.push(AppRoutes.details(credit.type, credit.item.id), extra: credit.item),
+          onCreditSelected: (credit) => context.push(
+            AppRoutes.details(credit.type, credit.item.id),
+            extra: credit.item,
+          ),
           pageBuilder: (context, title, body) => PopcornMaterialSplashScreen(
             child: Scaffold(
-              appBar: AppBar(title: Text(title), actions: const [PopcornAppBarLogo()]),
+              appBar: AppBar(
+                title: Text(title),
+                actions: const [PopcornAppBarLogo()],
+              ),
               body: SafeArea(child: body),
             ),
           ),
         );
       case WatchRoute(:final type, :final id, :final season, :final episode):
-        return _watchPage(type, id, season, episode, arguments is MediaItem ? arguments : null);
+        return _watchPage(
+          type,
+          id,
+          season,
+          episode,
+          arguments is MediaItem ? arguments : null,
+        );
       case TrailerRoute():
         final video = arguments is MediaVideo ? arguments : null;
-        return video == null ? _AndroidHomeView(services: _services, browse: true) : _trailerPage(video);
+        return video == null
+            ? _AndroidHomeView(services: _services, browse: true)
+            : _trailerPage(video);
       case PrivacyRoute():
         return _legalPage(context, LegalTranslations.privacyPolicy);
       case TermsRoute():
         return _legalPage(context, LegalTranslations.termsOfService);
       case AccountSettingsRoute():
         return _accountSettingsPage(context);
+      case ProfileSettingsRoute(:final profileId):
+        return _profileSettingsPage(context, profileId: profileId);
     }
   }
 
-  Widget _accountSettingsPage(BuildContext context) => PopcornMaterialSplashScreen(
-    child: Scaffold(
-      appBar: AppBar(title: Text(ProfileTranslations.accountSettings.trOf(context)), actions: const [PopcornAppBarLogo()]),
-      body: const SafeArea(child: AccountSettingsView()),
-    ),
-  );
+  Widget _accountSettingsPage(BuildContext context) =>
+      PopcornMaterialSplashScreen(
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(ProfileTranslations.accountSettings.trOf(context)),
+            actions: const [PopcornAppBarLogo()],
+          ),
+          body: const SafeArea(child: AccountSettingsView()),
+        ),
+      );
 
-  Widget _legalPage(BuildContext context, LegalDocument document) => PopcornMaterialSplashScreen(
-    child: Scaffold(
-      appBar: AppBar(title: Text(document.title.trOf(context)), actions: const [PopcornAppBarLogo()]),
-      body: SafeArea(child: LegalDocumentView(document: document)),
-    ),
-  );
+  Widget _profileSettingsPage(BuildContext context, {String? profileId}) =>
+      PopcornMaterialSplashScreen(
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(ProfileTranslations.profileSettings.trOf(context)),
+            actions: const [PopcornAppBarLogo()],
+          ),
+          body: SafeArea(
+            child: ProfileSettingsView(
+              profileController: _services.profileController,
+              profileId: profileId,
+            ),
+          ),
+        ),
+      );
+
+  Widget _legalPage(BuildContext context, LegalDocument document) =>
+      PopcornMaterialSplashScreen(
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(document.title.trOf(context)),
+            actions: const [PopcornAppBarLogo()],
+          ),
+          body: SafeArea(child: LegalDocumentView(document: document)),
+        ),
+      );
 
   Widget _landingPage(BuildContext context) => PopcornMaterialSplashScreen(
     child: PopcornLandingView(
@@ -224,11 +320,17 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
 
   Widget _favoritesPage(BuildContext context) => PopcornMaterialSplashScreen(
     child: Scaffold(
-      appBar: AppBar(title: Text(FavoritesTranslations.pageTitle.trOf(context)), actions: const [PopcornAppBarLogo()]),
+      appBar: AppBar(
+        title: Text(FavoritesTranslations.pageTitle.trOf(context)),
+        actions: const [PopcornAppBarLogo()],
+      ),
       body: SafeArea(
         child: MaterialFavoritesView(
           controller: _services.favoritesController,
-          onMediaSelected: (favorite) => context.push(AppRoutes.details(favorite.type, favorite.item.id), extra: favorite.item),
+          onMediaSelected: (favorite) => context.push(
+            AppRoutes.details(favorite.type, favorite.item.id),
+            extra: favorite.item,
+          ),
         ),
       ),
     ),
@@ -236,13 +338,24 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
 
   Widget _historyPage(BuildContext context) => PopcornMaterialSplashScreen(
     child: Scaffold(
-      appBar: AppBar(title: Text(WatchHistoryTranslations.pageTitle.trOf(context)), actions: const [PopcornAppBarLogo()]),
+      appBar: AppBar(
+        title: Text(WatchHistoryTranslations.pageTitle.trOf(context)),
+        actions: const [PopcornAppBarLogo()],
+      ),
       body: SafeArea(
         child: MaterialContinueWatchingView(
           controller: _services.historyController,
-          onMediaSelected: (entry) => context.push(AppRoutes.details(entry.type, entry.item.id), extra: entry.item),
+          onMediaSelected: (entry) => context.push(
+            AppRoutes.details(entry.type, entry.item.id),
+            extra: entry.item,
+          ),
           onMediaPlay: (entry) => context.push(
-            AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+            AppRoutes.watch(
+              entry.type,
+              entry.item.id,
+              season: entry.season,
+              episode: entry.episode,
+            ),
             extra: entry.item,
           ),
         ),
@@ -250,19 +363,29 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
     ),
   );
 
-  Widget _watchPage(MediaType type, int id, int? season, int? episode, MediaItem? item) => MediaPlaybackScaffold(
+  Widget _watchPage(
+    MediaType type,
+    int id,
+    int? season,
+    int? episode,
+    MediaItem? item,
+  ) => MediaPlaybackScaffold(
     id: id,
     type: type,
     season: season,
     episode: episode,
     item: item,
     services: _services,
-    loadingBuilder: (context) => _playerPage(const Center(child: CircularProgressIndicator())),
+    loadingBuilder: (context) =>
+        _playerPage(const Center(child: CircularProgressIndicator())),
     builder: (context, source, item, onUrlChanged) => _playerPage(
       MediaXRayOverlay(
         item: item,
         detailsLoader: () => _services.repository.details(id, type),
-        child: VideoPlayerFactory.create(source: source, onUrlChanged: onUrlChanged),
+        child: VideoPlayerFactory.create(
+          source: source,
+          onUrlChanged: onUrlChanged,
+        ),
       ),
     ),
   );
@@ -273,62 +396,103 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
     ),
   );
 
-  Widget _detailsPage(MediaType type, int id, MediaItem? item) => MediaDetailsScaffold(
-    id: id,
-    type: type,
-    item: item,
-    repository: _services.repository,
-    loadingBuilder: (context) => const PopcornMaterialSplashScreen(
-      child: Scaffold(body: Center(child: CircularProgressIndicator())),
-    ),
-    errorBuilder: (context, error) => Scaffold(
-      appBar: AppBar(actions: const [PopcornAppBarLogo()]),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text('$error', textAlign: TextAlign.center),
-        ),
-      ),
-    ),
-    builder: (context, bundle) => PopcornMaterialSplashScreen(
-      child: Scaffold(
-        appBar: AppBar(title: Text(bundle.item.title), actions: const [PopcornAppBarLogo()]),
-        body: SafeArea(
-          child: MaterialMediaDetailsView(
-            item: bundle.item,
-            details: bundle.details,
-            videos: bundle.videos,
-            providers: bundle.providers,
-            related: bundle.related,
-            favoritesController: _services.favoritesController,
-            historyController: _services.historyController,
-            mediaType: bundle.type,
-            onPlay: (playItem) => context.push(AppRoutes.watch(bundle.type, playItem.id), extra: playItem),
-            onResume: (playItem, {season, episode}) => context.push(
-              AppRoutes.watch(bundle.type, playItem.id, season: season, episode: episode),
-              extra: playItem,
+  PreferredSizeWidget _detailsAppBar(BuildContext context, {String? title}) =>
+      AppBar(
+        title: title == null ? null : Text(title),
+        leading: const PopcornAppBarLogo(),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: UserIdentityTitle(
+              controller: _services.authController,
+              profileController: _services.profileController,
+              fallbackTitle: const SizedBox.shrink(),
+              compact: true,
             ),
-            onVideoPlay: (video) => context.push(AppRoutes.trailer, extra: video),
-            onRelatedSelected: (related) => context.push(AppRoutes.details(bundle.type, related.id), extra: related),
-            episodesLoader: (season) => _services.repository.episodes(bundle.item.id, season.seasonNumber),
-            onPlayEpisode: (season, episode) => context.push(
-              AppRoutes.watch(
-                bundle.type,
-                bundle.item.id,
-                season: season.seasonNumber,
-                episode: episode.episodeNumber,
-              ),
-              extra: bundle.item,
+          ),
+        ],
+      );
+
+  Widget _detailsPage(MediaType type, int id, MediaItem? item) =>
+      MediaDetailsScaffold(
+        id: id,
+        type: type,
+        item: item,
+        repository: _services.repository,
+        loadingBuilder: (context) => PopcornMaterialSplashScreen(
+          child: Scaffold(
+            appBar: _detailsAppBar(context),
+            body: const Center(child: CircularProgressIndicator()),
+          ),
+        ),
+        errorBuilder: (context, error) => Scaffold(
+          appBar: _detailsAppBar(context),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('$error', textAlign: TextAlign.center),
             ),
           ),
         ),
-      ),
-    ),
-  );
+        builder: (context, bundle) => PopcornMaterialSplashScreen(
+          child: Scaffold(
+            appBar: _detailsAppBar(context, title: bundle.item.title),
+            body: SafeArea(
+              child: MaterialMediaDetailsView(
+                item: bundle.item,
+                details: bundle.details,
+                videos: bundle.videos,
+                providers: bundle.providers,
+                related: bundle.related,
+                favoritesController: _services.favoritesController,
+                historyController: _services.historyController,
+                mediaType: bundle.type,
+                onPlay: (playItem) => context.push(
+                  AppRoutes.watch(bundle.type, playItem.id),
+                  extra: playItem,
+                ),
+                onResume: (playItem, {season, episode}) => context.push(
+                  AppRoutes.watch(
+                    bundle.type,
+                    playItem.id,
+                    season: season,
+                    episode: episode,
+                  ),
+                  extra: playItem,
+                ),
+                onVideoPlay: (video) =>
+                    context.push(AppRoutes.trailer, extra: video),
+                onRelatedSelected: (related) => context.push(
+                  AppRoutes.details(bundle.type, related.id),
+                  extra: related,
+                ),
+                episodesLoader: (season) => _services.repository.episodes(
+                  bundle.item.id,
+                  season.seasonNumber,
+                ),
+                onPlayEpisode: (season, episode) => context.push(
+                  AppRoutes.watch(
+                    bundle.type,
+                    bundle.item.id,
+                    season: season.seasonNumber,
+                    episode: episode.episodeNumber,
+                  ),
+                  extra: bundle.item,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class _AndroidHomeView extends StatelessWidget {
-  const _AndroidHomeView({required this.services, this.initialQuery, this.initialMediaType, this.browse = false});
+  const _AndroidHomeView({
+    required this.services,
+    this.initialQuery,
+    this.initialMediaType,
+    this.browse = false,
+  });
 
   final AppServices services;
   final String? initialQuery;
@@ -393,12 +557,24 @@ class _AndroidHomeView extends StatelessWidget {
                 favoritesController: services.favoritesController,
                 historyController: services.historyController,
                 searchController: services.searchController,
+                profileController: services.profileController,
+                isGuest: services.authController.isGuest,
+                authController: services.authController,
                 initialQuery: initialQuery,
                 initialMediaType: initialMediaType,
-                onOpenDetails: (media, type) => context.push(AppRoutes.details(type, media.id), extra: media),
-                onPlay: (media, type) => context.push(AppRoutes.watch(type, media.id), extra: media),
+                onOpenDetails: (media, type) => context.push(
+                  AppRoutes.details(type, media.id),
+                  extra: media,
+                ),
+                onPlay: (media, type) =>
+                    context.push(AppRoutes.watch(type, media.id), extra: media),
                 onResume: (entry) => context.push(
-                  AppRoutes.watch(entry.type, entry.item.id, season: entry.season, episode: entry.episode),
+                  AppRoutes.watch(
+                    entry.type,
+                    entry.item.id,
+                    season: entry.season,
+                    episode: entry.episode,
+                  ),
                   extra: entry.item,
                 ),
                 onSeeAllFavorites: () => context.push(AppRoutes.favorites),
@@ -409,9 +585,20 @@ class _AndroidHomeView extends StatelessWidget {
                 favoritesController: services.favoritesController,
                 initialQuery: initialQuery,
                 initialMediaType: initialMediaType,
-                onMediaSelected: (media) => context.push(AppRoutes.details(services.searchController.mediaType, media.id), extra: media),
-                onMediaPlay: (media) =>
-                  context.push(AppRoutes.watch(services.searchController.mediaType, media.id), extra: media),
+                onMediaSelected: (media) => context.push(
+                  AppRoutes.details(
+                    services.searchController.mediaType,
+                    media.id,
+                  ),
+                  extra: media,
+                ),
+                onMediaPlay: (media) => context.push(
+                  AppRoutes.watch(
+                    services.searchController.mediaType,
+                    media.id,
+                  ),
+                  extra: media,
+                ),
               ),
       ),
     );

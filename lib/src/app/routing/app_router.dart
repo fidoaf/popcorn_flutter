@@ -10,12 +10,17 @@ import 'package:popcorn_flutter/src/radio/radio_station.dart';
 ///
 /// The concrete media item / video passed while navigating is available as
 /// `state.extra`; a cold-start deep link has `null` extra and is re-fetched.
-typedef AppPageBuilder = Page<void> Function(BuildContext context, GoRouterState state, AppRouteRequest request);
+typedef AppPageBuilder = Page<void> Function(
+  BuildContext context,
+  GoRouterState state,
+  AppRouteRequest request,
+);
 
 /// Exposes the router's current location as a [ValueListenable] so the
 /// route-aware [AuthGate] can react to navigation.
 class RouterLocationListenable extends ValueNotifier<String?> {
-  RouterLocationListenable(this._provider) : super(_provider.value.uri.toString()) {
+  RouterLocationListenable(this._provider)
+    : super(_provider.value.uri.toString()) {
     _provider.addListener(_sync);
   }
 
@@ -58,13 +63,23 @@ GoRouter createAppRouter({
       Uri.parse(initialLocation).path.startsWith('/radio/');
   var wasSignedIn = isSignedIn();
 
-  GoRoute route(String path) => GoRoute(path: path, pageBuilder: (context, state) => pageBuilder(context, state, AppRoutes.parse(state.uri.toString())));
+  GoRoute route(String path) => GoRoute(
+    path: path,
+    pageBuilder: (context, state) =>
+        pageBuilder(context, state, AppRoutes.parse(state.uri.toString())),
+  );
 
   GoRoute liveTvRoute(String path, {bool watch = false}) => GoRoute(
     path: path,
     pageBuilder: (context, state) => MaterialPage<void>(
       key: state.pageKey,
-      child: LiveTvPage(channelId: state.pathParameters['id']!, channel: state.extra is LiveTvChannel ? state.extra as LiveTvChannel : null, watch: watch),
+      child: LiveTvPage(
+        channelId: state.pathParameters['id']!,
+        channel: state.extra is LiveTvChannel
+            ? state.extra as LiveTvChannel
+            : null,
+        watch: watch,
+      ),
     ),
   );
 
@@ -80,11 +95,13 @@ GoRouter createAppRouter({
         return AppRoutes.landing;
       }
       // Signed-in users skip the public landing page.
-      if (state.uri.path == AppRoutes.landing && signedIn) return AppRoutes.home;
+      if (state.uri.path == AppRoutes.landing && signedIn)
+        return AppRoutes.home;
       wasSignedIn = signedIn;
       return null;
     },
-    errorPageBuilder: (context, state) => pageBuilder(context, state, const HomeRoute()),
+    errorPageBuilder: (context, state) =>
+        pageBuilder(context, state, const HomeRoute()),
     routes: [
       route('/'),
       route('/home'),
@@ -93,6 +110,8 @@ GoRouter createAppRouter({
       route('/privacy'),
       route('/terms'),
       route('/account-settings'),
+      route('/profile-settings'),
+      route('/profile-settings/:id'),
       route('/trailer'),
       route('/search/:type'),
       route('/details/:type/:id'),
@@ -104,14 +123,21 @@ GoRouter createAppRouter({
         path: '/radio/:id',
         pageBuilder: (context, state) => MaterialPage<void>(
           key: state.pageKey,
-          child: RadioPage(stationId: state.pathParameters['id']!, station: state.extra is RadioStation ? state.extra as RadioStation : null),
+          child: RadioPage(
+            stationId: state.pathParameters['id']!,
+            station: state.extra is RadioStation
+                ? state.extra as RadioStation
+                : null,
+          ),
         ),
       ),
     ],
   );
 
   if (seedsHome) {
-    WidgetsBinding.instance.addPostFrameCallback((_) => router.push(initialLocation));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => router.push(initialLocation),
+    );
   }
   return router;
 }

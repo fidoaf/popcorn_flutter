@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:popcorn_flutter/src/profile/domain/home_section.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile_repository.dart';
 
@@ -14,9 +15,13 @@ class ProfileController extends ChangeNotifier {
 
   List<Profile> _profiles = const [];
   Profile? _active;
+  bool _isLoading = true;
 
   /// All profiles in the account, oldest first.
   List<Profile> get profiles => List.unmodifiable(_profiles);
+
+  /// Whether profile data is currently being loaded from the repository.
+  bool get isLoading => _isLoading;
 
   /// The currently selected profile, or `null` when signed out.
   Profile? get activeProfile => _active;
@@ -28,9 +33,15 @@ class ProfileController extends ChangeNotifier {
   Future<void> reload() => _load();
 
   Future<void> _load() async {
-    _profiles = await _repository.listProfiles();
-    _active = await _repository.activeProfile();
+    _isLoading = true;
     notifyListeners();
+    try {
+      _profiles = await _repository.listProfiles();
+      _active = await _repository.activeProfile();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   /// Selects [profileId] as active.
@@ -53,6 +64,11 @@ class ProfileController extends ChangeNotifier {
   /// Renames [profileId].
   Future<void> rename(String profileId, String displayName) async {
     _replace(await _repository.updateProfile(profileId, displayName: displayName));
+  }
+
+  /// Sets which home sections are visible for [profileId].
+  Future<void> setHomeSections(String profileId, List<HomeSection> sections) async {
+    _replace(await _repository.updateHomeSections(profileId, sections));
   }
 
   /// Uploads and applies a new picture for [profileId].

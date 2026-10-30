@@ -400,7 +400,7 @@ test('builds providers from configurable paths and query parameters', async (t) 
       initialProvider: 'Custom Source',
       providers: [
         { name: 'Render', host: 'popcorn-flutter.onrender.com', path: '/player' },
-        { name: 'Vidsrc.buzz', host: 'vidsrc.buzz', path: '/embed/{type}/{id}' },
+        { name: 'Vidsrc.buzz', strategy: 'redirect', host: 'vidsrc.buzz', path: '/embed/{type}/{id}' },
         {
           name: 'Custom Source',
           scheme: 'https',
@@ -422,6 +422,10 @@ test('builds providers from configurable paths and query parameters', async (t) 
   const redirect = await fetch(`${base}/player?id=42`, { redirect: 'manual' });
   assert.equal(redirect.status, 200);
   assert.match(await redirect.text(), /const embedUrl = "https:\/\/embed.example\/watch\/movie\/42\?language=en&captions=1&media=42&mode=embed"/);
+
+  const vidsrcBuzz = await fetch(`${base}/player?provider=vidsrcbuzz&id=42`, { redirect: 'manual' });
+  assert.equal(vidsrcBuzz.status, 200);
+  assert.match(await vidsrcBuzz.text(), /const embedUrl = "https:\/\/vidsrc\.buzz\/embed\/movie\/42"/);
 });
 
 test('redirect gear opens settings and preserves media when preferences or providers change', () => {
