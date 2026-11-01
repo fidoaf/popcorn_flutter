@@ -6,10 +6,15 @@ import 'package:http/testing.dart';
 import 'package:popcorn_flutter/src/app/update/web_update_checker.dart';
 
 void main() {
-  MockClient serving(String version) => MockClient((_) async => http.Response(jsonEncode({'version': version}), 200));
+  MockClient serving(String version) => MockClient(
+    (_) async => http.Response(jsonEncode({'version': version}), 200),
+  );
 
   test('flags an update on the first check when a cached bundle is older than the deployed one', () async {
-    final checker = WebUpdateChecker(client: serving('1.6.4'), runningVersion: '1.6.3');
+    final checker = WebUpdateChecker(
+      client: serving('1.6.4'),
+      runningVersion: '1.6.3',
+    );
     addTearDown(checker.dispose);
 
     await checker.start();
@@ -17,17 +22,53 @@ void main() {
     expect(checker.updateAvailable, isTrue);
   });
 
-  test('stays quiet when the running bundle matches the deployed version', () async {
-    final checker = WebUpdateChecker(client: serving('1.6.4'), runningVersion: '1.6.4');
+  test(
+    'stays quiet when the running bundle matches the deployed version',
+    () async {
+      final checker = WebUpdateChecker(
+        client: serving('1.6.4'),
+        runningVersion: '1.6.4',
+      );
+      addTearDown(checker.dispose);
+
+      await checker.start();
+
+      expect(checker.updateAvailable, isFalse);
+    },
+  );
+
+  test(
+    'ignores surrounding whitespace in the compiled and deployed versions',
+    () async {
+      final checker = WebUpdateChecker(
+        client: serving(' 1.6.4\n'),
+        runningVersion: ' 1.6.4',
+      );
+      addTearDown(checker.dispose);
+
+      await checker.start();
+
+      expect(checker.updateAvailable, isFalse);
+    },
+  );
+
+  test('still detects a different version when the compiled version has whitespace', () async {
+    final checker = WebUpdateChecker(
+      client: serving('1.6.4'),
+      runningVersion: ' 1.6.3',
+    );
     addTearDown(checker.dispose);
 
     await checker.start();
 
-    expect(checker.updateAvailable, isFalse);
+    expect(checker.updateAvailable, isTrue);
   });
 
   test('falls back to the first fetched version as baseline when no version is compiled in', () async {
-    final checker = WebUpdateChecker(client: serving('1.6.4'), runningVersion: '');
+    final checker = WebUpdateChecker(
+      client: serving('1.6.4'),
+      runningVersion: '',
+    );
     addTearDown(checker.dispose);
 
     await checker.start();

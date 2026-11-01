@@ -10,7 +10,11 @@
 set -euo pipefail
 
 # Compiled into the bundle so the update banner can detect a stale cached build.
-app_version="$(grep -E '^version:\s*' pubspec.yaml | head -n 1 | sed -E 's/^version:\s*([^+]+)(\+.*)?$/\1/')"
+app_version="$(awk '$1 == "version:" { split($2, version, "[+]"); print version[1]; exit }' pubspec.yaml)"
+if [[ -z "$app_version" ]]; then
+	printf 'Could not read the app version from pubspec.yaml.\n' >&2
+	exit 1
+fi
 
 printf "Building production web %s (docs/) ...\n" "$app_version"
 flutter build web -t lib/main_web.dart --base-href /popcorn_flutter/ --output docs --pwa-strategy=none --dart-define=APP_VERSION="$app_version"

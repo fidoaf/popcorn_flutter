@@ -7,12 +7,16 @@ import 'package:http/http.dart' as http;
 /// Polls the web build's `version.json` to detect when a newer build has been
 /// deployed, so the UI can prompt the user to reload.
 ///
-/// The first successful fetch is captured as the baseline; any later value that
-/// differs flips [updateAvailable] to `true` and stops polling.
+/// Compares the deployed version to the compiled version, or to the first
+/// successful fetch if no version was compiled in. A difference flips
+/// [updateAvailable] to `true` and stops polling.
 class WebUpdateChecker extends ChangeNotifier {
-  WebUpdateChecker({this.pollInterval = const Duration(minutes: 5), http.Client? client, this.runningVersion = const String.fromEnvironment('APP_VERSION')})
-    : _client = client ?? http.Client(),
-      _baseline = runningVersion.isEmpty ? null : runningVersion;
+  WebUpdateChecker({
+    this.pollInterval = const Duration(minutes: 5),
+    http.Client? client,
+    this.runningVersion = const String.fromEnvironment('APP_VERSION'),
+  }) : _client = client ?? http.Client(),
+       _baseline = runningVersion.trim().isEmpty ? null : runningVersion.trim();
 
   final Duration pollInterval;
   final http.Client _client;
@@ -53,13 +57,19 @@ class WebUpdateChecker extends ChangeNotifier {
   Future<String?> _fetchVersion() async {
     try {
       // Cache-bust so proxies/browsers don't hand back the cached copy.
-      final uri = Uri.parse('version.json?ts=${DateTime.now().millisecondsSinceEpoch}');
-      final response = await _client.get(uri, headers: const {'cache-control': 'no-cache'});
+      final uri = Uri.parse(
+        'version.json?ts=${DateTime.now().millisecondsSinceEpoch}',
+      );
+      final response = await _client.get(
+        uri,
+        headers: const {'cache-control': 'no-cache'},
+      );
       if (response.statusCode != 200) return null;
       final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final version = json['version']?.toString() ?? '';
-      if (runningVersion.isNotEmpty) return version.isEmpty ? null : version;
-      final build = json['build_number']?.toString() ?? '';
+      final version = json['version']?.toString().trim() ?? '';
+      if (runningVersion.trim().isNotEmpty)
+        return version.isEmpty ? null : version;
+      final build = json['build_number']?.toString().trim() ?? '';
       final combined = '$version+$build';
       // Fall back to the raw body if neither field is present.
       return combined == '+' ? response.body : combined;
