@@ -445,7 +445,9 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
             title: Text(ProfileTranslations.accountSettings.trOf(context)),
             commandBar: const PopcornAppBarLogo(),
           ),
-          content: const AccountSettingsView(),
+          content: AccountSettingsView(
+            mediaSourceProvider: _services.mediaSourceProvider,
+          ),
         ),
       ),
     ),

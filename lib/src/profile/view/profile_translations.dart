@@ -115,6 +115,24 @@ class ProfileTranslations {
     AppLanguage.ca: 'No s’ha pogut executar el servidor local.',
   });
 
+  static const mediaProvider = Translation({
+    AppLanguage.en: 'Media provider',
+    AppLanguage.es: 'Proveedor de reproducción',
+    AppLanguage.ca: 'Proveïdor de reproducció',
+  });
+
+  static const mediaProviderHint = Translation({
+    AppLanguage.en: 'Choose the playback backend used to open media links.',
+    AppLanguage.es: 'Elige el servidor de reproducción para abrir enlaces multimedia.',
+    AppLanguage.ca: 'Tria el servidor de reproducció per obrir enllaços multimèdia.',
+  });
+
+  static const mediaProviderSaveError = Translation({
+    AppLanguage.en: 'Could not save media provider:',
+    AppLanguage.es: 'No se pudo guardar el proveedor de reproducción:',
+    AppLanguage.ca: 'No s’ha pogut desar el proveïdor de reproducció:',
+  });
+
   static const useHostedServer = Translation({
     AppLanguage.en: 'Disable local mode and use hosted server',
     AppLanguage.es: 'Desactivar el modo local y usar el servidor alojado',

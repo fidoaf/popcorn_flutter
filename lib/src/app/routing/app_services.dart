@@ -4,6 +4,7 @@ import 'package:popcorn_flutter/src/favorites/favorites.dart';
 import 'package:popcorn_flutter/src/history/history.dart';
 import 'package:popcorn_flutter/src/home/home.dart';
 import 'package:popcorn_flutter/src/player/player.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_provider_preference.dart';
 import 'package:popcorn_flutter/src/profile/profile.dart';
 import 'package:popcorn_flutter/src/search/search.dart';
 
@@ -24,6 +25,16 @@ final class AppServices {
   static Future<AppServices> create() async {
     final repository = MediaSearchRepositoryFactory.create();
     final profileRepository = ProfileRepositoryFactory.create();
+    final mediaSourceProvider = await MediaSourceProviderFactory.createFromAsset();
+    final selectedProviderName = await MediaSourceProviderPreference.selectedProviderName();
+    if (selectedProviderName != null) {
+      for (final provider in mediaSourceProvider.providers) {
+        if (provider.name == selectedProviderName) {
+          mediaSourceProvider.delegate = provider;
+          break;
+        }
+      }
+    }
     final services = AppServices._(
       repository: repository,
       searchController: MediaSearchController(repository: repository),
@@ -31,7 +42,7 @@ final class AppServices {
         repository: repository,
         enabledSections: const {},
       ),
-      mediaSourceProvider: await MediaSourceProviderFactory.createFromAsset(),
+      mediaSourceProvider: mediaSourceProvider,
       favoritesController: FavoritesController(
         repository: FavoritesRepositoryFactory.create(
           profileRepository: profileRepository,

@@ -281,7 +281,11 @@ class _PopcornTvAppState extends State<_PopcornTvApp> {
             title: Text(ProfileTranslations.accountSettings.trOf(context)),
             actions: const [PopcornAppBarLogo()],
           ),
-          body: const SafeArea(child: AccountSettingsView()),
+          body: SafeArea(
+            child: AccountSettingsView(
+              mediaSourceProvider: _services.mediaSourceProvider,
+            ),
+          ),
         ),
       );
 

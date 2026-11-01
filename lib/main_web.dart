@@ -276,7 +276,7 @@ class _PopcornWebAppState extends State<_PopcornWebApp>
         return _scaffoldPage(
           context,
           ProfileTranslations.accountSettings.trOf(context),
-          const AccountSettingsView(),
+          AccountSettingsView(mediaSourceProvider: _services.mediaSourceProvider),
         );
       case ProfileSettingsRoute(:final profileId):
         return _scaffoldPage(

@@ -1,6 +1,8 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/media_source/configurable_media_source_provider.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_provider_preference.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
 import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
@@ -8,7 +10,12 @@ import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/domain/media_region_preference.dart';
 
 class AccountSettingsView extends StatefulWidget {
-  const AccountSettingsView({super.key});
+  const AccountSettingsView({
+    super.key,
+    required this.mediaSourceProvider,
+  });
+
+  final ConfigurableMediaSourceProvider mediaSourceProvider;
 
   @override
   State<AccountSettingsView> createState() => _AccountSettingsViewState();
@@ -20,8 +27,15 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   bool? _localServer;
   bool _savingLocalServer = false;
   String? _localServerError;
+    bool _savingMediaProvider = false;
+    String? _mediaProviderError;
   bool get _isWindows =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
+    List<String> get _mediaProviderNames =>
+      widget.mediaSourceProvider.providers
+        .map((provider) => provider.name)
+        .toList(growable: false);
 
   @override
   void initState() {
@@ -53,6 +67,27 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
       if (mounted) setState(() => _localServerError = error.toString());
     } finally {
       if (mounted) setState(() => _savingLocalServer = false);
+    }
+  }
+
+  Future<void> _saveMediaProvider(String name) async {
+    if (_savingMediaProvider || widget.mediaSourceProvider.delegate.name == name) {
+      return;
+    }
+    setState(() => _savingMediaProvider = true);
+    try {
+      final provider = widget.mediaSourceProvider.providers.firstWhere(
+        (candidate) => candidate.name == name,
+      );
+      await MediaSourceProviderPreference.setSelectedProviderName(name);
+      widget.mediaSourceProvider.delegate = provider;
+      if (mounted) {
+        setState(() => _mediaProviderError = null);
+      }
+    } catch (error) {
+      if (mounted) setState(() => _mediaProviderError = error.toString());
+    } finally {
+      if (mounted) setState(() => _savingMediaProvider = false);
     }
   }
 
@@ -101,6 +136,12 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
 
   @override
   Widget build(BuildContext context) {
+    final providerNames = _mediaProviderNames;
+    final activeProviderName = providerNames.contains(
+      widget.mediaSourceProvider.delegate.name,
+    )
+        ? widget.mediaSourceProvider.delegate.name
+        : providerNames.first;
     final country = Country.tryParse(_region);
     final regionName = country?.name ?? _region;
     final regionValue =
@@ -130,6 +171,39 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
                       _savingLocalServer
                   ? null
                   : _saveLocalServer,
+            ),
+          ListTile(
+            leading: const Icon(Icons.dns_outlined),
+            title: Text(ProfileTranslations.mediaProvider.trOf(context)),
+            subtitle: Text(ProfileTranslations.mediaProviderHint.trOf(context)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: DropdownButtonFormField<String>(
+              value: activeProviderName,
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+              items: providerNames
+                  .map(
+                    (name) => DropdownMenuItem<String>(
+                      value: name,
+                      child: Text(name),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: _savingMediaProvider
+                  ? null
+                  : (name) {
+                      if (name != null) _saveMediaProvider(name);
+                    },
+            ),
+          ),
+          if (_mediaProviderError != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                '${ProfileTranslations.mediaProviderSaveError.trOf(context)} $_mediaProviderError',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
           ListTile(
             leading: _isWindows && country != null

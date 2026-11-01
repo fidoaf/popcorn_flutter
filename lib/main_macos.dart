@@ -11,6 +11,7 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:popcorn_flutter/src/app/routing/routing.dart';
 import 'package:popcorn_flutter/src/app/translations/app_translations.dart';
 import 'package:popcorn_flutter/src/app/view/landing_view.dart';
+import 'package:popcorn_flutter/src/app/view/macos/details_scaffold.dart';
 import 'package:popcorn_flutter/src/app/view/macos/splash_screen.dart';
 import 'package:popcorn_flutter/src/app/view/maintenance_page.dart';
 import 'package:popcorn_flutter/src/app/view/popcorn_appbar_logo.dart';
@@ -320,9 +321,6 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
             child: MacosScaffold(
               toolBar: ToolBar(
                 title: Text(title),
-                leading: MacosBackButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
                 actions: [
                   CustomToolbarItem(
                     inToolbarBuilder: (context) => const PopcornAppBarLogo(),
@@ -361,14 +359,19 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
     child: MacosScaffold(
       toolBar: ToolBar(
         title: Text(ProfileTranslations.accountSettings.trOf(context)),
-        leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
         actions: [
           CustomToolbarItem(
             inToolbarBuilder: (context) => const PopcornAppBarLogo(),
           ),
         ],
       ),
-      children: const [ContentArea(builder: _accountSettingsContent)],
+      children: [
+        ContentArea(
+          builder: (context, _) => AccountSettingsView(
+            mediaSourceProvider: _services.mediaSourceProvider,
+          ),
+        ),
+      ],
     ),
   );
 
@@ -377,9 +380,6 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         child: MacosScaffold(
           toolBar: ToolBar(
             title: Text(ProfileTranslations.profileSettings.trOf(context)),
-            leading: MacosBackButton(
-              onPressed: () => Navigator.of(context).pop(),
-            ),
             actions: [
               CustomToolbarItem(
                 inToolbarBuilder: (context) => const PopcornAppBarLogo(),
@@ -397,19 +397,11 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         ),
       );
 
-  static Widget _accountSettingsContent(
-    BuildContext context,
-    ScrollController _,
-  ) => const AccountSettingsView();
-
   Widget _legalPage(BuildContext context, LegalDocument document) =>
       PopcornMacosSplashScreen(
         child: MacosScaffold(
           toolBar: ToolBar(
             title: Text(document.title.trOf(context)),
-            leading: MacosBackButton(
-              onPressed: () => Navigator.of(context).pop(),
-            ),
             actions: [
               CustomToolbarItem(
                 inToolbarBuilder: (context) => const PopcornAppBarLogo(),
@@ -435,11 +427,7 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
   Widget _playerPage(BuildContext context, Widget player) =>
       PopcornMacosSplashScreen(
         child: MacosScaffold(
-          toolBar: ToolBar(
-            leading: MacosBackButton(
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ),
+          toolBar: const ToolBar(),
           children: [ContentArea(builder: (context, _) => player)],
         ),
       );
@@ -448,7 +436,6 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
     child: MacosScaffold(
       toolBar: ToolBar(
         title: Text(FavoritesTranslations.pageTitle.trOf(context)),
-        leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
         actions: [
           CustomToolbarItem(
             inToolbarBuilder: (context) => const PopcornAppBarLogo(),
@@ -473,7 +460,6 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
     child: MacosScaffold(
       toolBar: ToolBar(
         title: Text(WatchHistoryTranslations.pageTitle.trOf(context)),
-        leading: MacosBackButton(onPressed: () => Navigator.of(context).pop()),
         actions: [
           CustomToolbarItem(
             inToolbarBuilder: (context) => const PopcornAppBarLogo(),
@@ -542,6 +528,9 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
 
   List<CustomToolbarItem> _detailsToolbarActions() => [
     CustomToolbarItem(
+      inToolbarBuilder: (context) => const PopcornAppBarLogo(),
+    ),
+    CustomToolbarItem(
       inToolbarBuilder: (context) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: UserIdentityTitle(
@@ -563,7 +552,6 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         loadingBuilder: (context) => PopcornMacosSplashScreen(
           child: MacosScaffold(
             toolBar: ToolBar(
-              leading: const PopcornAppBarLogo(),
               actions: _detailsToolbarActions(),
             ),
             children: const [ContentArea(builder: _macosLoadingBuilder)],
@@ -572,7 +560,6 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
         errorBuilder: (context, error) => PopcornMacosSplashScreen(
           child: MacosScaffold(
             toolBar: ToolBar(
-              leading: const PopcornAppBarLogo(),
               actions: _detailsToolbarActions(),
             ),
             children: [
@@ -588,12 +575,9 @@ class _PopcornMacosAppState extends State<_PopcornMacosApp> {
           ),
         ),
         builder: (context, bundle) => PopcornMacosSplashScreen(
-          child: MacosScaffold(
-            toolBar: ToolBar(
-              title: Text(bundle.item.title),
-              leading: const PopcornAppBarLogo(),
-              actions: _detailsToolbarActions(),
-            ),
+          child: MacosDetailsScaffold(
+            title: bundle.item.title,
+            actions: _detailsToolbarActions(),
             children: [
               ContentArea(
                 builder: (context, _) => MacosMediaDetailsView(
@@ -675,7 +659,6 @@ class _MacosHomeView extends StatelessWidget {
           toolBar: ToolBar(
             centerTitle: true,
             titleWidth: showLabels ? 380 : 120,
-            leading: const PopcornAppBarLogo(),
             title: FittedBox(
               fit: BoxFit.scaleDown,
               child: Row(
@@ -736,6 +719,9 @@ class _MacosHomeView extends StatelessWidget {
               ),
             ),
             actions: [
+              CustomToolbarItem(
+                inToolbarBuilder: (context) => const PopcornAppBarLogo(),
+              ),
               CustomToolbarItem(
                 inToolbarBuilder: (context) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
