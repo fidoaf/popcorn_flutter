@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_provider_factory.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
 import 'package:popcorn_flutter/src/search/domain/media_item.dart';
@@ -19,6 +19,11 @@ void main() {
       {'name': 'External', 'host': 'external.example', 'path': '/embed/{type}/{id}'},
     ],
   };
+
+  testWidgets('loads provider definitions from the shared server config asset', (tester) async {
+    final provider = await MediaSourceProviderFactory.createFromAsset();
+    expect(provider.providers, isNotEmpty);
+  });
 
   test('normal playback keeps the production player origin', () {
     final provider = MediaSourceProviderFactory.createFromMap(config(), playerServerUrl: '');

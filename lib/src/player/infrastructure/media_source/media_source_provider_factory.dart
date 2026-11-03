@@ -38,9 +38,8 @@ import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.d
 abstract final class MediaSourceProviderFactory {
   const MediaSourceProviderFactory._();
 
-  /// Default asset bundling the provider definitions. This is the source of
-  /// truth for the available backends; edit that file to change them.
-  static const String defaultAssetPath = 'assets/config/media_source_providers.json';
+  /// Shared with the player server; edit this file to change available backends.
+  static const String defaultAssetPath = 'server/config/media_source_providers.json';
 
   /// Builds the provider from a raw JSON [source] string.
   static ConfigurableMediaSourceProvider createFromJson(

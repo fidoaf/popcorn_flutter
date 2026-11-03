@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.7]
+
+### Changed
+- Consolidated media source definitions in the shared server configuration and removed duplicate app/web copies.
+
 ## [1.10.6]
 
 ### Changed
