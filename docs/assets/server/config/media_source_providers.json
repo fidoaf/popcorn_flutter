@@ -54,9 +54,20 @@
       "sandbox": false
     },
     {
-      "name": "Vidsrc.sbs",
+      "name": "Vidsrc.ru",
       "scheme": "https",
-      "host": "vidsrc.sbs",
+      "host": "vidsrc.ru",
+      "path": "/embed/{type}/{id}/{season}/{episode}",
+      "method": "GET",
+      "parameters": { "lang": "{language}", "sub": "{subtitles}" },
+      "headers": {},
+      "cookies": [],
+      "sandbox": false
+    },
+    {
+      "name": "Vidsrc2.ru",
+      "scheme": "https",
+      "host": "vidsrc2.ru",
       "path": "/embed/{type}/{id}/{season}/{episode}",
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },
@@ -87,9 +98,9 @@
       "sandbox": false
     },
     {
-      "name": "Vidsrc.me",
+      "name": "Vidsrc.sh",
       "scheme": "https",
-      "host": "vidsrcme.ru",
+      "host": "vidsrcme.sh",
       "path": "/embed/{type}/{id}/{season}/{episode}",
       "method": "GET",
       "parameters": { "lang": "{language}", "sub": "{subtitles}" },

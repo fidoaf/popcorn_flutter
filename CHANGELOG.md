@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.6]
+
+### Changed
+- Updated configured media source endpoints.
+
+## [1.10.5]
+
+### Fixed
+- Improved web update detection when version values contain surrounding whitespace.
+
+## [1.10.4]
+
+### Added
+- Account setting to choose and persist the default media provider.
+
+## [1.10.3]
+
+### Added
+- Per-profile home settings to show or hide movie, TV, trailer, Live TV, and radio sections.
+- Fly.io deployment configuration for the player server.
+
 ## [1.10.2]
 
 ### Changed
@@ -137,45 +158,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.2]
 
-### Added
-- Trending trailers section.
-- Subtitle track selection in the media player.
-- Additional media providers and provider selection in the player.
-
-### Changed
-- Improved login profile selection and logout navigation.
-- Fixed soft keyboard issues and refined media details presentation.
-- Updated Windows packaging and deployment workflows.
+### Fixed
+- Fixed soft keyboard handling in home search.
 
 ## [1.5.1]
 
 ### Added
-- Additional language-specific and self-hosted media providers.
+- Trending trailers section on the home page.
+- App version display in the landing and browse page footers.
 
 ### Changed
-- Improved server configuration and media source handling.
+- Added loading feedback to the hosted player.
 
 ## [1.5.0]
 
-### Added
-- New server-backed media player implementation.
-- Windows installer support.
-
 ### Changed
-- Refactored player and server integration, including subtitle handling.
+- Improved login profile selection and logout navigation.
+- Simplified media details presentation.
+- Separated Windows packaging from web deployment.
 
 ## [1.4.0]
 
+### Added
+- Expanded media-source providers, including user-selectable playback sources.
+
 ### Changed
-- Improved app navigation and player startup behavior.
-- Updated Windows build and packaging pipelines.
+- Updated media provider deployment and server configuration.
 
 ## [1.3.0]
 
 ### Added
-- Media provider selection, allowing users to choose their preferred media source provider.
 - Rich details on the media details page.
 - Integrated media player, including a proof-of-concept player that opens in a new tab.
+- Windows installer support and subtitle track selection in the hosted player.
 - Node.js backend server with Docker support for containerized deployment.
 - Extraction handling via a dedicated `/proxy-m3u8` endpoint with a total extraction timeout.
 

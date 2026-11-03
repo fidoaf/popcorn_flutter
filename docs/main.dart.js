@@ -136083,7 +136083,7 @@ $S:28}
 A.U7.prototype={
 aa(){var s,r=$.bp().gKn(),q=A.AO()
 if(q==null)q=new A.mV(A.b([],t.O))
-s=B.e.bz("1.10.5")
+s=B.e.bz("1.10.6")
 if(s.length===0)s=null
 return new A.U8(new A.by(null,t.fG),r,new A.Rd(q,s,$.aB()))}}
 A.U8.prototype={
@@ -136887,7 +136887,7 @@ k=t.a.a(B.P.dY(A.dg(A.df(g.e)).bk(g.w),null))
 g=J.v(k,"version")
 f=g==null?null:B.e.bz(J.bJ(g))
 j=f==null?"":f
-if(B.e.bz("1.10.5").length!==0){g=J.bX(j)===0?null:j
+if(B.e.bz("1.10.6").length!==0){g=J.bX(j)===0?null:j
 q=g
 s=1
 break}g=J.v(k,"build_number")
