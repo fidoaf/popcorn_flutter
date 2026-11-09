@@ -11,18 +11,47 @@ const { LiveTvCatalog } = require('../liveTvCatalog');
 const { LiveTvEpg } = require('../liveTvEpg');
 const { RadioCatalog } = require('../radioCatalog');
 
-function createPlayerServer({ initialMedia = null, providers, resourceProxy, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch, apiTokens = parseTokens(process.env.API_TOKENS || process.env.AUTH_TOKEN), auth = new PlayerAuth(apiTokens), liveTvCatalog = new LiveTvCatalog({ fetchImpl }), radioCatalog = new RadioCatalog({ fetchImpl }) }) {
+function createPlayerServer({ initialMedia = null, providers, resourceProxy, getSettings, updateSettings, subtitleRefs = new SubtitleRefStore(), sourceRefs = new SourceRefStore(), fetchImpl = fetch, apiTokens = parseTokens(process.env.API_TOKENS || process.env.AUTH_TOKEN), auth = new PlayerAuth(apiTokens), liveTvCatalog = new LiveTvCatalog({ fetchImpl }), radioCatalog = new RadioCatalog({ fetchImpl }) }) {
   if (!providers || !resourceProxy) throw new TypeError('Player server requires providers and a resource proxy');
   const liveTvEpg = new LiveTvEpg({ fetchImpl });
 
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
     response.setHeader('Access-Control-Allow-Origin', '*');
-    response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    response.setHeader('Access-Control-Allow-Methods', url.pathname === '/settings' ? 'GET, PUT, OPTIONS' : 'GET, OPTIONS');
     response.setHeader('Access-Control-Allow-Headers', 'Authorization, Range');
     response.setHeader('Referrer-Policy', 'no-referrer');
     if (request.method === 'OPTIONS') {
       response.writeHead(204).end();
+      return;
+    }
+    if (url.pathname === '/settings') {
+      if (!auth.hasConfiguredBearer(request)) {
+        sendJson(response, 401, { error: 'Unauthorized' }, { 'WWW-Authenticate': 'Bearer' });
+        return;
+      }
+      if (request.method === 'GET') {
+        if (typeof getSettings !== 'function') {
+          sendJson(response, 503, { error: 'Settings are unavailable' });
+          return;
+        }
+        sendJson(response, 200, getSettings());
+        return;
+      }
+      if (request.method === 'PUT') {
+        if (typeof updateSettings !== 'function') {
+          sendJson(response, 503, { error: 'Settings are unavailable' });
+          return;
+        }
+        try {
+          const settings = await readJsonBody(request);
+          sendJson(response, 200, updateSettings(settings));
+        } catch (error) {
+          sendJson(response, error.statusCode || 400, { error: error.message });
+        }
+        return;
+      }
+      sendJson(response, 405, { error: 'method_not_allowed' }, { Allow: 'GET, PUT, OPTIONS' });
       return;
     }
     if (request.method !== 'GET') {
@@ -172,6 +201,26 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, sub
     }
   });
   return server;
+}
+
+async function readJsonBody(request) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    size += chunk.length;
+    if (size > 1024 * 1024) {
+      const error = new Error('Settings body exceeds 1 MB');
+      error.statusCode = 413;
+      throw error;
+    }
+    chunks.push(chunk);
+  }
+  if (size === 0) throw new Error('Settings body must be valid JSON');
+  const settings = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+    throw new Error('Settings must be a JSON object');
+  }
+  return settings;
 }
 
 function sendHtml(response, html) {

@@ -24,6 +24,50 @@ test('provider catalog exposes configured choices and default to the app', async
   });
 });
 
+test('settings endpoint updates media providers at runtime and requires a configured bearer token', async (t) => {
+  const initialConfig = {
+    initialProvider: 'Original',
+    providers: [{ name: 'Original', host: 'original.example', path: '/embed/{type}/{id}', parameters: {} }],
+  };
+  const server = createServer(null, { providerConfig: initialConfig, apiTokens: new Set(['settings-token']) });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const headers = { Authorization: 'Bearer settings-token' };
+
+  const unauthorized = await fetch(`${base}/settings`);
+  assert.equal(unauthorized.status, 401);
+
+  const current = await fetch(`${base}/settings`, { headers });
+  assert.equal(current.status, 200);
+  assert.deepEqual(await current.json(), initialConfig);
+
+  const updatedConfig = {
+    initialProvider: 'Updated',
+    providers: [{ name: 'Updated', host: 'updated.example', path: '/watch/{type}/{id}', parameters: { lang: '{language}' } }],
+  };
+  const updated = await fetch(`${base}/settings`, {
+    method: 'PUT',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify(updatedConfig),
+  });
+  assert.equal(updated.status, 200);
+  assert.deepEqual(await updated.json(), updatedConfig);
+
+  const invalid = await fetch(`${base}/settings`, {
+    method: 'PUT',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initialProvider: 'Missing', providers: [] }),
+  });
+  assert.equal(invalid.status, 400);
+  const unchanged = await fetch(`${base}/settings`, { headers });
+  assert.deepEqual(await unchanged.json(), updatedConfig);
+
+  const player = await fetch(`${base}/player?provider=updated&id=42`, { headers });
+  assert.equal(player.status, 200);
+  assert.match(await player.text(), /https:\/\/updated\.example\/watch\/movie\/42\?lang=en/);
+});
+
 test('restores a hosted session with fresh track IDs and reports settings, progress and seeks', async () => {
   const media = { providerId: 'vidsrcbuzz', type: 'movie', id: '42', lang: 'es', sub: '1' };
   const sourceKey = JSON.stringify(['Server 1', 'Spanish']);

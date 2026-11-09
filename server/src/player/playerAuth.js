@@ -16,6 +16,10 @@ class PlayerAuth {
     return this.auth.isAuthorized(request, '', new URLSearchParams());
   }
 
+  hasConfiguredBearer(request) {
+    return this.auth.enabled && this.auth.isAuthorized(request, '', new URLSearchParams());
+  }
+
   authorize(request, url) {
     if (url.pathname === '/health' || url.pathname === '/favicon.ico') return true;
     if (url.pathname === '/session') return this.hasBearer(request);

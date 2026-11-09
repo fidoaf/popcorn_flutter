@@ -3,7 +3,7 @@
 const { mediaFromQuery } = require('./src/player/mediaRequest');
 const { createPlayerServer } = require('./src/player/playerServer');
 const { DEFAULT_PROVIDER_ID } = require('./src/player/providerRegistry');
-const { createProviderRegistry } = require('./src/player/providerFactory');
+const { createProviderRegistry, loadProviderConfig } = require('./src/player/providerFactory');
 const { ResourceProxy } = require('./src/player/resourceProxy');
 
 function createDefaultProviders(options = {}) {
@@ -11,13 +11,23 @@ function createDefaultProviders(options = {}) {
 }
 
 function createServer(initialMedia = null, dependencies = {}) {
-  const providers = dependencies.providers || createDefaultProviders({
+  const providerOptions = {
     providerConfig: dependencies.providerConfig,
     configPath: dependencies.providerConfigPath,
     fetchImpl: dependencies.fetchImpl,
     browserPool: dependencies.browserPool,
     timeoutMs: dependencies.timeoutMs,
-  });
+  };
+  let activeProviderConfig = structuredClone(
+    dependencies.providerConfig || loadProviderConfig(dependencies.providerConfigPath),
+  );
+  const providers = dependencies.providers || createDefaultProviders(providerOptions);
+  const updateProviderConfig = (config) => {
+    const replacement = createDefaultProviders({ ...providerOptions, providerConfig: config });
+    providers.replaceWith(replacement);
+    activeProviderConfig = structuredClone(config);
+    return structuredClone(activeProviderConfig);
+  };
   const resourceProxy = dependencies.resourceProxy || new ResourceProxy({
     providers,
     fetchImpl: dependencies.fetchImpl,
@@ -28,6 +38,8 @@ function createServer(initialMedia = null, dependencies = {}) {
     initialMedia,
     providers,
     resourceProxy,
+    getSettings: () => structuredClone(activeProviderConfig),
+    updateSettings: updateProviderConfig,
     subtitleRefs: dependencies.subtitleRefs,
     fetchImpl: dependencies.fetchImpl,
     apiTokens: dependencies.apiTokens,

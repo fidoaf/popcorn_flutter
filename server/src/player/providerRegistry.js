@@ -14,6 +14,11 @@ class ProviderRegistry {
       .map(({ id, label }) => ({ id, label }));
   }
 
+  replaceWith(registry) {
+    this.providers = registry.providers;
+    this.defaultProviderId = registry.defaultProviderId;
+  }
+
   get(id = DEFAULT_PROVIDER_ID) {
     const provider = this.providers.get(id);
     if (!provider) {
