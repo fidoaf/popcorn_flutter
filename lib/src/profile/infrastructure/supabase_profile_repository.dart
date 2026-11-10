@@ -3,13 +3,13 @@ import 'dart:typed_data';
 import 'package:popcorn_flutter/src/profile/domain/home_section.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile.dart';
 import 'package:popcorn_flutter/src/profile/domain/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// [ProfileRepository] backed by Supabase (`profiles` and the `avatars` storage
 /// bucket).
 ///
-/// Each account member's default profile is stored server-side, so it follows
-/// the authenticated user across devices without changing other members' defaults.
+/// The last selected profile is stored locally for each user and account.
 class SupabaseProfileRepository implements ProfileRepository {
   SupabaseProfileRepository({SupabaseClient? client}) : _client = client ?? Supabase.instance.client;
 
@@ -23,6 +23,8 @@ class SupabaseProfileRepository implements ProfileRepository {
   String? _cacheAccountId;
 
   String? get _userId => _client.auth.currentUser?.id;
+
+  String _preferenceKey(String userId, String accountId) => 'profile.active.$userId.$accountId';
 
   Future<String?> _accountId() async {
     final userId = _userId;
@@ -64,14 +66,10 @@ class SupabaseProfileRepository implements ProfileRepository {
       return _activeCache;
     }
 
-    Profile? profile;
-    final defaultProfileId = await _defaultProfileId(userId);
-    if (defaultProfileId != null) {
-      final row = await _client.from(_profiles).select().eq('id', defaultProfileId).eq('account_id', accountId).maybeSingle();
-      if (row != null) {
-        profile = Profile.fromRow(row);
-      }
-    }
+    final preferences = await SharedPreferences.getInstance();
+    final savedProfileId = preferences.getString(_preferenceKey(userId, accountId));
+    var profile = await _profileForAccount(savedProfileId, accountId);
+    profile ??= await _profileForAccount(await _defaultProfileId(userId), accountId);
     // No valid default is present: use the account's first profile for this session.
     profile ??= await _firstProfileForAccount(accountId);
 
@@ -79,6 +77,12 @@ class SupabaseProfileRepository implements ProfileRepository {
     _cacheUserId = userId;
     _cacheAccountId = accountId;
     return profile;
+  }
+
+  Future<Profile?> _profileForAccount(String? profileId, String accountId) async {
+    if (profileId == null) return null;
+    final row = await _client.from(_profiles).select().eq('id', profileId).eq('account_id', accountId).maybeSingle();
+    return row == null ? null : Profile.fromRow(row);
   }
 
   Future<Profile?> _firstProfileForAccount(String accountId) async {
@@ -96,7 +100,10 @@ class SupabaseProfileRepository implements ProfileRepository {
     if (accountId == null) return;
     final row = await _client.from(_profiles).select().eq('id', profileId).eq('account_id', accountId).maybeSingle();
     if (row == null) return;
-    // Switching is session-local; keep the member's login default unchanged.
+    final preferences = await SharedPreferences.getInstance();
+    if (!await preferences.setString(_preferenceKey(userId, accountId), profileId)) {
+      throw StateError('Unable to save the selected profile preference.');
+    }
     _activeCache = Profile.fromRow(row);
     _cacheUserId = userId;
     _cacheAccountId = accountId;
