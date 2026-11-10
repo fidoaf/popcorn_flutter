@@ -35,6 +35,17 @@ test('settings endpoint updates media providers at runtime and requires a config
   const base = `http://127.0.0.1:${server.address().port}`;
   const headers = { Authorization: 'Bearer settings-token' };
 
+  const preflight = await fetch(`${base}/settings`, {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'http://localhost:8080',
+      'Access-Control-Request-Method': 'PUT',
+      'Access-Control-Request-Headers': 'authorization,content-type',
+    },
+  });
+  assert.equal(preflight.status, 204);
+  assert.match(preflight.headers.get('access-control-allow-headers'), /content-type/i);
+
   const unauthorized = await fetch(`${base}/settings`);
   assert.equal(unauthorized.status, 401);
 

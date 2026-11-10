@@ -19,7 +19,7 @@ function createPlayerServer({ initialMedia = null, providers, resourceProxy, get
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Methods', url.pathname === '/settings' ? 'GET, PUT, OPTIONS' : 'GET, OPTIONS');
-    response.setHeader('Access-Control-Allow-Headers', 'Authorization, Range');
+    response.setHeader('Access-Control-Allow-Headers', 'Authorization, Range, Content-Type');
     response.setHeader('Referrer-Policy', 'no-referrer');
     if (request.method === 'OPTIONS') {
       response.writeHead(204).end();

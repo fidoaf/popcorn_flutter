@@ -1,19 +1,17 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/configurable_media_source_provider.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/media_source/media_source_provider_preference.dart';
-import 'package:popcorn_flutter/src/player/infrastructure/local_server_preference.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/player_server_config.dart';
-import 'package:popcorn_flutter/src/locale/view/translation_context_extension.dart';
+import 'package:popcorn_flutter/src/profile/view/player_settings_view.dart';
 import 'package:popcorn_flutter/src/profile/view/profile_translations.dart';
 import 'package:popcorn_flutter/src/search/domain/media_region_preference.dart';
 
 class AccountSettingsView extends StatefulWidget {
-  const AccountSettingsView({
-    super.key,
-    required this.mediaSourceProvider,
-  });
+  const AccountSettingsView({super.key, required this.mediaSourceProvider});
 
   final ConfigurableMediaSourceProvider mediaSourceProvider;
 
@@ -27,15 +25,11 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   bool? _localServer;
   bool _savingLocalServer = false;
   String? _localServerError;
-    bool _savingMediaProvider = false;
-    String? _mediaProviderError;
-  bool get _isWindows =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+  bool _savingMediaProvider = false;
+  String? _mediaProviderError;
+  bool get _isWindows => !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
-    List<String> get _mediaProviderNames =>
-      widget.mediaSourceProvider.providers
-        .map((provider) => provider.name)
-        .toList(growable: false);
+  List<String> get _mediaProviderNames => widget.mediaSourceProvider.providers.map((provider) => provider.name).toList(growable: false);
 
   @override
   void initState() {
@@ -76,9 +70,7 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
     }
     setState(() => _savingMediaProvider = true);
     try {
-      final provider = widget.mediaSourceProvider.providers.firstWhere(
-        (candidate) => candidate.name == name,
-      );
+      final provider = widget.mediaSourceProvider.providers.firstWhere((candidate) => candidate.name == name);
       await MediaSourceProviderPreference.setSelectedProviderName(name);
       widget.mediaSourceProvider.delegate = provider;
       if (mounted) {
@@ -105,9 +97,7 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
       context: context,
       favorite: [_region],
       // Windows has no flag emoji glyphs, so render flag images instead.
-      customFlagBuilder: _isWindows
-          ? (country) => _flagImage(country.countryCode, 28)
-          : null,
+      customFlagBuilder: _isWindows ? (country) => _flagImage(country.countryCode, 28) : null,
       onSelect: (country) => _saveRegion(country.countryCode),
     );
   }
@@ -119,8 +109,7 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
         'https://flagcdn.com/w80/${code.toLowerCase()}.png',
         width: width,
         fit: BoxFit.contain,
-        errorBuilder: (_, _, _) =>
-            Text(code, style: const TextStyle(fontWeight: FontWeight.bold)),
+        errorBuilder: (_, _, _) => Text(code, style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -137,9 +126,7 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   @override
   Widget build(BuildContext context) {
     final providerNames = _mediaProviderNames;
-    final activeProviderName = providerNames.contains(
-      widget.mediaSourceProvider.delegate.name,
-    )
+    final activeProviderName = providerNames.contains(widget.mediaSourceProvider.delegate.name)
         ? widget.mediaSourceProvider.delegate.name
         : providerNames.first;
     final country = Country.tryParse(_region);
@@ -157,20 +144,10 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
               subtitle: Text(
                 PlayerServerConfig.usesDefinedServer
                     ? PlayerServerConfig.serverUrl
-                    : _localServerError ??
-                          ProfileTranslations.localPlayerServerHint.trOf(
-                            context,
-                          ),
+                    : _localServerError ?? ProfileTranslations.localPlayerServerHint.trOf(context),
               ),
-              value:
-                  PlayerServerConfig.usesDefinedServer ||
-                  (_localServer ?? false),
-              onChanged:
-                  PlayerServerConfig.usesDefinedServer ||
-                      _localServer == null ||
-                      _savingLocalServer
-                  ? null
-                  : _saveLocalServer,
+              value: PlayerServerConfig.usesDefinedServer || (_localServer ?? false),
+              onChanged: PlayerServerConfig.usesDefinedServer || _localServer == null || _savingLocalServer ? null : _saveLocalServer,
             ),
           ListTile(
             leading: const Icon(Icons.dns_outlined),
@@ -182,14 +159,7 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
             child: DropdownButtonFormField<String>(
               value: activeProviderName,
               decoration: const InputDecoration(border: OutlineInputBorder()),
-              items: providerNames
-                  .map(
-                    (name) => DropdownMenuItem<String>(
-                      value: name,
-                      child: Text(name),
-                    ),
-                  )
-                  .toList(growable: false),
+              items: providerNames.map((name) => DropdownMenuItem<String>(value: name, child: Text(name))).toList(growable: false),
               onChanged: _savingMediaProvider
                   ? null
                   : (name) {
@@ -206,9 +176,7 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
               ),
             ),
           ListTile(
-            leading: _isWindows && country != null
-                ? _flagImage(country.countryCode, 32)
-                : const Icon(Icons.public),
+            leading: _isWindows && country != null ? _flagImage(country.countryCode, 32) : const Icon(Icons.public),
             title: Text(ProfileTranslations.countryOrRegion.trOf(context)),
             subtitle: Text(regionValue),
             trailing: Row(
@@ -224,6 +192,19 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
               ],
             ),
             onTap: _chooseRegion,
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings_outlined),
+            title: Text(ProfileTranslations.playerSettings.trOf(context)),
+            subtitle: Text(ProfileTranslations.playerSettingsHint.trOf(context)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              final page = InheritedTheme.captureAll(
+                context,
+                PlayerSettingsView(backgroundColor: Scaffold.maybeOf(context)?.widget.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor),
+              );
+              Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+            },
           ),
         ],
       ),

@@ -43,7 +43,6 @@
     },
     {
       "name": "Vidsrc.buzz",
-      "strategy": "redirect",
       "scheme": "https",
       "host": "vidsrc.buzz",
       "path": "/embed/{type}/{id}/{season}/{episode}",
