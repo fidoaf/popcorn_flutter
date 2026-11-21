@@ -252,15 +252,17 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     function parseSegments(values) {
       if (values == null) return [];
       if (!Array.isArray(values)) throw new Error('Invalid IntroDB segments');
-      return values.map((segment) => {
+      // IntroDB returns placeholder/degenerate segments (e.g. start_ms == end_ms == 0);
+      // drop them individually so one bad entry doesn't disable every skip control.
+      return values.flatMap((segment) => {
         const start = segment?.start_ms;
         const end = segment?.end_ms;
         if ((start != null && (!Number.isFinite(start) || start < 0)) ||
             (end != null && (!Number.isFinite(end) || end < 0)) ||
             (start == null && end == null) || (end != null && end <= (start ?? 0))) {
-          throw new Error('Invalid IntroDB timestamps');
+          return [];
         }
-        return { start: (start ?? 0) / 1000, end: end == null ? null : end / 1000 };
+        return [{ start: (start ?? 0) / 1000, end: end == null ? null : end / 1000 }];
       });
     }
     function updateSkipActions() {

@@ -22,22 +22,25 @@ final class IntroDbTimestamps {
       final values = json[key];
       if (values == null) return const [];
       if (values is! List) throw FormatException('IntroDB $key must be an array');
+      // IntroDB returns placeholder/degenerate segments (e.g. start_ms == end_ms == 0);
+      // drop them individually so one bad entry doesn't disable every skip control.
       return values
           .map((value) {
-            if (value is! Map) throw const FormatException('Invalid IntroDB segment');
+            if (value is! Map) return null;
             final start = value['start_ms'];
             final end = value['end_ms'];
             if ((start != null && (start is! num || !start.isFinite || start < 0)) ||
                 (end != null && (end is! num || !end.isFinite || end < 0)) ||
                 (start == null && end == null) ||
                 (end is num && end <= (start ?? 0))) {
-              throw const FormatException('Invalid IntroDB timestamps');
+              return null;
             }
             return SkipSegment(
               start: Duration(milliseconds: (start as num?)?.round() ?? 0),
               end: end == null ? null : Duration(milliseconds: (end as num).round()),
             );
           })
+          .nonNulls
           .toList(growable: false);
     }
 

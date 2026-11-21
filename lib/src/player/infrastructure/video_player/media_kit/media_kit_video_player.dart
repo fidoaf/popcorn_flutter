@@ -230,7 +230,7 @@ class _MediaKitPlayerState extends State<_MediaKitPlayer> {
   void _retryOnLoadError(String message) {
     final normalizedMessage = message.toLowerCase();
     final isLoadFailure =
-        normalizedMessage.contains('flagloaderror') || normalizedMessage.contains('flagloadtimeout') || normalizedMessage.contains('fragloadtimeout');
+        normalizedMessage.contains('fragloaderror') || normalizedMessage.contains('flagloadtimeout') || normalizedMessage.contains('fragloadtimeout');
     if (!isLoadFailure) return;
     if (_activeMedia == null || _hasLoadedMedia) return;
     if (_loadErrorRetryInProgress) {

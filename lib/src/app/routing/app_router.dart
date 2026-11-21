@@ -95,8 +95,9 @@ GoRouter createAppRouter({
         return AppRoutes.landing;
       }
       // Signed-in users skip the public landing page.
-      if (state.uri.path == AppRoutes.landing && signedIn)
+      if (state.uri.path == AppRoutes.landing && signedIn) {
         return AppRoutes.home;
+      }
       wasSignedIn = signedIn;
       return null;
     },

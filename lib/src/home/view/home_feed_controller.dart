@@ -13,12 +13,10 @@ import 'package:popcorn_flutter/src/search/domain/media_video.dart';
 /// Depends only on the [MediaSearchRepository] abstraction, so it works with any
 /// data source and is trivial to unit test.
 class HomeFeedController extends ChangeNotifier {
-  // ignore: prefer_initializing_formals -- named parameters cannot be private.
   HomeFeedController({
-    required MediaSearchRepository repository,
+    required this._repository,
     Set<HomeSection>? enabledSections,
-  }) : _repository = repository,
-       _enabledSections = enabledSections ?? HomeSection.values.toSet(),
+  }) : _enabledSections = enabledSections ?? HomeSection.values.toSet(),
        _isLoading = enabledSections == null || enabledSections.isNotEmpty {
     load();
   }
@@ -122,8 +120,9 @@ class HomeFeedController extends ChangeNotifier {
       if (!_disposed && generation == _loadGeneration) {
         _isLoading = false;
         notifyListeners();
-        if (_enabledSections.contains(HomeSection.trailers) && !_hasError)
+        if (_enabledSections.contains(HomeSection.trailers) && !_hasError) {
           unawaited(_loadTrailers(generation));
+        }
       }
     }
   }

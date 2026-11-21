@@ -189,8 +189,9 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
         await LocalServerPreference.isEnabled()) {
       final prefs = await SharedPreferences.getInstance();
       final token = await WindowsLocalServer.loadToken(prefs);
-      if (!mounted)
+      if (!mounted) {
         throw StateError('Application closed during local server startup.');
+      }
       final bundle = Directory(
         '${File(Platform.resolvedExecutable).parent.path}\\local_server',
       );
@@ -302,8 +303,9 @@ class _PopcornWindowsAppState extends State<_PopcornWindowsApp> {
       );
     }
     if (_startupError != null) return _bootstrapApp(const MaintenancePage());
-    if (_servicesOrNull == null || _router == null)
+    if (_servicesOrNull == null || _router == null) {
       return _bootstrapApp(const PopcornFluentSplashScreen());
+    }
     return FluentApp.router(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       locale: PlatformDispatcher.instance.locale,

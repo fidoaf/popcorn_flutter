@@ -49,3 +49,40 @@ test('rewrites nested playlists and forwards byte ranges for media segments', as
   assert.equal(segment.status, 206);
   assert.equal(await segment.text(), 'data');
 });
+
+test('prefers the direct upstream exposed by a provider and falls back to the relay', async () => {
+  const requests = [];
+  const fetchImpl = async (url, { headers }) => {
+    requests.push({ url, referer: headers.Referer });
+    if (url === 'https://origin.test/ok.ts') return new Response('direct');
+    if (url === 'https://origin.test/gone.ts') return new Response('gone', { status: 403 });
+    return new Response('relayed');
+  };
+  const provider = {
+    id: 'test',
+    label: 'Test',
+    origin: 'https://provider.test',
+    directUpstream: (url) => {
+      const target = new URL(url).searchParams.get('u');
+      return target ? { url: target, referer: 'https://embed.test/' } : null;
+    },
+  };
+  const resourceProxy = new ResourceProxy({ providers: new ProviderRegistry([provider]), fetchImpl });
+  const serve = async (url) => {
+    let body = '';
+    const response = new (require('node:stream').Writable)({ write(chunk, _, done) { body += chunk; done(); } });
+    response.writeHead = () => response;
+    const finished = new Promise((resolve) => response.on('finish', resolve));
+    await resourceProxy.serve({ url: '/', headers: {} }, response, url, 'test');
+    await finished;
+    return body;
+  };
+
+  assert.equal(await serve('https://relay.test/seg?u=https%3A%2F%2Forigin.test%2Fok.ts'), 'direct');
+  assert.equal(await serve('https://relay.test/seg?u=https%3A%2F%2Forigin.test%2Fgone.ts'), 'relayed');
+  assert.deepEqual(requests, [
+    { url: 'https://origin.test/ok.ts', referer: 'https://embed.test/' },
+    { url: 'https://origin.test/gone.ts', referer: 'https://embed.test/' },
+    { url: 'https://relay.test/seg?u=https%3A%2F%2Forigin.test%2Fgone.ts', referer: 'https://provider.test/' },
+  ]);
+});

@@ -163,8 +163,9 @@ class _PopcornWebAppState extends State<_PopcornWebApp>
   @override
   Widget build(BuildContext context) {
     if (_startupError != null) return _bootstrapApp(const MaintenancePage());
-    if (_servicesOrNull == null || _router == null)
+    if (_servicesOrNull == null || _router == null) {
       return _bootstrapApp(const PopcornWebSplashScreen());
+    }
     return WidgetsApp.router(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       color: _background,

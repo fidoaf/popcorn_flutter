@@ -116,24 +116,31 @@ void main() {
     expect(data.creditsAt(const Duration(seconds: 95)), isTrue);
   });
 
-  test('missing timestamps are normal, API and malformed data failures are explicit', () async {
+  test('missing timestamps are normal, API and malformed response failures are explicit', () async {
     final missing = await loadIntroDbTimestamps(tmdbId: 42, duration: const Duration(minutes: 1), client: MockClient((_) async => http.Response('', 404)));
     expect(missing.intros, isEmpty);
     await expectLater(loadIntroDbTimestamps(tmdbId: 42, duration: const Duration(minutes: 1), client: MockClient((_) async => http.Response('', 503))), throwsA(isA<http.ClientException>()));
-    for (final segment in [
-      {'start_ms': -1, 'end_ms': 100},
-      {'start_ms': 200, 'end_ms': 100},
-      {'start_ms': null, 'end_ms': null},
-      {'start_ms': null, 'end_ms': 0},
-      {'start_ms': '100', 'end_ms': 200},
-    ]) {
-      expect(
-        () => IntroDbTimestamps.fromJson({
-          'intro': [segment],
-        }),
-        throwsFormatException,
-      );
-    }
+    expect(() => IntroDbTimestamps.fromJson({'intro': 'nope'}), throwsFormatException);
+  });
+
+  test('invalid segments are dropped without discarding valid ones', () {
+    final data = IntroDbTimestamps.fromJson({
+      'intro': [
+        {'start_ms': 0, 'end_ms': 0},
+        {'start_ms': -1, 'end_ms': 100},
+        {'start_ms': 200, 'end_ms': 100},
+        {'start_ms': null, 'end_ms': null},
+        {'start_ms': null, 'end_ms': 0},
+        {'start_ms': '100', 'end_ms': 200},
+        'nope',
+        {'start_ms': null, 'end_ms': 30000},
+      ],
+      'credits': [
+        {'start_ms': 3629912, 'end_ms': null},
+      ],
+    });
+    expect(data.intros.single.end, const Duration(seconds: 30));
+    expect(data.credits.single.start, const Duration(milliseconds: 3629912));
   });
 
   test('next episode resolves same season, rollover, finales and unreleased episodes', () async {

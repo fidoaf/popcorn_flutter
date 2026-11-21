@@ -34,6 +34,7 @@ test('resolves the HLS source from the OnlyPelis player response', async () => {
   const tmdbRequest = calls.find(({ url }) => url.hostname === 'www.themoviedb.org');
   assert.equal(tmdbRequest.url.pathname, '/movie/977942');
   assert.equal(tmdbRequest.url.searchParams.get('language'), 'es-ES');
+  assert.equal(tmdbRequest.options.headers['User-Agent'], undefined);
   assert.equal(calls.find(({ url }) => url.hostname === 'onlypelis.com' && url.searchParams.has('s')).url.searchParams.get('s'), 'El hombre que desafió al rey');
   const playerRequest = calls.find(({ url }) => url.pathname === '/wp-admin/admin-ajax.php');
   assert.equal(playerRequest.options.method, 'POST');

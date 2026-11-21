@@ -472,8 +472,21 @@ test('unavailable next episode, unseekable intros and embedded provider controls
   assert.equal(embedded.requests.some((url) => url.startsWith('/introdb')), false);
 });
 
-test('malformed timestamps surface an error without changing playback', async () => {
-  const harness = playerHarness({ timestamps: { intro: [{ start_ms: 100, end_ms: 50 }] } });
+test('malformed segments are dropped individually without disabling valid ones', async () => {
+  const harness = playerHarness({
+    timestamps: { intro: [{ start_ms: 100, end_ms: 50 }, { start_ms: 0, end_ms: 23000 }], credits: [{ start_ms: 0, end_ms: 0 }] },
+  });
+  const video = harness.elements.get('video');
+  await video.dispatch('loadedmetadata');
+  await harness.elements.get('start-playback').dispatch('click');
+  assert.equal(harness.elements.get('skip-status').textContent, '');
+  video.currentTime = 10;
+  await video.dispatch('timeupdate');
+  assert.equal(harness.elements.get('skip-intro').hidden, false);
+});
+
+test('non-array segments surface an error without changing playback', async () => {
+  const harness = playerHarness({ timestamps: { intro: 'nope' } });
   await harness.elements.get('video').dispatch('loadedmetadata');
   assert.match(harness.elements.get('skip-status').textContent, /Skip controls unavailable: Invalid IntroDB/);
   assert.equal(harness.elements.get('skip-intro').hidden, true);

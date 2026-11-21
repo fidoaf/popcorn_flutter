@@ -157,7 +157,8 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: DropdownButtonFormField<String>(
-              value: activeProviderName,
+              key: ValueKey(activeProviderName),
+              initialValue: activeProviderName,
               decoration: const InputDecoration(border: OutlineInputBorder()),
               items: providerNames.map((name) => DropdownMenuItem<String>(value: name, child: Text(name))).toList(growable: false),
               onChanged: _savingMediaProvider

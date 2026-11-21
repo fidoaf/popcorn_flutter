@@ -142,15 +142,17 @@ class _BrowseHomeViewState extends State<BrowseHomeView> {
       final router = GoRouter.maybeOf(context);
       if (router == null) return;
       final uri = router.routeInformationProvider.value.uri;
-      if (uri.path != AppRoutes.home && !uri.path.startsWith('/search/'))
+      if (uri.path != AppRoutes.home && !uri.path.startsWith('/search/')) {
         return;
+      }
       final query = widget.searchController.query;
       final type = widget.searchController.mediaType;
       final location = uri.path == AppRoutes.home || query.isEmpty
           ? AppRoutes.homeSearch(query, type: type)
           : AppRoutes.search(query, type: type);
-      if (uri.toString() != location)
+      if (uri.toString() != location) {
         Router.neglect(context, () => router.go(location));
+      }
     });
     WidgetsBinding.instance.ensureVisualUpdate();
   }
@@ -759,10 +761,11 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
   }
 
   Widget _buildLiveResults(BuildContext context) {
-    if (_liveSearch.isLoading)
+    if (_liveSearch.isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: _Palette.accent),
       );
+    }
     if (_liveSearch.hasError) {
       return _LiveTvMessage(
         text: HomeTranslations.liveTvUnavailable.trOf(context),
@@ -770,8 +773,9 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
         onAction: () => _search(_queryController.text),
       );
     }
-    if (_liveSearch.channels.isEmpty)
+    if (_liveSearch.channels.isEmpty) {
       return _message(SearchTranslations.emptyResults.trOf(context));
+    }
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -787,10 +791,11 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
   }
 
   Widget _buildRadioResults(BuildContext context) {
-    if (_radioSearch.isLoading)
+    if (_radioSearch.isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: _Palette.accent),
       );
+    }
     if (_radioSearch.hasError) {
       return _LiveTvMessage(
         text: RadioTranslations.unavailable.trOf(context),
@@ -798,8 +803,9 @@ class _SearchOverlayState extends State<HomeSearchOverlay> {
         onAction: () => _search(_queryController.text),
       );
     }
-    if (_radioSearch.stations.isEmpty)
+    if (_radioSearch.stations.isEmpty) {
       return _message(SearchTranslations.emptyResults.trOf(context));
+    }
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -1676,8 +1682,9 @@ String? _posterBadgeLabel(
         : null;
   }
 
-  if (isRecent(item.releaseDate))
+  if (isRecent(item.releaseDate)) {
     return HomeTranslations.newSeries.trOf(context);
+  }
   final hasOnlyOneReleasedSeason =
       item.releasedSeasonCount == 1 ||
       (item.releasedSeasonCount == null && item.numberOfSeasons == 1);
@@ -1686,8 +1693,9 @@ String? _posterBadgeLabel(
           isRecent(item.latestEpisodeAirDate))) {
     return HomeTranslations.newSeries.trOf(context);
   }
-  if (isRecent(item.latestSeasonAirDate))
+  if (isRecent(item.latestSeasonAirDate)) {
     return HomeTranslations.seasonPremiere.trOf(context);
+  }
   if (isRecent(item.latestEpisodeAirDate)) {
     return item.latestEpisodeNumber == 1
         ? HomeTranslations.seasonPremiere.trOf(context)
@@ -2501,8 +2509,9 @@ class _PressableState extends State<_Pressable> {
   };
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent)
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
+    }
     if (widget.onTap != null && _activationKeys.contains(event.logicalKey)) {
       widget.onTap!();
       return KeyEventResult.handled;

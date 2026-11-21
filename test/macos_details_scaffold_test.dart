@@ -51,8 +51,9 @@ void main() {
       expect(titleRect.left, greaterThanOrEqualTo(backRect.right));
       expect(titleRect.right, lessThanOrEqualTo(logoRect.left));
       expect(profileRect.right, lessThanOrEqualTo(width));
-      if (previousWidth != null)
+      if (previousWidth != null) {
         expect(titleRect.width, greaterThan(previousWidth));
+      }
       previousWidth = titleRect.width;
       expect(tester.takeException(), isNull);
     }

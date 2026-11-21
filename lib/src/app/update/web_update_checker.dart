@@ -67,8 +67,9 @@ class WebUpdateChecker extends ChangeNotifier {
       if (response.statusCode != 200) return null;
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final version = json['version']?.toString().trim() ?? '';
-      if (runningVersion.trim().isNotEmpty)
+      if (runningVersion.trim().isNotEmpty) {
         return version.isEmpty ? null : version;
+      }
       final build = json['build_number']?.toString().trim() ?? '';
       final combined = '$version+$build';
       // Fall back to the raw body if neither field is present.

@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.10]
+
+### Changed
+- VidSrc.buzz playback falls back to per-server playback and the "last resort" server list when the race endpoint fails, and lists those extra servers as sources.
+- VidSrc.buzz streams are validated by probing the first HLS segment, and segments bypass the slow relay by fetching the upstream origin directly when possible.
+- Updated the Dart SDK to 3.13.7.
+
+### Fixed
+- Invalid IntroDB segments are skipped individually instead of disabling every skip control.
+- Media-kit player now retries on HLS fragment load errors.
+- OnlyPelis title lookups no longer fail with TMDB 403 responses.
+
 ## [1.10.9]
 
 ### Changed

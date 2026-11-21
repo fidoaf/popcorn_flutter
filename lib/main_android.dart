@@ -141,8 +141,9 @@ class _PopcornAndroidAppState extends State<_PopcornAndroidApp> {
   @override
   Widget build(BuildContext context) {
     if (_startupError != null) return _bootstrapApp(const MaintenancePage());
-    if (_servicesOrNull == null || _router == null)
+    if (_servicesOrNull == null || _router == null) {
       return _bootstrapApp(const PopcornMaterialSplashScreen());
+    }
     return MaterialApp.router(
       onGenerateTitle: (context) => AppTranslations.appTitle.trOf(context),
       locale: PlatformDispatcher.instance.locale,

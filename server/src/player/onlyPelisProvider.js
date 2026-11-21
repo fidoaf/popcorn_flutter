@@ -99,9 +99,8 @@ class OnlyPelisProvider {
   async _tmdbTitle(media) {
     const url = new URL(`/${media.type}/${encodeURIComponent(media.id)}`, TMDB_ORIGIN);
     url.searchParams.set('language', TMDB_TITLE_LANGUAGE);
-    const html = await this._text(url.href, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
-    });
+    // TMDB's bot protection rejects (403) a spoofed browser User-Agent sent from a non-browser client.
+    const html = await this._text(url.href, { headers: { Accept: 'text/html' } });
     const title = parseMetaContent(html, 'og:title');
     if (!title) throw new Error(`TMDB returned no localized title for ${media.type} ID ${media.id}`);
     return title;

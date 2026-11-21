@@ -35,6 +35,30 @@ test('extracts and validates an HLS candidate using the provider API', async () 
   assert.equal(calls[0].options.headers.Referer, 'https://vidsrc.buzz/');
 });
 
+test('falls back to per-server play when the race endpoint fails', async () => {
+  const fetchImpl = async (input) => {
+    const url = new URL(input);
+    if (url.pathname === '/embed/tv/97645/5/2') {
+      return new Response('var Q = {"type":"tv","id":"97645","s":5,"e":2,"t":"token","ssr":{"servers":[{"ref":"server-ref"}]}};');
+    }
+    if (url.pathname === '/pl/api.php' && url.searchParams.get('a') === 'race') {
+      return new Response('', { status: 502, statusText: 'Bad Gateway' });
+    }
+    if (url.pathname === '/pl/api.php' && url.searchParams.get('a') === 'play') {
+      return Response.json({ url: '/stream/master.m3u8', type: 'hls' });
+    }
+    if (url.pathname === '/stream/master.m3u8') {
+      return new Response('#EXTM3U\n#EXT-X-ENDLIST');
+    }
+    throw new Error(`Unexpected request: ${url.href}`);
+  };
+
+  const provider = new VidSrcBuzzProvider({ fetchImpl });
+  const result = await provider.extract({ providerId: provider.id, type: 'tv', id: '97645', season: '5', episode: '2' });
+
+  assert.equal(result.url, 'https://vidsrc.buzz/stream/master.m3u8');
+});
+
 test('lists VidSrc.buzz servers and extracts the selected source', async () => {
   const calls = [];
   const fetchImpl = async (input) => {
@@ -68,6 +92,66 @@ test('lists VidSrc.buzz servers and extracts the selected source', async () => {
   assert.equal(playRequest.searchParams.get('a'), 'play');
   assert.equal(playRequest.searchParams.get('ref'), 'second-ref');
   assert.equal(playRequest.searchParams.get('t'), 'page-token');
+});
+
+test('skips candidates whose playlist segments are unavailable', async () => {
+  const fetchImpl = async (input) => {
+    const url = new URL(input);
+    if (url.pathname === '/embed/tv/97645/1/1') {
+      return new Response('var Q = {"type":"tv","id":"97645","s":1,"e":1,"t":"token","ssr":{"servers":[{"ref":"dead"},{"ref":"live"}]}};');
+    }
+    if (url.pathname === '/pl/api.php' && url.searchParams.get('a') === 'race') {
+      return Response.json({ cands: [{ url: '/dead/master.m3u8', type: 'hls' }, { url: '/live/master.m3u8', type: 'hls' }] });
+    }
+    if (url.pathname.endsWith('/master.m3u8')) {
+      return new Response('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nvariant.m3u8\n');
+    }
+    if (url.pathname.endsWith('/variant.m3u8')) {
+      return new Response('#EXTM3U\n#EXTINF:2.000,\nseg0.ts\n#EXT-X-ENDLIST');
+    }
+    if (url.pathname === '/dead/seg0.ts') return new Response('{"code":3403}', { status: 403 });
+    if (url.pathname === '/live/seg0.ts') return new Response('segment');
+    throw new Error(`Unexpected request: ${url.href}`);
+  };
+
+  const provider = new VidSrcBuzzProvider({ fetchImpl });
+  const result = await provider.extract({ providerId: provider.id, type: 'tv', id: '97645', season: '1', episode: '1' });
+
+  assert.equal(result.url, 'https://vidsrc.buzz/live/master.m3u8');
+});
+
+test('falls back to last-resort servers when the initial servers are unplayable', async () => {
+  const calls = [];
+  const fetchImpl = async (input) => {
+    const url = new URL(input);
+    calls.push(url);
+    const action = url.searchParams.get('a');
+    if (url.pathname === '/embed/tv/97645/1/1') {
+      return new Response('var Q = {"type":"tv","id":"tt8910922","s":1,"e":1,"t":"token","ssr":{"more":true,"servers":[{"ref":"xpk","k":"xpk-key","name":"Server XPK"}]}};');
+    }
+    if (action === 'race') return Response.json({ cands: [{ url: '/xpk/index.m3u8', type: 'hls' }] });
+    if (action === 'sources' && url.searchParams.get('pf') === '1') {
+      return Response.json({ status: 'ok', servers: [{ ref: 'xpk-resigned', k: 'xpk-key', name: 'Server XPK' }, { ref: 'vnh', k: 'vnh-key', name: 'Server VNH' }] });
+    }
+    if (action === 'play') return Response.json({ url: `/${url.searchParams.get('ref')}/index.m3u8`, type: 'hls' });
+    if (url.pathname.endsWith('/index.m3u8')) return new Response('#EXTM3U\n#EXTINF:2.000,\nseg0.ts\n#EXT-X-ENDLIST');
+    if (url.pathname === '/xpk/seg0.ts') return new Response('{"code":3403}', { status: 403 });
+    if (url.pathname === '/vnh/seg0.ts') return new Response('segment');
+    throw new Error(`Unexpected request: ${url.href}`);
+  };
+
+  const provider = new VidSrcBuzzProvider({ fetchImpl });
+  const media = { providerId: provider.id, type: 'tv', id: '97645', season: '1', episode: '1' };
+  const result = await provider.extract(media);
+
+  assert.equal(result.url, 'https://vidsrc.buzz/vnh/index.m3u8');
+  assert.deepEqual(
+    calls.filter((url) => url.searchParams.get('a') === 'play').map((url) => url.searchParams.get('ref')),
+    ['xpk', 'vnh'],
+  );
+
+  const { sources } = await provider.listSources(media);
+  assert.deepEqual(sources.map(({ ref }) => ref), ['xpk', 'vnh']);
 });
 
 test('lists subtitles with a fresh page token', async () => {

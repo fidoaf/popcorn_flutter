@@ -98,29 +98,50 @@ class ResourceProxy {
 
   async _fetchWithRetry(request, url, providerId) {
     const provider = this.providers.get(providerId);
+    const range = request.headers.range ? { Range: request.headers.range } : {};
+    const direct = typeof provider.directUpstream === 'function' ? provider.directUpstream(url) : null;
+    if (direct) {
+      try {
+        const response = await this._fetchOnce(direct.url, {
+          'User-Agent': USER_AGENT,
+          ...(direct.referer ? { Referer: direct.referer } : {}),
+          ...range,
+        });
+        if (response.ok || response.status === 206) return response;
+        await response.body?.cancel();
+      } catch (_) {
+        // Fall back to the provider URL below.
+      }
+    }
     const headers = {
       'User-Agent': USER_AGENT,
       Referer: `${provider.origin}/`,
-      ...(request.headers.range ? { Range: request.headers.range } : {}),
+      ...range,
     };
     let lastError;
     for (let attempt = 1; attempt <= 3; attempt++) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
-        const response = await this.fetchImpl(url, { headers, signal: controller.signal });
-        clearTimeout(timeout);
+        const response = await this._fetchOnce(url, headers);
         if (response.ok || response.status === 206 || response.status < 500) return response;
         lastError = new Error(`Upstream returned ${response.status}`);
         await response.body?.cancel();
       } catch (error) {
-        clearTimeout(timeout);
         lastError = error;
       }
       console.warn(`Upstream attempt ${attempt} failed for ${new URL(url).host}: ${lastError.message}`);
       await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
     }
     throw lastError;
+  }
+
+  async _fetchOnce(url, headers) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      return await this.fetchImpl(url, { headers, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 }
 
