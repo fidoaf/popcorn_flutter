@@ -49,6 +49,8 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     #provider-frame[hidden],#playback-settings[hidden]{display:none}
     #settings-toggle{margin-left:auto;width:36px;height:36px;border:1px solid #ffffff50;border-radius:4px;background:#17191ee8;font-size:22px;text-decoration:none}
     #settings-toggle[hidden]{display:none}
+    #settings-toggle{transition:opacity .2s,visibility .2s}
+    body[data-controls-inactive="true"] #settings-toggle,body[data-controls-inactive="true"] #fullscreen-toggle{opacity:0;visibility:hidden;pointer-events:none}
     #playback-settings{position:absolute;z-index:5;bottom:12px;right:12px;box-sizing:border-box;width:min(340px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;padding:16px;background:#17191ef5;border:1px solid #41444c;border-radius:6px;box-shadow:0 8px 32px #0008}
     .settings-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
     .settings-heading h2{font-size:16px;margin:0}
@@ -454,6 +456,38 @@ function renderPlayerPage(initialMedia, { providers = [], showForm = true, embed
     }
     for (const event of ['playing', 'pause', 'ended']) video.addEventListener(event, showFullscreenControl);
     window.addEventListener('pagehide', () => clearTimeout(fullscreenHideTimer));
+    // Hide the page's own overlay controls on inactivity while playing, and
+    // report activity to the host app so it can hide its overlays in sync.
+    let controlsHideTimer;
+    let lastControlsReport = 0;
+    let lastReportedPlaying = null;
+    function isVideoPlaying() {
+      return !video.hidden && !video.paused && !video.ended;
+    }
+    function reportControlsActivity(force) {
+      const playing = isVideoPlaying();
+      const now = Date.now();
+      if (!force && playing === lastReportedPlaying && now - lastControlsReport < 500) return;
+      lastControlsReport = now;
+      lastReportedPlaying = playing;
+      const message = { type: 'popcorn:controls', playing };
+      const parentOrigin = resumeQuery.get('parentOrigin');
+      if (window.parent !== window && parentOrigin) window.parent.postMessage(message, parentOrigin);
+      window.flutter_inappwebview?.callHandler('popcornPlayback', message);
+    }
+    function onControlsActivity(event) {
+      clearTimeout(controlsHideTimer);
+      document.body.dataset.controlsInactive = 'false';
+      reportControlsActivity(event?.type === 'playing' || event?.type === 'pause' || event?.type === 'ended');
+      if (!isVideoPlaying()) return;
+      controlsHideTimer = setTimeout(() => {
+        if (isVideoPlaying() && settingsPanel.hidden) document.body.dataset.controlsInactive = 'true';
+      }, 3000);
+    }
+    for (const event of ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart']) document.addEventListener(event, onControlsActivity, { passive: true });
+    for (const event of ['playing', 'pause', 'ended']) video.addEventListener(event, onControlsActivity);
+    window.addEventListener('flutterInAppWebViewPlatformReady', () => reportControlsActivity(true));
+    window.addEventListener('pagehide', () => clearTimeout(controlsHideTimer));
     document.addEventListener('fullscreenchange', updateFullscreenControl);
     fullscreenToggle.addEventListener('click', async () => {
       try {

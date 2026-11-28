@@ -22,6 +22,18 @@ class PlayerControlsController extends ValueNotifier<bool> {
     }
   }
 
+  /// Handles a `popcorn:controls` activity report from an embedded web player,
+  /// which captures pointer/keyboard input the host app cannot observe.
+  void accept(dynamic message) {
+    if (message is! Map || message['type'] != 'popcorn:controls') return;
+    final playing = message['playing'];
+    if (playing is bool && playing != _playing) {
+      this.playing = playing;
+    } else {
+      show();
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();

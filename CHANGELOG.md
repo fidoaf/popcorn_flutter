@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.11]
+
+### Fixed
+- Player close, cast/info, settings and fullscreen buttons now hide after 3 seconds of inactivity while playing on all platforms, not only Windows.
+
 ## [1.10.10]
 
 ### Changed

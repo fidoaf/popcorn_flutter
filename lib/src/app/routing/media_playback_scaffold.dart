@@ -253,7 +253,6 @@ class _MediaPlaybackScaffoldState extends State<MediaPlaybackScaffold> {
       nextSeason: _nextEpisode?.$1,
       child: PlayerControlsScope(
         key: ObjectKey(source),
-        enabled: !kIsWeb && defaultTargetPlatform == TargetPlatform.windows,
         child: Stack(
           fit: StackFit.expand,
           children: [

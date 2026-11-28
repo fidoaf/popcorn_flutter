@@ -8,6 +8,7 @@ import 'package:popcorn_flutter/src/player/domain/media_source.dart';
 import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/domain/video_player.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/player_fullscreen_scope.dart';
+import 'package:popcorn_flutter/src/player/view/player_controls_scope.dart';
 
 final class InappwebviewVideoPlayer extends VideoPlayer {
   const InappwebviewVideoPlayer({super.key, required super.source, required this.fullscreenController, super.onUrlChanged});
@@ -111,7 +112,10 @@ final class InappwebviewVideoPlayer extends VideoPlayer {
             callback: (arguments) async {
               final url = await controller.getUrl();
               if (url?.host != source.url.host || arguments.length != 1) return null;
-              if (context.mounted) PlaybackSessionScope.of(context)?.accept(arguments.first);
+              if (context.mounted) {
+                PlayerControlsScope.controllerOf(context)?.accept(arguments.first);
+                PlaybackSessionScope.of(context)?.accept(arguments.first);
+              }
               return null;
             },
           );

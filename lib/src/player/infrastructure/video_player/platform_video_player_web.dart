@@ -8,6 +8,7 @@ import 'package:popcorn_flutter/src/player/domain/playback_session_scope.dart';
 import 'package:popcorn_flutter/src/player/domain/video_player.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/fullscreen_controller_factory.dart';
 import 'package:popcorn_flutter/src/player/infrastructure/video_player/media_kit/media_kit_video_player.dart';
+import 'package:popcorn_flutter/src/player/view/player_controls_scope.dart';
 import 'package:web/web.dart' as web;
 
 /// Web playback renders the source in a plain `<iframe>` by default, or uses the
@@ -101,6 +102,7 @@ class _SessionIframeState extends State<_SessionIframe> {
       if (_iframe == null || event.origin != widget.source.url.origin || !event.source.strictEquals(_iframe!.contentWindow).toDart) return;
       final message = event.data.dartify();
       if (kDebugMode && message is Map && message['type'] == 'popcorn:playback') debugPrint('[VideoPlayer] Playback event: ${message['event']}');
+      if (mounted) PlayerControlsScope.controllerOf(context)?.accept(message);
       _scope?.accept(message);
     }).toJS;
     web.window.addEventListener('message', _listener);
